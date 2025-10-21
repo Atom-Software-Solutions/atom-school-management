@@ -1,2 +1,2 @@
-# atom-school-management
+# Atom School Management
 Atom School Management System
