@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["user_mgt", "payment_mgt"]
+}
+
+// ==========================================
+// USER & SCHOOL MANAGEMENT SCHEMA
+// ==========================================
+
+enum Role {
+  SUPER_ADMIN
+  SCHOOL_ADMIN
+  PARENT
+  STUDENT
+
+  @@schema("user_mgt")
+}
+
+model School {
+  id         String  @id @default(uuid())
+  name       String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  users User[]
+
+  @@schema("user_mgt")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  school_id     String?
+  school        School?  @relation(fields: [school_id], references: [id], onDelete: SetNull)
+  email         String   @unique
+  phone         String?  @unique
+  password_hash String
+  first_name    String
+  last_name     String
+  role          Role
+  is_active     Boolean  @default(true)
+  last_login    DateTime?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  @@index([school_id])
+  @@schema("user_mgt")
+}
+
+// ==========================================
+// PAYMENT MANAGEMENT SCHEMA
+// ==========================================
+
+model Payment {
+  id             String               @id @default(uuid())
+  user_id        String               // Reference to user in user_mgt schema
+  amount         Decimal              @db.Decimal(10, 2)
+  currency       String               @default("UGX")
+  status         String               // PENDING, COMPLETED, FAILED, REFUNDED
+  payment_method String               // MOMO, BANK, CASH, CARD
+  reference      String               @unique
+  description    String?
+  created_at     DateTime             @default(now())
+  updated_at     DateTime             @updatedAt
+  completed_at   DateTime?
+  transactions   PaymentTransaction[] // One-to-many relation to transactions
+
+  @@index([user_id])
+  @@index([status])
+  @@index([reference])
+  @@schema("payment_mgt")
+}
+
+model PaymentTransaction {
+  id         String   @id @default(uuid())
+  payment_id String
+  payment    Payment  @relation(fields: [payment_id], references: [id], onDelete: Cascade)
+  amount     Decimal  @db.Decimal(10, 2)
+  type       String   // CHARGE, REFUND, FEE
+  status     String   // SUCCESS, FAILED, PENDING
+  reference  String   @unique
+  metadata   Json?
+  created_at DateTime @default(now())
+
+  @@index([payment_id])
+  @@index([status])
+  @@index([reference])
+  @@schema("payment_mgt")
+}
