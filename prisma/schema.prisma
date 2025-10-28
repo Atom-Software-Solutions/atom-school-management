@@ -23,14 +23,26 @@ enum Role {
 }
 
 model School {
-  id         String  @id @default(uuid())
+  id         String    @id @default(uuid())
+  code       String    @unique
   name       String
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  email      String
+  phone      String
+  address    String?
+  logo_url   String?
+  currency   String    @default("UGX")
+  time_zone  String    @default("Africa/Kampala")
+  is_active  Boolean   @default(true)
+  deleted_at DateTime? // Soft delete timestamp
+  settings   Json?     // Flexible settings storage
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
 
   // Relations
   users User[]
 
+  @@index([code])
+  @@index([deleted_at])
   @@schema("user_mgt")
 }
 
