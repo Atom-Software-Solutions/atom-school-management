@@ -48,8 +48,25 @@ model User {
   last_login    DateTime?
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
+  sessions      Session[]
 
   @@index([school_id])
+  @@schema("user_mgt")
+}
+
+model Session {
+  id         String    @id @default(uuid())
+  user_id    String
+  user       User?     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  jti        String    @unique
+  is_active  Boolean   @default(true)
+  ip_address String?
+  user_agent String?
+  created_at DateTime  @default(now())
+  expires_at DateTime
+  revoked_at DateTime?
+
+  @@index([user_id])
   @@schema("user_mgt")
 }
 

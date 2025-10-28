@@ -5,12 +5,15 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import * as bcrypt from 'bcrypt';
+import { randomUUID } from 'crypto';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
+    private prisma: PrismaService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -80,13 +83,33 @@ export class AuthService {
     };
   }
 
-  private generateAccessToken(user: { id: string; email: string; role: string }) {
-    const payload: JwtPayload = {
-      sub: user.id,
-      email: user.email,
-      role: user.role,
-    };
+  private async generateAccessToken(user: { id: string; email: string; role: string }) {
+    const jti = randomUUID();
+    // sign to get exp
+    const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role, jti } as JwtPayload);
+    const decoded: any = this.jwtService.decode(token);
+    const expSeconds: number | undefined = decoded?.exp;
+    const expiresAt = expSeconds ? new Date(expSeconds * 1000) : new Date(Date.now() + 7 * 24 * 3600 * 1000);
 
-    return this.jwtService.sign(payload);
+    await this.prisma.session.create({
+      data: {
+        user_id: user.id,
+        jti,
+        is_active: true,
+        expires_at: expiresAt,
+      },
+    });
+
+    return token;
+  }
+
+  async revokeSessionByJti(jti?: string) {
+    if (!jti) return;
+    await this.prisma.session
+      .update({
+        where: { jti },
+        data: { is_active: false, revoked_at: new Date() },
+      })
+      .catch(() => undefined);
   }
 }

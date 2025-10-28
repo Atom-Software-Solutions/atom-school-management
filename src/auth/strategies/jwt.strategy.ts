@@ -4,10 +4,11 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { UsersService } from '../../users/users.service';
 import { JwtPayload } from '../interfaces/jwt-payload.interface';
 import { AuthenticatedUser } from '../interfaces/authenticated-user.interface';
+import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(private usersService: UsersService) {
+  constructor(private usersService: UsersService, private prisma: PrismaService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -17,6 +18,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
+    // Check active session by jti
+    if (payload.jti) {
+      const session = await this.prisma.session.findUnique({ where: { jti: payload.jti } });
+      if (!session || !session.is_active || session.expires_at < new Date()) {
+        throw new UnauthorizedException('Session is not active');
+      }
+    }
+
     const user = await this.usersService.findByEmail(payload.email);
 
     if (!user || !user.is_active) {

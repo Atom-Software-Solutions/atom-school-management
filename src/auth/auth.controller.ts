@@ -51,4 +51,17 @@ export class AuthController {
       updatedAt: user.updated_at,
     };
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  async logout(@Request() req: any) {
+    const authHeader = req.headers['authorization'] || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
+    if (token) {
+      const decoded: any = this.authService['jwtService'].decode(token);
+      await this.authService.revokeSessionByJti(decoded?.jti);
+    }
+    return { message: 'Logged out successfully' };
+  }
 }
