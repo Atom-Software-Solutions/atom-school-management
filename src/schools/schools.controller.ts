@@ -27,9 +27,10 @@ export class SchoolsController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPER_ADMIN')
-  create(@Body() createSchoolDto: CreateSchoolDto) {
-    return this.schoolsService.create(createSchoolDto);
+  @Roles('SUPER_ADMIN', 'SCHOOL_ADMIN')
+  create(@Body() createSchoolDto: CreateSchoolDto, @Request() req: AuthenticatedRequest) {
+    const creatorUserId = (req as any).user?.id as string | undefined;
+    return this.schoolsService.create(createSchoolDto, creatorUserId);
   }
 
   @Get()
@@ -46,8 +47,8 @@ export class SchoolsController {
     if (userRole === 'SUPER_ADMIN') {
       return this.schoolsService.findOne(id);
     }
-    if (userRole === 'SCHOOL_ADMIN' && req.user.school_id === id) {
-      return this.schoolsService.findOne(id);
+    if (userRole === 'SCHOOL_ADMIN') {
+      return this.schoolsService.findIfAdmin(id, req.user.id);
     }
     throw new ForbiddenException('Insufficient permissions to view this school');
   }
@@ -63,8 +64,8 @@ export class SchoolsController {
     if (userRole === 'SUPER_ADMIN') {
       return this.schoolsService.update(id, updateSchoolDto);
     }
-    if (userRole === 'SCHOOL_ADMIN' && req.user.school_id === id) {
-      return this.schoolsService.update(id, updateSchoolDto);
+    if (userRole === 'SCHOOL_ADMIN') {
+      return this.schoolsService.updateIfAdmin(id, req.user.id, updateSchoolDto);
     }
     throw new ForbiddenException('Insufficient permissions to update this school');
   }
@@ -79,8 +80,8 @@ export class SchoolsController {
     if (userRole === 'SUPER_ADMIN') {
       return this.schoolsService.getSettings(id);
     }
-    if (userRole === 'SCHOOL_ADMIN' && req.user.school_id === id) {
-      return this.schoolsService.getSettings(id);
+    if (userRole === 'SCHOOL_ADMIN') {
+      return this.schoolsService.getSettingsIfAdmin(id, req.user.id);
     }
     throw new ForbiddenException(
       'Insufficient permissions to view school settings',
@@ -98,8 +99,8 @@ export class SchoolsController {
     if (userRole === 'SUPER_ADMIN') {
       return this.schoolsService.updateSettings(id, updateSettingsDto);
     }
-    if (userRole === 'SCHOOL_ADMIN' && req.user.school_id === id) {
-      return this.schoolsService.updateSettings(id, updateSettingsDto);
+    if (userRole === 'SCHOOL_ADMIN') {
+      return this.schoolsService.updateSettingsIfAdmin(id, req.user.id, updateSettingsDto);
     }
     throw new ForbiddenException(
       'Insufficient permissions to update school settings',

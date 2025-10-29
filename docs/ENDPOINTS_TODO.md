@@ -11,9 +11,10 @@ Legend:
 
 ## Authentication
 
-- [x] `POST /auth/register` - Register a new user (Parent or School Admin)
+- [x] `POST /auth/register` - Register a new user (automatically set to SCHOOL_ADMIN role, sends verification email)
 - [x] `POST /auth/login` - Login with email and password
 - [x] `POST /auth/logout` - Logout current user
+- [x] `GET /auth/verify-email?token=xxx` - Verify email address using verification token
 - [ ] `POST /auth/refresh` - Refresh access token using refresh token
 - [ ] `POST /auth/forgot-password` - Request password reset
 - [ ] `POST /auth/reset-password` - Reset password with token

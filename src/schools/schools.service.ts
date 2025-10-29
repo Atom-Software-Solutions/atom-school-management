@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSchoolDto } from './dto/create-school.dto';
@@ -12,7 +13,15 @@ import { UpdateSettingsDto } from './dto/update-settings.dto';
 export class SchoolsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(createSchoolDto: CreateSchoolDto) {
+  async create(createSchoolDto: CreateSchoolDto, creatorUserId?: string) {
+    // If request originated from an authenticated user, enforce verification for SCHOOL_ADMINs
+    if (creatorUserId) {
+      const creator = await this.prisma.user.findUnique({ where: { id: creatorUserId } });
+      if (creator && creator.role === 'SCHOOL_ADMIN' && !creator.email_verified) {
+        throw new ForbiddenException('Email must be verified before creating a school');
+      }
+    }
+
     // Check if school with code already exists
     const existingSchool = await this.prisma.school.findUnique({
       where: { code: createSchoolDto.code },
@@ -45,19 +54,78 @@ export class SchoolsService {
       },
     });
 
-    return school;
+    // If created by a user (e.g., SCHOOL_ADMIN self-service), create SchoolAdmin relationship
+    if (creatorUserId) {
+      await this.prisma.schoolAdmin
+        .upsert({
+          where: { school_id_user_id: { school_id: school.id, user_id: creatorUserId } },
+          create: { school_id: school.id, user_id: creatorUserId },
+          update: {},
+        })
+        .catch(() => undefined);
+    }
+
+    // Return with admins
+    return this.prisma.school.findUnique({
+      where: { id: school.id },
+      include: {
+        admins: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                first_name: true,
+                last_name: true,
+                phone: true,
+              },
+            },
+          },
+        },
+      },
+    });
   }
 
   async findAll() {
     return this.prisma.school.findMany({
       where: { deleted_at: null },
       orderBy: { created_at: 'desc' },
+      include: {
+        admins: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                first_name: true,
+                last_name: true,
+                phone: true,
+              },
+            },
+          },
+        },
+      },
     });
   }
 
   async findOne(id: string) {
     const school = await this.prisma.school.findFirst({
       where: { id, deleted_at: null },
+      include: {
+        admins: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                first_name: true,
+                last_name: true,
+                phone: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!school) {
@@ -65,6 +133,20 @@ export class SchoolsService {
     }
 
     return school;
+  }
+
+  private async assertIsAdminOfSchool(schoolId: string, userId: string) {
+    const rel = await this.prisma.schoolAdmin.findUnique({
+      where: { school_id_user_id: { school_id: schoolId, user_id: userId } },
+    });
+    if (!rel) {
+      throw new ForbiddenException('Insufficient permissions for this school');
+    }
+  }
+
+  async findIfAdmin(id: string, userId: string) {
+    await this.assertIsAdminOfSchool(id, userId);
+    return this.findOne(id);
   }
 
   async update(id: string, updateSchoolDto: UpdateSchoolDto) {
@@ -86,7 +168,27 @@ export class SchoolsService {
     return this.prisma.school.update({
       where: { id },
       data: updateData,
+      include: {
+        admins: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                first_name: true,
+                last_name: true,
+                phone: true,
+              },
+            },
+          },
+        },
+      },
     });
+  }
+
+  async updateIfAdmin(id: string, userId: string, updateSchoolDto: UpdateSchoolDto) {
+    await this.assertIsAdminOfSchool(id, userId);
+    return this.update(id, updateSchoolDto);
   }
 
   async remove(id: string) {
@@ -112,6 +214,11 @@ export class SchoolsService {
       timeZone: school.time_zone,
       customSettings: school.settings || {},
     };
+  }
+
+  async getSettingsIfAdmin(id: string, userId: string) {
+    await this.assertIsAdminOfSchool(id, userId);
+    return this.getSettings(id);
   }
 
   async updateSettings(id: string, updateSettingsDto: UpdateSettingsDto) {
@@ -140,5 +247,9 @@ export class SchoolsService {
       customSettings: updatedSchool.settings || {},
     };
   }
-}
 
+  async updateSettingsIfAdmin(id: string, userId: string, updateSettingsDto: UpdateSettingsDto) {
+    await this.assertIsAdminOfSchool(id, userId);
+    return this.updateSettings(id, updateSettingsDto);
+  }
+}
