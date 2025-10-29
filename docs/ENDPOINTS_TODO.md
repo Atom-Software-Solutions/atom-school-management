@@ -11,9 +11,10 @@ Legend:
 
 ## Authentication
 
-- [x] `POST /auth/register` - Register a new user (Parent or School Admin)
+- [x] `POST /auth/register` - Register a new user (automatically set to SCHOOL_ADMIN role, sends verification email)
 - [x] `POST /auth/login` - Login with email and password
 - [x] `POST /auth/logout` - Logout current user
+- [x] `GET /auth/verify-email?token=xxx` - Verify email address using verification token
 - [ ] `POST /auth/refresh` - Refresh access token using refresh token
 - [ ] `POST /auth/forgot-password` - Request password reset
 - [ ] `POST /auth/reset-password` - Reset password with token
@@ -23,13 +24,13 @@ Legend:
 
 ## School Management
 
-- [ ] `GET /schools` - List all schools (Super Admin only)
-- [ ] `POST /schools` - Create new school
-- [ ] `GET /schools/:id` - Get school details
-- [ ] `PATCH /schools/:id` - Update school information
-- [ ] `DELETE /schools/:id` - Archive/soft-delete school
-- [ ] `GET /schools/:id/settings` - Get school settings
-- [ ] `PATCH /schools/:id/settings` - Update school settings
+- [x] `GET /schools` - List all schools (Super Admin only)
+- [x] `POST /schools` - Create new school (Super Admin only)
+- [x] `GET /schools/:id` - Get school details (Super Admin or School Admin for their own school)
+- [x] `PATCH /schools/:id` - Update school information (Super Admin or School Admin for their own school)
+- [x] `DELETE /schools/:id` - Soft-delete school (Super Admin only - sets is_active=false and deleted_at timestamp)
+- [x] `GET /schools/:id/settings` - Get school settings (Super Admin or School Admin for their own school)
+- [x] `PATCH /schools/:id/settings` - Update school settings (Super Admin or School Admin for their own school)
 
 ---
 
@@ -124,10 +125,10 @@ Legend:
 ## Summary
 
 - **Total Endpoints**: 51
-- **Implemented**: 10
+- **Implemented**: 15
 - **In Progress**: 0
-- **Not Implemented**: 41
-- **Completion**: 19.6%
+- **Not Implemented**: 36
+- **Completion**: 29.4%
 
 ---
 

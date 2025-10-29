@@ -7,6 +7,7 @@ import {
   UseGuards,
   Get,
   Request,
+  Query,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -44,7 +45,6 @@ export class AuthController {
       lastName: user.last_name,
       role: user.role,
       phone: user.phone,
-      schoolId: user.school_id,
       isActive: user.is_active,
       lastLogin: user.last_login,
       createdAt: user.created_at,
@@ -63,5 +63,11 @@ export class AuthController {
       await this.authService.revokeSessionByJti(decoded?.jti);
     }
     return { message: 'Logged out successfully' };
+  }
+
+  @Get('verify-email')
+  @HttpCode(HttpStatus.OK)
+  async verifyEmail(@Query('token') token: string) {
+    return this.authService.verifyEmail(token);
   }
 }

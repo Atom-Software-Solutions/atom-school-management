@@ -35,7 +35,7 @@ export class UsersService {
         last_name: createUserDto.lastName,
         role: createUserDto.role,
         phone: createUserDto.phone,
-        school_id: createUserDto.schoolId,
+        verification_token: (createUserDto as any).verificationToken || null,
       },
       select: {
         id: true,
@@ -44,8 +44,9 @@ export class UsersService {
         last_name: true,
         role: true,
         phone: true,
-        school_id: true,
         is_active: true,
+        email_verified: true,
+        verification_token: true,
         created_at: true,
         updated_at: true,
       },
@@ -63,7 +64,6 @@ export class UsersService {
         last_name: true,
         role: true,
         phone: true,
-        school_id: true,
         is_active: true,
         created_at: true,
         updated_at: true,
@@ -81,7 +81,6 @@ export class UsersService {
         last_name: true,
         role: true,
         phone: true,
-        school_id: true,
         is_active: true,
         created_at: true,
         updated_at: true,
@@ -110,7 +109,6 @@ export class UsersService {
     if (updateUserDto.lastName) updateData.last_name = updateUserDto.lastName;
     if (updateUserDto.phone !== undefined)
       updateData.phone = updateUserDto.phone;
-    if (updateUserDto.schoolId) updateData.school_id = updateUserDto.schoolId;
     if (updateUserDto.password) {
       updateData.password_hash = await bcrypt.hash(updateUserDto.password, 10);
     }
@@ -127,7 +125,6 @@ export class UsersService {
           last_name: true,
           role: true,
           phone: true,
-          school_id: true,
           is_active: true,
           created_at: true,
           updated_at: true,
@@ -145,7 +142,6 @@ export class UsersService {
         last_name: true,
         role: true,
         phone: true,
-        school_id: true,
         is_active: true,
         created_at: true,
         updated_at: true,

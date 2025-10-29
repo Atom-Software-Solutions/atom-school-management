@@ -7,8 +7,9 @@ export interface UserResponse {
   last_name: string;
   role: Role;
   phone: string | null;
-  school_id: string | null;
   is_active: boolean;
+  email_verified?: boolean;
+  verification_token?: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -17,4 +18,3 @@ export interface UserWithPassword extends UserResponse {
   password_hash: string;
   last_login: Date | null;
 }
-
