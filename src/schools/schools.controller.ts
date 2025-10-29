@@ -27,7 +27,7 @@ export class SchoolsController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPER_ADMIN', 'SCHOOL_ADMIN')
+  @Roles('SCHOOL_ADMIN')
   create(@Body() createSchoolDto: CreateSchoolDto, @Request() req: AuthenticatedRequest) {
     const creatorUserId = (req as any).user?.id as string | undefined;
     return this.schoolsService.create(createSchoolDto, creatorUserId);
