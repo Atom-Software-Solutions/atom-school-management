@@ -26,6 +26,7 @@ model School {
   id         String    @id @default(uuid())
   code       String    @unique
   name       String
+  domain     String
   email      String
   phone      String
   address    String?
@@ -73,6 +74,7 @@ model SchoolAdmin {
   id         String   @id @default(uuid())
   school_id  String
   user_id    String
+  is_super_admin Boolean @default(false)
   created_at DateTime @default(now())
 
   school School @relation(fields: [school_id], references: [id], onDelete: Cascade)

@@ -45,6 +45,7 @@ export class SchoolsService {
       data: {
         code: createSchoolDto.code,
         name: createSchoolDto.name,
+        domain: createSchoolDto.domain,
         email: createSchoolDto.email,
         phone: createSchoolDto.phone,
         address: createSchoolDto.address,
@@ -59,7 +60,7 @@ export class SchoolsService {
       await this.prisma.schoolAdmin
         .upsert({
           where: { school_id_user_id: { school_id: school.id, user_id: creatorUserId } },
-          create: { school_id: school.id, user_id: creatorUserId },
+          create: { school_id: school.id, user_id: creatorUserId, is_super_admin: true },
           update: {},
         })
         .catch(() => undefined);

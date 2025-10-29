@@ -25,7 +25,7 @@ Legend:
 ## School Management
 
 - [x] `GET /schools` - List all schools (Super Admin only)
-- [x] `POST /schools` - Create new school (Super Admin only)
+- [x] `POST /schools` - Create new school (School Admin only)
 - [x] `GET /schools/:id` - Get school details (Super Admin or School Admin for their own school)
 - [x] `PATCH /schools/:id` - Update school information (Super Admin or School Admin for their own school)
 - [x] `DELETE /schools/:id` - Soft-delete school (Super Admin only - sets is_active=false and deleted_at timestamp)
