@@ -47,14 +47,17 @@ Legend:
 
 ## Student Management
 
-- [ ] `GET /students` - List students (tenant-scoped)
-- [ ] `POST /students` - Add new student
-- [ ] `GET /students/:id` - View student profile
-- [ ] `PATCH /students/:id` - Update student information
-- [ ] `DELETE /students/:id` - Archive student (soft delete)
-- [ ] `GET /students/:id/invoices` - Get student invoices
-- [ ] `GET /students/:id/payments` - Get student payment history
-- [ ] `POST /students/:id/guardians` - Add guardian to student
+- [x] `GET /students?schoolId=:schoolId` - List students (School Admin only, tenant-scoped)
+- [x] `POST /students?schoolId=:schoolId` - Add new student (School Admin only, tenant-scoped)
+- [x] `GET /students/:id` - View student profile (School Admin only, tenant-scoped)
+- [x] `PATCH /students/:id` - Update student information (School Admin only, tenant-scoped)
+- [x] `DELETE /students/:id` - Archive student (soft delete) (School Admin only, tenant-scoped)
+- [x] `GET /students/:id/invoices` - Get student invoices (School Admin only, tenant-scoped)
+- [x] `GET /students/:id/payments` - Get student payment history (School Admin only, tenant-scoped)
+- [x] `POST /students/:id/guardians` - Add guardian to student (School Admin only, tenant-scoped)
+- [x] `GET /students/import/template` - Download .xlsx template (School Admin only)
+- [x] `POST /students/import/validate` - Validate .xlsx data (School Admin only, tenant-scoped)
+- [x] `POST /students/import` - Upload .xlsx to create students (School Admin only, tenant-scoped)
 
 ---
 
@@ -125,10 +128,10 @@ Legend:
 ## Summary
 
 - **Total Endpoints**: 51
-- **Implemented**: 15
+- **Implemented**: 23
 - **In Progress**: 0
-- **Not Implemented**: 36
-- **Completion**: 29.4%
+- **Not Implemented**: 28
+- **Completion**: 45.1%
 
 ---
 

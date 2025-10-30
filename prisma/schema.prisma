@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["user_mgt", "payment_mgt"]
+  schemas  = ["user_mgt", "payment_mgt", "student_mgt"]
 }
 
 // ==========================================
@@ -84,6 +84,62 @@ model SchoolAdmin {
   @@index([school_id])
   @@index([user_id])
   @@schema("user_mgt")
+}
+
+// ==========================================
+// STUDENT MANAGEMENT SCHEMA
+// ==========================================
+
+model Student {
+  id          String   @id @default(uuid())
+  school_id   String
+  student_no  String   @unique
+  reg_no      String?  @unique
+  first_name  String
+  last_name   String
+  email       String?  @unique
+  phone       String?  @unique
+  is_active   Boolean  @default(true)
+  deleted_at  DateTime?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Note: school_id references user_mgt.School.id (cross-schema, no Prisma relation)
+  guardians StudentGuardian[]
+
+  @@index([school_id])
+  @@index([deleted_at])
+  @@schema("student_mgt")
+}
+
+model Guardian {
+  id          String   @id @default(uuid())
+  first_name  String
+  last_name   String
+  email       String?
+  phone       String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  students StudentGuardian[]
+
+  @@schema("student_mgt")
+}
+
+model StudentGuardian {
+  id          String   @id @default(uuid())
+  student_id  String
+  guardian_id String
+  relation    String?
+  created_at  DateTime @default(now())
+
+  student  Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  guardian Guardian @relation(fields: [guardian_id], references: [id], onDelete: Cascade)
+
+  @@unique([student_id, guardian_id])
+  @@index([student_id])
+  @@index([guardian_id])
+  @@schema("student_mgt")
 }
 
 model Session {
