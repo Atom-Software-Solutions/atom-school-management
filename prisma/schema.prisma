@@ -93,6 +93,7 @@ model SchoolAdmin {
 model Student {
   id          String   @id @default(uuid())
   school_id   String
+  class_id    String?
   student_no  String   @unique
   reg_no      String?  @unique
   first_name  String
@@ -106,9 +107,24 @@ model Student {
 
   // Note: school_id references user_mgt.School.id (cross-schema, no Prisma relation)
   guardians StudentGuardian[]
+  classroom Classroom? @relation(fields: [class_id], references: [id])
 
   @@index([school_id])
   @@index([deleted_at])
+  @@schema("student_mgt")
+}
+
+model Classroom {
+  id         String   @id @default(uuid())
+  school_id  String
+  name       String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  students Student[]
+
+  @@unique([school_id, name])
+  @@index([school_id])
   @@schema("student_mgt")
 }
 
