@@ -51,13 +51,21 @@ Legend:
 - [x] `POST /students?schoolId=:schoolId` - Add new student (School Admin only, tenant-scoped)
 - [x] `GET /students/:id` - View student profile (School Admin only, tenant-scoped)
 - [x] `PATCH /students/:id` - Update student information (School Admin only, tenant-scoped)
+- [x] `PATCH /students/:id/identifiers` - Update studentNo/regNo (School Admin only, tenant-scoped)
 - [x] `DELETE /students/:id` - Archive student (soft delete) (School Admin only, tenant-scoped)
 - [x] `GET /students/:id/invoices` - Get student invoices (School Admin only, tenant-scoped)
 - [x] `GET /students/:id/payments` - Get student payment history (School Admin only, tenant-scoped)
 - [x] `POST /students/:id/guardians` - Add guardian to student (School Admin only, tenant-scoped)
 - [x] `GET /students/import/template` - Download .xlsx template (School Admin only)
-- [x] `POST /students/import/validate` - Validate .xlsx data (School Admin only, tenant-scoped)
-- [x] `POST /students/import` - Upload .xlsx to create students (School Admin only, tenant-scoped)
+- [x] `POST /students/import/validate?schoolId=:schoolId` - Validate .xlsx data (School Admin only, tenant-scoped)
+- [x] `POST /students/import?schoolId=:schoolId` - Upload .xlsx to create students (School Admin only, tenant-scoped)
+
+---
+
+## Classroom Management
+
+- [ ] `GET /classrooms?schoolId=:schoolId` - List classrooms (School Admin only, tenant-scoped)
+- [ ] `POST /classrooms?schoolId=:schoolId&name=:name` - Create classroom (School Admin only, tenant-scoped)
 
 ---
 
@@ -127,11 +135,11 @@ Legend:
 
 ## Summary
 
-- **Total Endpoints**: 51
-- **Implemented**: 23
+- **Total Endpoints**: 53
+- **Implemented**: 27
 - **In Progress**: 0
-- **Not Implemented**: 28
-- **Completion**: 45.1%
+- **Not Implemented**: 26
+- **Completion**: 50.9%
 
 ---
 

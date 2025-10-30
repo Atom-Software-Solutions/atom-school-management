@@ -71,7 +71,34 @@ export class StudentsController {
     @Request() req: AuthenticatedRequest,
   ) {
     const adminUserId = (req as any).user?.id as string;
+    if (body?.phone !== undefined && body.phone !== null) {
+      const phone = body.phone.toString().trim();
+      if (phone !== '' && !/^\d{10}$/.test(phone)) {
+        throw new BadRequestException('phone must be a 10-digit number string');
+      }
+    }
+    if (body?.email !== undefined && body.email !== null) {
+      const email = body.email.toString().trim();
+      if (email !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        throw new BadRequestException('email is invalid');
+      }
+    }
     return this.studentsService.update(id, adminUserId, body);
+  }
+
+  @Patch(':id/identifiers')
+  updateIdentifiers(
+    @Param('id') id: string,
+    @Body() body: { studentNo?: string; regNo?: string },
+    @Request() req: AuthenticatedRequest,
+  ) {
+    const adminUserId = (req as any).user?.id as string;
+    const studentNo = body?.studentNo?.toString().trim();
+    const regNo = body?.regNo?.toString().trim();
+    if (!studentNo && !regNo) {
+      throw new BadRequestException('Provide studentNo and/or regNo');
+    }
+    return this.studentsService.updateIdentifiers(id, adminUserId, { studentNo, regNo });
   }
 
   @Delete(':id')
@@ -113,22 +140,42 @@ export class StudentsController {
   @Post('import/validate')
   @UseInterceptors(FileInterceptor('file'))
   validateImport(
-    @Body() body: { schoolId: string },
+    @Query('schoolId') schoolId: string,
     @UploadedFile() file: any,
     @Request() req: AuthenticatedRequest,
   ) {
     const adminUserId = (req as any).user?.id as string;
-    return this.studentsService.validateImportFile(body.schoolId, adminUserId, file?.buffer || Buffer.alloc(0));
+    if (!schoolId || schoolId.trim() === '') {
+      throw new BadRequestException('Missing required query parameter: schoolId');
+    }
+    const buffer = file?.buffer || Buffer.alloc(0);
+    return this.studentsService
+      .validateImportFile(schoolId, adminUserId, buffer)
+      .then(async (result) => {
+        if (result.valid) {
+          // Auto-import on successful validation
+          const importResult = await this.studentsService.importStudents(
+            schoolId,
+            adminUserId,
+            buffer,
+          );
+          return { ...result, ...importResult };
+        }
+        return result;
+      });
   }
 
   @Post('import')
   @UseInterceptors(FileInterceptor('file'))
   importStudents(
-    @Body() body: { schoolId: string },
+    @Query('schoolId') schoolId: string,
     @UploadedFile() file: any,
     @Request() req: AuthenticatedRequest,
   ) {
     const adminUserId = (req as any).user?.id as string;
-    return this.studentsService.importStudents(body.schoolId, adminUserId, file?.buffer || Buffer.alloc(0));
+    if (!schoolId || schoolId.trim() === '') {
+      throw new BadRequestException('Missing required query parameter: schoolId');
+    }
+    return this.studentsService.importStudents(schoolId, adminUserId, file?.buffer || Buffer.alloc(0));
   }
 }
