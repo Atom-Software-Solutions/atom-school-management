@@ -15,9 +15,9 @@ Legend:
 - [x] `POST /auth/login` - Login with email and password
 - [x] `POST /auth/logout` - Logout current user
 - [x] `GET /auth/verify-email?token=xxx` - Verify email address using verification token
-- [ ] `POST /auth/refresh` - Refresh access token using refresh token
-- [ ] `POST /auth/forgot-password` - Request password reset
-- [ ] `POST /auth/reset-password` - Reset password with token
+- [x] `POST /auth/refresh` - Refresh access token using refresh token
+- [x] `POST /auth/forgot-password` - Request password reset
+- [x] `POST /auth/reset-password` - Reset password with token
 - [x] `GET /auth/profile` - Get current user profile (maps to GET /auth/me)
 
 ---
@@ -168,10 +168,10 @@ Legend:
 ## Summary
 
 - **Total Endpoints**: 86
-- **Implemented**: 29
+- **Implemented**: 32
 - **In Progress**: 0
-- **Not Implemented**: 57
-- **Completion**: 33.7%
+- **Not Implemented**: 54
+- **Completion**: 37.2%
 
 ---
 

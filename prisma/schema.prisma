@@ -35,7 +35,7 @@ model School {
   time_zone  String    @default("Africa/Kampala")
   is_active  Boolean   @default(true)
   deleted_at DateTime? // Soft delete timestamp
-  settings   Json?     // Flexible settings storage
+  settings   Json? // Flexible settings storage
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
 
@@ -48,34 +48,37 @@ model School {
 }
 
 model User {
-  id                String    @id @default(uuid())
-  email             String    @unique
-  phone             String?   @unique
-  password_hash     String
-  first_name        String
-  last_name         String
-  role              Role
-  is_active         Boolean   @default(true)
-  email_verified    Boolean   @default(false)
-  verification_token String?  @unique
-  email_verified_at DateTime?
-  last_login        DateTime?
-  created_at        DateTime  @default(now())
-  updated_at        DateTime  @updatedAt
-  sessions          Session[]
-  adminOf           SchoolAdmin[]
+  id                     String        @id @default(uuid())
+  email                  String        @unique
+  phone                  String?       @unique
+  password_hash          String
+  first_name             String
+  last_name              String
+  role                   Role
+  is_active              Boolean       @default(true)
+  email_verified         Boolean       @default(false)
+  verification_token     String?       @unique
+  email_verified_at      DateTime?
+  password_reset_token   String?       @unique
+  password_reset_expires DateTime?
+  last_login             DateTime?
+  created_at             DateTime      @default(now())
+  updated_at             DateTime      @updatedAt
+  sessions               Session[]
+  adminOf                SchoolAdmin[]
 
   @@index([verification_token])
+  @@index([password_reset_token])
   @@schema("user_mgt")
 }
 
 // Join table to associate multiple admins to a school
 model SchoolAdmin {
-  id         String   @id @default(uuid())
-  school_id  String
-  user_id    String
-  is_super_admin Boolean @default(false)
-  created_at DateTime @default(now())
+  id             String   @id @default(uuid())
+  school_id      String
+  user_id        String
+  is_super_admin Boolean  @default(false)
+  created_at     DateTime @default(now())
 
   school School @relation(fields: [school_id], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
@@ -91,23 +94,23 @@ model SchoolAdmin {
 // ==========================================
 
 model Student {
-  id          String   @id @default(uuid())
-  school_id   String
-  class_id    String?
-  student_no  String   @unique
-  reg_no      String?  @unique
-  first_name  String
-  last_name   String
-  email       String?  @unique
-  phone       String?  @unique
-  is_active   Boolean  @default(true)
-  deleted_at  DateTime?
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  id         String    @id @default(uuid())
+  school_id  String
+  class_id   String?
+  student_no String    @unique
+  reg_no     String?   @unique
+  first_name String
+  last_name  String
+  email      String?   @unique
+  phone      String?   @unique
+  is_active  Boolean   @default(true)
+  deleted_at DateTime?
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
 
   // Note: school_id references user_mgt.School.id (cross-schema, no Prisma relation)
   guardians StudentGuardian[]
-  classroom Classroom? @relation(fields: [class_id], references: [id])
+  classroom Classroom?        @relation(fields: [class_id], references: [id])
 
   @@index([school_id])
   @@index([deleted_at])
@@ -129,13 +132,13 @@ model Classroom {
 }
 
 model Guardian {
-  id          String   @id @default(uuid())
-  first_name  String
-  last_name   String
-  email       String?
-  phone       String?
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  id         String   @id @default(uuid())
+  first_name String
+  last_name  String
+  email      String?
+  phone      String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   students StudentGuardian[]
 
@@ -180,11 +183,11 @@ model Session {
 
 model Payment {
   id             String               @id @default(uuid())
-  user_id        String               // Reference to user in user_mgt schema
+  user_id        String // Reference to user in user_mgt schema
   amount         Decimal              @db.Decimal(10, 2)
   currency       String               @default("UGX")
-  status         String               // PENDING, COMPLETED, FAILED, REFUNDED
-  payment_method String               // MOMO, BANK, CASH, CARD
+  status         String // PENDING, COMPLETED, FAILED, REFUNDED
+  payment_method String // MOMO, BANK, CASH, CARD
   reference      String               @unique
   description    String?
   created_at     DateTime             @default(now())
@@ -203,8 +206,8 @@ model PaymentTransaction {
   payment_id String
   payment    Payment  @relation(fields: [payment_id], references: [id], onDelete: Cascade)
   amount     Decimal  @db.Decimal(10, 2)
-  type       String   // CHARGE, REFUND, FEE
-  status     String   // SUCCESS, FAILED, PENDING
+  type       String // CHARGE, REFUND, FEE
+  status     String // SUCCESS, FAILED, PENDING
   reference  String   @unique
   metadata   Json?
   created_at DateTime @default(now())
@@ -220,11 +223,11 @@ model PaymentTransaction {
 // ==========================================
 
 model TermTemplate {
-  id         String  @id @default(uuid())
-  school_id  String
-  name       String
-  structure  Json    // e.g., [{ordinal:1,name:"Term 1"}, {ordinal:2,name:"Term 2"}]
-  is_locked  Boolean @default(false) // Locked once referenced by an AcademicYear
+  id        String  @id @default(uuid())
+  school_id String
+  name      String
+  structure Json // e.g., [{ordinal:1,name:"Term 1"}, {ordinal:2,name:"Term 2"}]
+  is_locked Boolean @default(false) // Locked once referenced by an AcademicYear
 
   years AcademicYear[]
 
@@ -234,15 +237,15 @@ model TermTemplate {
 }
 
 model AcademicYear {
-  id               String       @id @default(uuid())
+  id               String   @id @default(uuid())
   school_id        String
   name             String
   start_date       DateTime
   end_date         DateTime
-  status           String       // planned | active | closed
+  status           String // planned | active | closed
   term_template_id String
 
-  term_template TermTemplate @relation(fields: [term_template_id], references: [id])
+  term_template TermTemplate        @relation(fields: [term_template_id], references: [id])
   terms         Term[]
   offerings     ClassroomOffering[]
 
@@ -252,7 +255,7 @@ model AcademicYear {
 }
 
 model Term {
-  id               String      @id @default(uuid())
+  id               String   @id @default(uuid())
   academic_year_id String
   ordinal          Int
   name             String
@@ -298,13 +301,13 @@ model ClassroomOffering {
 }
 
 model StudentEnrollment {
-  id                    String   @id @default(uuid())
+  id                    String    @id @default(uuid())
   student_id            String
   classroom_offering_id String
   academic_year_id      String
   start_date            DateTime
   end_date              DateTime?
-  status                String   // active | completed | withdrawn
+  status                String // active | completed | withdrawn
 
   classroom_offering ClassroomOffering @relation(fields: [classroom_offering_id], references: [id])
 
