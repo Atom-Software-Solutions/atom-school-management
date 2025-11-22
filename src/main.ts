@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { PrismaService } from './prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
@@ -76,6 +77,40 @@ async function bootstrap() {
   // Enable CORS
   app.enableCors();
 
+  // Set global API prefix
+  app.setGlobalPrefix('api');
+
+  // Swagger Configuration
+  const config = new DocumentBuilder()
+    .setTitle('Atom School Management API')
+    .setDescription('API documentation for Atom School Management System')
+    .setVersion('1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Enter JWT token',
+        in: 'header',
+      },
+      'JWT-auth', // This name here is important for matching up with @ApiBearerAuth() in your controller!
+    )
+    .addTag('auth', 'Authentication endpoints')
+    .addTag('schools', 'School management endpoints')
+    .addTag('users', 'User management endpoints')
+    .addTag('students', 'Student management endpoints')
+    .addTag('classrooms', 'Classroom management endpoints')
+    .addTag('academics', 'Academic management endpoints')
+    .addTag('email', 'Email service endpoints')
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true, // This will persist the JWT token in the browser
+    },
+  });
   await app.listen(process.env.PORT ?? 3000);
 }
 

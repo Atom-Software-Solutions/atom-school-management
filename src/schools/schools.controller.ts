@@ -10,6 +10,13 @@ import {
   Request,
   ForbiddenException,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+} from '@nestjs/swagger';
 import { SchoolsService } from './schools.service';
 import { CreateSchoolDto } from './dto/create-school.dto';
 import { UpdateSchoolDto } from './dto/update-school.dto';
@@ -21,6 +28,7 @@ interface AuthenticatedRequest extends Request {
   user: any;
 }
 
+@ApiTags('schools')
 @Controller('schools')
 export class SchoolsController {
   constructor(private readonly schoolsService: SchoolsService) {}
@@ -28,6 +36,15 @@ export class SchoolsController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SCHOOL_ADMIN')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Create a new school' })
+  @ApiResponse({
+    status: 201,
+    description: 'School created successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Bad request - validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - insufficient permissions' })
   create(@Body() createSchoolDto: CreateSchoolDto, @Request() req: AuthenticatedRequest) {
     const creatorUserId = (req as any).user?.id as string | undefined;
     return this.schoolsService.create(createSchoolDto, creatorUserId);
@@ -36,12 +53,30 @@ export class SchoolsController {
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPER_ADMIN')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'List all schools (Super Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of schools retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - SUPER_ADMIN only' })
   findAll() {
     return this.schoolsService.findAll();
   }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get school details' })
+  @ApiParam({ name: 'id', description: 'School ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'School details retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - insufficient permissions' })
+  @ApiResponse({ status: 404, description: 'School not found' })
   findOne(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     const userRole = req.user.role;
     if (userRole === 'SUPER_ADMIN') {
