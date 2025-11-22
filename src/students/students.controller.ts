@@ -178,4 +178,50 @@ export class StudentsController {
     }
     return this.studentsService.importStudents(schoolId, adminUserId, file?.buffer || Buffer.alloc(0));
   }
+
+  @Post(':id/promote')
+  promote(
+    @Param('id') id: string,
+    @Query('schoolId') schoolId: string,
+    @Body() body: { fromEnrollmentId?: string; toOfferingId?: string; endDate?: string; startDate?: string },
+    @Request() req: AuthenticatedRequest,
+  ) {
+    const adminUserId = (req as any).user?.id as string;
+    if (!schoolId || schoolId.trim() === '') throw new BadRequestException('Missing required query parameter: schoolId');
+    if (!body?.fromEnrollmentId || !body?.toOfferingId) throw new BadRequestException('Missing fromEnrollmentId/toOfferingId');
+    return this.studentsService.promoteStudent(
+      id,
+      adminUserId,
+      schoolId,
+      {
+        fromEnrollmentId: body.fromEnrollmentId,
+        toOfferingId: body.toOfferingId,
+        endDate: body.endDate ? new Date(body.endDate) : undefined,
+        startDate: body.startDate ? new Date(body.startDate) : undefined,
+      },
+    );
+  }
+
+  @Post(':id/retain')
+  retain(
+    @Param('id') id: string,
+    @Query('schoolId') schoolId: string,
+    @Body() body: { fromEnrollmentId?: string; toOfferingId?: string; endDate?: string; startDate?: string },
+    @Request() req: AuthenticatedRequest,
+  ) {
+    const adminUserId = (req as any).user?.id as string;
+    if (!schoolId || schoolId.trim() === '') throw new BadRequestException('Missing required query parameter: schoolId');
+    if (!body?.fromEnrollmentId || !body?.toOfferingId) throw new BadRequestException('Missing fromEnrollmentId/toOfferingId');
+    return this.studentsService.retainStudent(
+      id,
+      adminUserId,
+      schoolId,
+      {
+        fromEnrollmentId: body.fromEnrollmentId,
+        toOfferingId: body.toOfferingId,
+        endDate: body.endDate ? new Date(body.endDate) : undefined,
+        startDate: body.startDate ? new Date(body.startDate) : undefined,
+      },
+    );
+  }
 }

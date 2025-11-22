@@ -9,6 +9,7 @@ import { StudentsModule } from './students/students.module';
 import { EmailModule } from './email/email.module';
 import { ClassroomsModule } from './classrooms/classrooms.module';
 import { PrismaService } from './prisma/prisma.service';
+import { AcademicsModule } from './academics/academics.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { PrismaService } from './prisma/prisma.service';
     SchoolsModule,
     StudentsModule,
     ClassroomsModule,
+    AcademicsModule,
     EmailModule,
   ],
   controllers: [AppController],

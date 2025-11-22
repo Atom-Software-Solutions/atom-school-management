@@ -214,3 +214,101 @@ model PaymentTransaction {
   @@index([reference])
   @@schema("payment_mgt")
 }
+
+// ==========================================
+// ACADEMICS & CLASSROOMS (Versioned by Year)
+// ==========================================
+
+model TermTemplate {
+  id         String  @id @default(uuid())
+  school_id  String
+  name       String
+  structure  Json    // e.g., [{ordinal:1,name:"Term 1"}, {ordinal:2,name:"Term 2"}]
+  is_locked  Boolean @default(false) // Locked once referenced by an AcademicYear
+
+  years AcademicYear[]
+
+  @@unique([school_id, name])
+  @@index([school_id])
+  @@schema("student_mgt")
+}
+
+model AcademicYear {
+  id               String       @id @default(uuid())
+  school_id        String
+  name             String
+  start_date       DateTime
+  end_date         DateTime
+  status           String       // planned | active | closed
+  term_template_id String
+
+  term_template TermTemplate @relation(fields: [term_template_id], references: [id])
+  terms         Term[]
+  offerings     ClassroomOffering[]
+
+  @@unique([school_id, name])
+  @@index([school_id])
+  @@schema("student_mgt")
+}
+
+model Term {
+  id               String      @id @default(uuid())
+  academic_year_id String
+  ordinal          Int
+  name             String
+  start_date       DateTime
+  end_date         DateTime
+
+  academic_year AcademicYear @relation(fields: [academic_year_id], references: [id])
+
+  @@unique([academic_year_id, ordinal])
+  @@index([academic_year_id])
+  @@schema("student_mgt")
+}
+
+model ClassroomDefinition {
+  id          String  @id @default(uuid())
+  school_id   String
+  name        String
+  level       String?
+  is_archived Boolean @default(false)
+
+  offerings ClassroomOffering[]
+
+  @@unique([school_id, name])
+  @@index([school_id])
+  @@schema("student_mgt")
+}
+
+model ClassroomOffering {
+  id                      String  @id @default(uuid())
+  academic_year_id        String
+  classroom_definition_id String
+  display_name            String?
+  is_active               Boolean @default(true)
+
+  academic_year        AcademicYear        @relation(fields: [academic_year_id], references: [id])
+  classroom_definition ClassroomDefinition @relation(fields: [classroom_definition_id], references: [id])
+  enrollments          StudentEnrollment[]
+
+  @@unique([academic_year_id, classroom_definition_id])
+  @@index([academic_year_id])
+  @@index([classroom_definition_id])
+  @@schema("student_mgt")
+}
+
+model StudentEnrollment {
+  id                    String   @id @default(uuid())
+  student_id            String
+  classroom_offering_id String
+  academic_year_id      String
+  start_date            DateTime
+  end_date              DateTime?
+  status                String   // active | completed | withdrawn
+
+  classroom_offering ClassroomOffering @relation(fields: [classroom_offering_id], references: [id])
+
+  @@index([student_id, academic_year_id])
+  @@index([classroom_offering_id])
+  @@schema("student_mgt")
+}

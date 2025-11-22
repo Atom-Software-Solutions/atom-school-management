@@ -58,14 +58,40 @@ Legend:
 - [x] `POST /students/:id/guardians` - Add guardian to student (School Admin only, tenant-scoped)
 - [x] `GET /students/import/template` - Download .xlsx template (School Admin only)
 - [x] `POST /students/import/validate?schoolId=:schoolId` - Validate .xlsx data (School Admin only, tenant-scoped)
-- [x] `POST /students/import?schoolId=:schoolId` - Upload .xlsx to create students (School Admin only, tenant-scoped)
+
+---
+
+## Academic Calendar
+
+- [ ] `GET /schools/:schoolId/term-templates` - List term templates (immutable once used)
+- [ ] `POST /schools/:schoolId/term-templates` - Create term template (names and count)
+- [ ] `PATCH /term-templates/:id/lock` - Lock template (auto-locked on first use)
+- [ ] `GET /schools/:schoolId/years` - List academic years
+- [ ] `POST /schools/:schoolId/years` - Create academic year (references a term template)
+- [ ] `GET /years/:yearId` - Get academic year details
+- [ ] `GET /years/:yearId/terms` - List terms instantiated for the year
+- [ ] `PATCH /years/:yearId/status` - Update year status (planned/active/closed)
 
 ---
 
 ## Classroom Management
 
-- [ ] `GET /classrooms?schoolId=:schoolId` - List classrooms (School Admin only, tenant-scoped)
-- [ ] `POST /classrooms?schoolId=:schoolId&name=:name` - Create classroom (School Admin only, tenant-scoped)
+- [ ] `GET /schools/:schoolId/classroom-definitions` - List classroom definitions (school-defined names)
+- [ ] `POST /schools/:schoolId/classroom-definitions` - Create classroom definition (name, level)
+- [ ] `PATCH /classroom-definitions/:id` - Update classroom definition (rename, archive)
+- [ ] `GET /years/:yearId/classroom-offerings` - List classroom offerings for an academic year
+- [ ] `POST /years/:yearId/classroom-offerings` - Create classroom offering from a definition
+- [ ] `PATCH /classroom-offerings/:id` - Update offering (displayName, isActive)
+
+---
+
+## Enrollments & Student Progression
+
+- [ ] `POST /classroom-offerings/:offeringId/enrollments` - Enroll student in offering
+- [ ] `PATCH /enrollments/:id/complete` - Complete/withdraw enrollment with endDate
+- [ ] `GET /students/:studentId/enrollments/history` - Enrollment history for student
+- [ ] `POST /students/:studentId/promote` - Promote to next-year offering (no same classroom definition)
+- [ ] `POST /students/:studentId/retain` - Retain student (enroll into an allowed alternative; narration later)
 
 ---
 
@@ -133,13 +159,19 @@ Legend:
 
 ---
 
+## Health Check
+
+- [x] `GET /api/health` - Health check
+
+---
+
 ## Summary
 
-- **Total Endpoints**: 53
-- **Implemented**: 27
+- **Total Endpoints**: 86
+- **Implemented**: 29
 - **In Progress**: 0
-- **Not Implemented**: 26
-- **Completion**: 50.9%
+- **Not Implemented**: 57
+- **Completion**: 33.7%
 
 ---
 

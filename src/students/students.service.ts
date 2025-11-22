@@ -356,4 +356,92 @@ export class StudentsService {
     }
     return { imported, failed: rows.length - imported, errors };
   }
+
+  async promoteStudent(
+    studentId: string,
+    adminUserId: string,
+    schoolId: string,
+    params: { fromEnrollmentId: string; toOfferingId: string; endDate?: Date; startDate?: Date },
+  ) {
+    const student = await this.findOwned(studentId, adminUserId);
+    if (student.school_id !== schoolId) throw new ForbiddenException('Student not accessible');
+    return this.prisma.$transaction(async (tx) => {
+      const from = await (tx as any).studentEnrollment.findUnique({
+        where: { id: params.fromEnrollmentId },
+        include: { classroom_offering: { include: { academic_year: true } } },
+      });
+      if (!from || from.student_id !== student.id) throw new BadRequestException('Invalid fromEnrollmentId');
+      if (from.end_date) throw new BadRequestException('Enrollment already closed');
+      const to = await (tx as any).classroomOffering.findUnique({
+        where: { id: params.toOfferingId },
+        include: { academic_year: true },
+      });
+      if (!to || to.academic_year.school_id !== schoolId) throw new ForbiddenException('Target offering not accessible');
+      // Ensure next-year (by date)
+      if (!(to.academic_year.start_date > from.classroom_offering.academic_year.start_date)) {
+        throw new BadRequestException('Target offering must be in a later academic year');
+      }
+      // Disallow same classroom definition in later year
+      if (to.classroom_definition_id === from.classroom_offering.classroom_definition_id) {
+        throw new BadRequestException('Cannot promote to the same classroom definition');
+      }
+      // Ensure no active enrollment in target year
+      const overlap = await (tx as any).studentEnrollment.findFirst({ where: { student_id: student.id, academic_year_id: to.academic_year_id, end_date: null } });
+      if (overlap) throw new BadRequestException('Student already has an active enrollment in target academic year');
+      // Close current and open new
+      await (tx as any).studentEnrollment.update({ where: { id: from.id }, data: { end_date: params.endDate ?? new Date(), status: 'completed' } });
+      return (tx as any).studentEnrollment.create({
+        data: {
+          student_id: student.id,
+          classroom_offering_id: to.id,
+          academic_year_id: to.academic_year_id,
+          start_date: params.startDate ?? new Date(),
+          status: 'active',
+        },
+      });
+    });
+  }
+
+  async retainStudent(
+    studentId: string,
+    adminUserId: string,
+    schoolId: string,
+    params: { fromEnrollmentId: string; toOfferingId: string; endDate?: Date; startDate?: Date },
+  ) {
+    const student = await this.findOwned(studentId, adminUserId);
+    if (student.school_id !== schoolId) throw new ForbiddenException('Student not accessible');
+    return this.prisma.$transaction(async (tx) => {
+      const from = await (tx as any).studentEnrollment.findUnique({
+        where: { id: params.fromEnrollmentId },
+        include: { classroom_offering: { include: { academic_year: true } } },
+      });
+      if (!from || from.student_id !== student.id) throw new BadRequestException('Invalid fromEnrollmentId');
+      if (from.end_date) throw new BadRequestException('Enrollment already closed');
+      const to = await (tx as any).classroomOffering.findUnique({
+        where: { id: params.toOfferingId },
+        include: { academic_year: true },
+      });
+      if (!to || to.academic_year.school_id !== schoolId) throw new ForbiddenException('Target offering not accessible');
+      // Retention is also next academic year
+      if (!(to.academic_year.start_date > from.classroom_offering.academic_year.start_date)) {
+        throw new BadRequestException('Target offering must be in a later academic year');
+      }
+      // Do not allow returning to the exact same classroom definition
+      if (to.classroom_definition_id === from.classroom_offering.classroom_definition_id) {
+        throw new BadRequestException('Cannot retain into the same classroom definition');
+      }
+      const overlap = await (tx as any).studentEnrollment.findFirst({ where: { student_id: student.id, academic_year_id: to.academic_year_id, end_date: null } });
+      if (overlap) throw new BadRequestException('Student already has an active enrollment in target academic year');
+      await (tx as any).studentEnrollment.update({ where: { id: from.id }, data: { end_date: params.endDate ?? new Date(), status: 'completed' } });
+      return (tx as any).studentEnrollment.create({
+        data: {
+          student_id: student.id,
+          classroom_offering_id: to.id,
+          academic_year_id: to.academic_year_id,
+          start_date: params.startDate ?? new Date(),
+          status: 'active',
+        },
+      });
+    });
+  }
 }
