@@ -1,8 +1,11 @@
-import { Injectable, UnauthorizedException, NotFoundException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
@@ -44,9 +47,11 @@ export class AuthService {
     );
 
     const accessToken = await this.generateAccessToken(user);
+    const refreshToken = await this.generateRefreshToken(user);
 
     return {
-      accessToken,
+      access_token: accessToken,
+      refresh_token: refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -109,9 +114,11 @@ export class AuthService {
     await this.usersService.update(user.id, {});
 
     const accessToken = await this.generateAccessToken(user);
+    const refreshToken = await this.generateRefreshToken(user);
 
     return {
-      accessToken,
+      access_token: accessToken,
+      refresh_token: refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -142,6 +149,161 @@ export class AuthService {
     });
 
     return token;
+  }
+
+  private async generateRefreshToken(user: { id: string; email: string; role: string }) {
+    const jti = randomUUID();
+    // Refresh token expires in 30 days
+    const expiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000);
+    
+    // Create a refresh token payload (different from access token)
+    const refreshPayload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      jti,
+      type: 'refresh',
+    };
+
+    const token = this.jwtService.sign(refreshPayload, { expiresIn: '30d' });
+
+    // Store refresh token in session
+    await this.prisma.session.create({
+      data: {
+        user_id: user.id,
+        jti,
+        is_active: true,
+        expires_at: expiresAt,
+      },
+    });
+
+    return token;
+  }
+
+  async refreshToken(refreshTokenDto: RefreshTokenDto) {
+    try {
+      // Verify and decode the refresh token
+      const payload = this.jwtService.verify(refreshTokenDto.refresh_token) as any;
+
+      // Check if it's a refresh token
+      if (payload.type !== 'refresh') {
+        throw new UnauthorizedException('Invalid token type');
+      }
+
+      // Check if session is still active
+      const session = await this.prisma.session.findUnique({
+        where: { jti: payload.jti },
+      });
+
+      if (!session || !session.is_active || session.expires_at < new Date()) {
+        throw new UnauthorizedException('Refresh token expired or revoked');
+      }
+
+      // Get user
+      const user = await this.usersService.findByEmail(payload.email);
+      if (!user || !user.is_active) {
+        throw new UnauthorizedException('User not found or inactive');
+      }
+
+      // Generate new access token
+      const accessToken = await this.generateAccessToken(user);
+
+      // Optionally rotate refresh token (generate new one)
+      const newRefreshToken = await this.generateRefreshToken(user);
+
+      // Revoke old refresh token session
+      await this.revokeSessionByJti(payload.jti);
+
+      return {
+        access_token: accessToken,
+        refresh_token: newRefreshToken,
+      };
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
+  async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+    const user = await this.usersService.findByEmail(forgotPasswordDto.email);
+
+    // Don't reveal if user exists or not (security best practice)
+    if (!user) {
+      // Still return success to prevent email enumeration
+      return {
+        message: 'If an account with that email exists, a password reset link has been sent.',
+      };
+    }
+
+    // Generate reset token
+    const resetToken = randomUUID();
+    const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    // Store reset token in user record
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password_reset_token: resetToken,
+        password_reset_expires: resetExpires,
+      },
+    });
+
+    // Send password reset email
+    try {
+      await this.emailService.sendPasswordResetEmail(
+        user.email,
+        user.first_name,
+        resetToken,
+      );
+    } catch (error) {
+      // Log error but don't reveal it to user
+      console.error('Failed to send password reset email:', error);
+    }
+
+    return {
+      message: 'If an account with that email exists, a password reset link has been sent.',
+    };
+  }
+
+  async resetPassword(resetPasswordDto: ResetPasswordDto) {
+    // Find user by reset token
+    const user = await this.prisma.user.findUnique({
+      where: { password_reset_token: resetPasswordDto.token },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    // Check if token has expired
+    if (!user.password_reset_expires || user.password_reset_expires < new Date()) {
+      throw new BadRequestException('Reset token has expired');
+    }
+
+    // Hash new password
+    const passwordHash = await bcrypt.hash(resetPasswordDto.newPassword, 10);
+
+    // Update password and clear reset token
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password_hash: passwordHash,
+        password_reset_token: null,
+        password_reset_expires: null,
+      },
+    });
+
+    // Revoke all existing sessions for security
+    await this.prisma.session.updateMany({
+      where: { user_id: user.id, is_active: true },
+      data: { is_active: false, revoked_at: new Date() },
+    });
+
+    return {
+      message: 'Password has been reset successfully',
+    };
   }
 
   async revokeSessionByJti(jti?: string) {
