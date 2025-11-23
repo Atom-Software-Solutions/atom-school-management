@@ -54,6 +54,38 @@ docker-compose -f docker-compose.dev.yml up
 - Health Check: http://localhost:3000/api/health
 - Swagger Documentation: http://localhost:3000/api
 
+## Testing Docker Build Locally
+
+Before pushing to avoid CI/CD failures, test your Docker build locally:
+
+### Quick Tests
+
+```bash
+# Quick build test
+npm run docker:build
+
+# Build without cache (more thorough)
+npm run docker:build:no-cache
+
+# Test with same platform as CI/CD
+npm run docker:build:ci
+
+# Quick verification
+npm run docker:test
+```
+
+### Manual Testing
+
+```bash
+# Test full production build
+docker build -t atom-school-management:test .
+
+# Test individual stages
+docker build --target dependencies -t atom-school-management:deps .
+docker build --target build -t atom-school-management:build .
+docker build --target production -t atom-school-management:prod .
+```
+
 ## Development Workflow
 
 ### Start Development Environment

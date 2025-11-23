@@ -38,18 +38,20 @@ FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Install only production dependencies
+# Install build tools for native dependencies (bcrypt, etc.) and production dependencies
+RUN apk add --no-cache python3 make g++
+
 COPY package*.json ./
 COPY prisma ./prisma/
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --omit=dev && npm cache clean --force && \
+    apk del python3 make g++
 
 # Copy built application and generated Prisma Client
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/generated ./generated
 
-# Verify critical files exist
-RUN test -f dist/main.js || (echo "ERROR: dist/main.js not found. Build may have failed." && exit 1) && \
-    test -d generated/prisma || (echo "ERROR: Generated Prisma Client not found" && exit 1)
+# Verify critical files exist (Prisma already verified in build stage, but check main.js)
+RUN test -f dist/src/main.js || (echo "ERROR: dist/src/main.js not found. Build may have failed." && exit 1)
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
@@ -67,4 +69,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Start the application
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/src/main.js"]
