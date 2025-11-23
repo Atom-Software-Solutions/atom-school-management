@@ -1,39 +1,40 @@
-import { Body, Controller, ForbiddenException, Get, Param, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Param, Patch, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { ClassroomsService } from './classrooms.service';
-import { CreateClassroomDefinitionDto } from './dto/create-classroom-definition.dto';
+import { UpdateClassroomDefinitionDto } from './dto/update-classroom-definition.dto';
 import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
 
-@Controller('schools/:schoolId/classroom-definitions')
+@Controller('classroom-definitions')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('SCHOOL_ADMIN')
-export class ClassroomDefinitionsController {
+export class ClassroomDefinitionsUpdateController {
   constructor(private readonly classroomsService: ClassroomsService) {}
 
-  @Get()
-  list(@Param('schoolId') schoolId: string, @Request() req: AuthenticatedRequest) {
+  @Get(':id')
+  getOne(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
     }
     const adminUserId = req.user.id;
-    return this.classroomsService.listDefinitions(schoolId, adminUserId);
+    return this.classroomsService.getDefinitionById(id, adminUserId);
   }
 
-  @Post()
-  create(
-    @Param('schoolId') schoolId: string,
-    @Body() dto: CreateClassroomDefinitionDto,
+  @Patch(':id')
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateClassroomDefinitionDto,
     @Request() req: AuthenticatedRequest,
   ) {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
     }
     const adminUserId = req.user.id;
-    return this.classroomsService.createDefinition(schoolId, adminUserId, {
+    return this.classroomsService.updateDefinitionById(id, adminUserId, {
       name: dto.name,
       level: dto.level || null,
+      isArchived: dto.isArchived,
     });
   }
-
 }
+

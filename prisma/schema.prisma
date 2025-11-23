@@ -97,8 +97,8 @@ model Student {
   id         String    @id @default(uuid())
   school_id  String
   class_id   String?
-  student_no String    // Tenant-scoped uniqueness (composite with school_id)
-  reg_no     String?   // Tenant-scoped uniqueness (composite with school_id)
+  student_no String // Tenant-scoped uniqueness (composite with school_id)
+  reg_no     String? // Tenant-scoped uniqueness (composite with school_id)
   first_name String
   last_name  String
   email      String?   @unique // Global uniqueness (used for communication)
@@ -113,7 +113,7 @@ model Student {
   classroom Classroom?        @relation(fields: [class_id], references: [id])
 
   @@unique([school_id, student_no]) // Tenant-scoped: unique per school
-  @@unique([school_id, reg_no])     // Tenant-scoped: unique per school (if provided)
+  @@unique([school_id, reg_no]) // Tenant-scoped: unique per school (if provided)
   @@index([school_id])
   @@index([deleted_at])
   @@schema("student_mgt")
@@ -135,7 +135,7 @@ model Classroom {
 
 model Guardian {
   id         String   @id @default(uuid())
-  school_id String   // Tenant identifier - reference to user_mgt.School.id (cross-schema, no Prisma relation)
+  school_id  String // Tenant identifier - reference to user_mgt.School.id (cross-schema, no Prisma relation)
   first_name String
   last_name  String
   email      String?
