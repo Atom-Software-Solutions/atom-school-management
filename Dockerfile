@@ -24,7 +24,11 @@ COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 
 # Generate Prisma Client
+# Note: Prisma generate doesn't require DATABASE_URL, but we verify it succeeds
 RUN npx prisma generate
+
+# Verify generated Prisma Client exists (fail fast if generation failed)
+RUN test -d generated/prisma || (echo "ERROR: Generated Prisma Client not found at generated/prisma" && exit 1)
 
 # Build the application
 RUN npm run build
@@ -42,6 +46,10 @@ RUN npm ci --only=production && npm cache clean --force
 # Copy built application and generated Prisma Client
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/generated ./generated
+
+# Verify critical files exist
+RUN test -f dist/main.js || (echo "ERROR: dist/main.js not found. Build may have failed." && exit 1) && \
+    test -d generated/prisma || (echo "ERROR: Generated Prisma Client not found" && exit 1)
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \

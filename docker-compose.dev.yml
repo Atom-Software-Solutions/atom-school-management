@@ -56,11 +56,12 @@ services:
       - atom-school-network-dev
     command: >
       sh -c "
+        set -e &&
         echo 'Waiting for database to be ready...' &&
         sleep 3 &&
+        echo 'Running database migrations...' &&
         npx prisma migrate deploy &&
-        npx prisma generate &&
-        npm run build &&
+        echo 'Starting application in development mode...' &&
         npm run start:dev
       "
 

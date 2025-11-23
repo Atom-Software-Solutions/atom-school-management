@@ -252,6 +252,47 @@ POSTGRES_PORT=5433
 docker-compose exec app npx prisma generate
 ```
 
+### Build Failures
+
+#### Invalid Docker Tag Format
+**Error:** `invalid tag "ghcr.io/.../atom-school-management:-219a06b": invalid reference format`
+
+**Solution:** This was fixed in the GitHub Actions workflow. If you see this, ensure you're using the latest workflow file.
+
+#### Missing Prisma Client
+**Error:** `Cannot find module '@generated/prisma'` or `Generated Prisma Client not found`
+
+**Solutions:**
+- Verify `prisma/schema.prisma` is valid
+- Check that the output path `../generated/prisma` is correct
+- Ensure Prisma CLI version matches `package.json` version
+- Run `npx prisma generate` locally to test
+
+#### TypeScript Compilation Errors
+**Symptoms:** Build fails during `npm run build`
+
+**Solutions:**
+- Run `npm run build` locally to catch errors before pushing
+- Check `tsconfig.json` paths are correct
+- Ensure all imports resolve correctly
+- Verify `generated/prisma` exists before TypeScript compilation
+
+#### Missing Dependencies
+**Symptoms:** Build fails with "Cannot find module" errors
+
+**Solutions:**
+- Ensure `package.json` and `package-lock.json` are committed
+- Verify all dependencies are listed in `package.json`
+- Check that `npm ci` completes successfully
+
+#### Build Cache Issues
+**Symptoms:** Build uses stale dependencies or code
+
+**Solutions:**
+- Clear Docker build cache: `docker builder prune`
+- Rebuild without cache: `docker build --no-cache`
+- In CI/CD, check that cache is working correctly
+
 ### Reset everything
 
 ```bash
@@ -320,6 +361,10 @@ The Docker setup has been enhanced with the following improvements:
 3. **Health Checks**: Added health check to production app container in docker-compose
 4. **Improved Build Process**: Optimized multi-stage Dockerfile for better caching and smaller images
 5. **Better Startup Sequence**: Improved wait times and startup commands for more reliable container initialization
+6. **Error Handling**: Added `set -e` to startup commands for fail-fast behavior
+7. **Build Verification**: Added verification steps for Prisma Client and critical build outputs
+8. **CI/CD Fixes**: Fixed Docker tag format issues in GitHub Actions workflow
+9. **Build Context Optimization**: Excluded `generated` directory from Docker build context
 
 ## Next Steps
 

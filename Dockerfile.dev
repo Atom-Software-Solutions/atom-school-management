@@ -12,6 +12,9 @@ COPY prisma ./prisma/
 # Generate Prisma Client
 RUN npx prisma generate
 
+# Verify generated Prisma Client exists
+RUN test -d generated/prisma || (echo "ERROR: Generated Prisma Client not found at generated/prisma" && exit 1)
+
 # Copy source code
 COPY . .
 

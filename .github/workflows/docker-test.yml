@@ -42,6 +42,7 @@ jobs:
           tags: atom-school-management:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          platforms: linux/amd64
 
       - name: Run tests in container
         run: |
