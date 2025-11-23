@@ -7,15 +7,17 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies
-RUN npm ci
+# Install all dependencies (including dev dependencies for build)
+RUN npm ci && npm cache clean --force
 
 # Stage 2: Build
 FROM node:20-alpine AS build
 
 WORKDIR /app
 
-# Copy dependencies from previous stage
+# Copy package files and dependencies
+COPY package*.json ./
+COPY prisma ./prisma/
 COPY --from=dependencies /app/node_modules ./node_modules
 
 # Copy source code
@@ -58,5 +60,3 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
 
 # Start the application
 CMD ["node", "dist/main.js"]
-
-

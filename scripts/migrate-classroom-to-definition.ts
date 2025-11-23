@@ -11,6 +11,8 @@
  *   npx ts-node scripts/migrate-classroom-to-definition.ts
  */
 
+/// <reference types="node" />
+
 import { PrismaClient } from '../generated/prisma';
 
 const prisma = new PrismaClient();

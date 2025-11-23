@@ -13,8 +13,9 @@ This guide explains how to run the Atom School Management API using Docker.
 
 ```bash
 cd atom-school-management
-cp .env.example .env
 ```
+
+**Note**: Create a `.env` file based on the environment variables listed below. The `.env.example` file is referenced in documentation but you'll need to create your own `.env` file with the required variables.
 
 ### 2. Configure Environment Variables
 
@@ -63,6 +64,7 @@ docker-compose -f docker-compose.dev.yml up
 
 This will:
 - Start PostgreSQL database
+- Automatically run database migrations on startup
 - Start the NestJS app in watch mode (auto-reload on code changes)
 - Mount your local code for live development
 
@@ -270,14 +272,19 @@ docker-compose up -d
    - Change default database passwords
    - Use secrets management (Docker secrets, AWS Secrets Manager, etc.)
    - Enable SSL/TLS for database connections
+   - Application runs as non-root user (already implemented)
+   - Resource limits configured to prevent resource exhaustion
 
 2. **Performance**
    - Use connection pooling for database
-   - Configure appropriate resource limits
-   - Use multi-stage builds (already implemented)
-   - Enable health checks
+   - Resource limits configured (App: 512MB RAM, DB: 1GB RAM)
+   - Multi-stage builds for optimized image size (already implemented)
+   - Health checks enabled for both app and database
+   - Automatic database migrations on startup
 
 3. **Monitoring**
+   - Health check endpoint: `GET /api/health`
+   - Container health checks configured
    - Set up logging aggregation
    - Monitor container health
    - Track application metrics
@@ -302,6 +309,18 @@ services:
 
 This file is automatically loaded by Docker Compose.
 
+## Recent Improvements
+
+The Docker setup has been enhanced with the following improvements:
+
+1. **Automatic Migrations**: Both production and development setups now automatically run database migrations on startup
+2. **Resource Limits**: Configured CPU and memory limits to prevent resource exhaustion:
+   - App container: 512MB RAM limit, 256MB reservation
+   - Database container: 1GB RAM limit, 512MB reservation
+3. **Health Checks**: Added health check to production app container in docker-compose
+4. **Improved Build Process**: Optimized multi-stage Dockerfile for better caching and smaller images
+5. **Better Startup Sequence**: Improved wait times and startup commands for more reliable container initialization
+
 ## Next Steps
 
 1. Set up CI/CD pipeline
@@ -310,5 +329,3 @@ This file is automatically loaded by Docker Compose.
 4. Configure monitoring and logging
 5. Set up SSL/TLS certificates
 6. Configure reverse proxy (nginx, traefik, etc.)
-
-
