@@ -4,6 +4,7 @@ export interface AuthenticatedUser {
   first_name: string;
   last_name: string;
   role: string;
+  school_id?: string | null; // Tenant identifier (null for SUPER_ADMIN, undefined if not set)
   phone: string | null;
   is_active: boolean;
   last_login: Date | null;

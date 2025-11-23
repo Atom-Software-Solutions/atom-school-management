@@ -97,12 +97,12 @@ model Student {
   id         String    @id @default(uuid())
   school_id  String
   class_id   String?
-  student_no String    @unique
-  reg_no     String?   @unique
+  student_no String    // Tenant-scoped uniqueness (composite with school_id)
+  reg_no     String?   // Tenant-scoped uniqueness (composite with school_id)
   first_name String
   last_name  String
-  email      String?   @unique
-  phone      String?   @unique
+  email      String?   @unique // Global uniqueness (used for communication)
+  phone      String?   @unique // Global uniqueness (used for communication)
   is_active  Boolean   @default(true)
   deleted_at DateTime?
   created_at DateTime  @default(now())
@@ -112,6 +112,8 @@ model Student {
   guardians StudentGuardian[]
   classroom Classroom?        @relation(fields: [class_id], references: [id])
 
+  @@unique([school_id, student_no]) // Tenant-scoped: unique per school
+  @@unique([school_id, reg_no])     // Tenant-scoped: unique per school (if provided)
   @@index([school_id])
   @@index([deleted_at])
   @@schema("student_mgt")
@@ -133,6 +135,7 @@ model Classroom {
 
 model Guardian {
   id         String   @id @default(uuid())
+  school_id String   // Tenant identifier - reference to user_mgt.School.id (cross-schema, no Prisma relation)
   first_name String
   last_name  String
   email      String?
@@ -142,6 +145,7 @@ model Guardian {
 
   students StudentGuardian[]
 
+  @@index([school_id])
   @@schema("student_mgt")
 }
 
@@ -184,6 +188,7 @@ model Session {
 model Payment {
   id             String               @id @default(uuid())
   user_id        String // Reference to user in user_mgt schema
+  school_id      String // Tenant identifier - reference to user_mgt.School.id (cross-schema, no Prisma relation)
   amount         Decimal              @db.Decimal(10, 2)
   currency       String               @default("UGX")
   status         String // PENDING, COMPLETED, FAILED, REFUNDED
@@ -196,6 +201,7 @@ model Payment {
   transactions   PaymentTransaction[] // One-to-many relation to transactions
 
   @@index([user_id])
+  @@index([school_id])
   @@index([status])
   @@index([reference])
   @@schema("payment_mgt")

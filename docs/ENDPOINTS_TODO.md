@@ -63,14 +63,15 @@ Legend:
 
 ## Academic Calendar
 
-- [ ] `GET /schools/:schoolId/term-templates` - List term templates (immutable once used)
-- [ ] `POST /schools/:schoolId/term-templates` - Create term template (names and count)
-- [ ] `PATCH /term-templates/:id/lock` - Lock template (auto-locked on first use)
-- [ ] `GET /schools/:schoolId/years` - List academic years
-- [ ] `POST /schools/:schoolId/years` - Create academic year (references a term template)
-- [ ] `GET /years/:yearId` - Get academic year details
-- [ ] `GET /years/:yearId/terms` - List terms instantiated for the year
-- [ ] `PATCH /years/:yearId/status` - Update year status (planned/active/closed)
+- [x] `GET /schools/:schoolId/term-templates` - List term templates (immutable once used)
+- [x] `POST /schools/:schoolId/term-templates` - Create term template (names and count)
+- [x] `PATCH /schools/:schoolId/term-templates/:id` - Update term template (name and/or structure; locked templates preserve existing terms)
+- [x] `PATCH /term-templates/:id/lock` - Lock template (auto-locked on first use)
+- [x] `GET /schools/:schoolId/years` - List academic years
+- [x] `POST /schools/:schoolId/years` - Create academic year (references a term template)
+- [x] `GET /years/:yearId` - Get academic year details
+- [x] `GET /years/:yearId/terms` - List terms instantiated for the year
+- [x] `PATCH /years/:yearId/status` - Update year status (planned/active/closed)
 
 ---
 
@@ -167,11 +168,11 @@ Legend:
 
 ## Summary
 
-- **Total Endpoints**: 86
-- **Implemented**: 32
+- **Total Endpoints**: 87
+- **Implemented**: 41
 - **In Progress**: 0
-- **Not Implemented**: 54
-- **Completion**: 37.2%
+- **Not Implemented**: 46
+- **Completion**: 47.1%
 
 ---
 

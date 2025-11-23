@@ -23,10 +23,7 @@ import { UpdateSchoolDto } from './dto/update-school.dto';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard, Roles } from '../auth/guards/roles.guard';
-
-interface AuthenticatedRequest extends Request {
-  user: any;
-}
+import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
 
 @ApiTags('schools')
 @Controller('schools')
@@ -78,6 +75,9 @@ export class SchoolsController {
   @ApiResponse({ status: 403, description: 'Forbidden - insufficient permissions' })
   @ApiResponse({ status: 404, description: 'School not found' })
   findOne(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
+    if (!req.user) {
+      throw new ForbiddenException('Authentication required');
+    }
     const userRole = req.user.role;
     if (userRole === 'SUPER_ADMIN') {
       return this.schoolsService.findOne(id);
@@ -95,6 +95,9 @@ export class SchoolsController {
     @Body() updateSchoolDto: UpdateSchoolDto,
     @Request() req: AuthenticatedRequest,
   ) {
+    if (!req.user) {
+      throw new ForbiddenException('Authentication required');
+    }
     const userRole = req.user.role;
     if (userRole === 'SUPER_ADMIN') {
       return this.schoolsService.update(id, updateSchoolDto);
@@ -111,6 +114,9 @@ export class SchoolsController {
     @Param('id') id: string,
     @Request() req: AuthenticatedRequest,
   ) {
+    if (!req.user) {
+      throw new ForbiddenException('Authentication required');
+    }
     const userRole = req.user.role;
     if (userRole === 'SUPER_ADMIN') {
       return this.schoolsService.getSettings(id);
@@ -130,6 +136,9 @@ export class SchoolsController {
     @Body() updateSettingsDto: UpdateSettingsDto,
     @Request() req: AuthenticatedRequest,
   ) {
+    if (!req.user) {
+      throw new ForbiddenException('Authentication required');
+    }
     const userRole = req.user.role;
     if (userRole === 'SUPER_ADMIN') {
       return this.schoolsService.updateSettings(id, updateSettingsDto);

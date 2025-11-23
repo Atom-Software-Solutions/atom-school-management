@@ -131,10 +131,33 @@ export class AuthService {
     };
   }
 
+  private async getUserSchoolId(userId: string, role: string): Promise<string | null> {
+    // SUPER_ADMIN doesn't belong to a specific school
+    if (role === 'SUPER_ADMIN') {
+      return null;
+    }
+    
+    // For other roles, get their school_id from SchoolAdmin relationship
+    const schoolAdmin = await this.prisma.schoolAdmin.findFirst({
+      where: { user_id: userId },
+      select: { school_id: true },
+    });
+    
+    return schoolAdmin?.school_id || null;
+  }
+
   private async generateAccessToken(user: { id: string; email: string; role: string }) {
     const jti = randomUUID();
+    const schoolId = await this.getUserSchoolId(user.id, user.role);
+    
     // sign to get exp
-    const token = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role, jti } as JwtPayload);
+    const token = this.jwtService.sign({ 
+      sub: user.id, 
+      email: user.email, 
+      role: user.role, 
+      school_id: schoolId || undefined,
+      jti 
+    } as JwtPayload);
     const decoded: any = this.jwtService.decode(token);
     const expSeconds: number | undefined = decoded?.exp;
     const expiresAt = expSeconds ? new Date(expSeconds * 1000) : new Date(Date.now() + 7 * 24 * 3600 * 1000);
@@ -156,11 +179,14 @@ export class AuthService {
     // Refresh token expires in 30 days
     const expiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000);
     
+    const schoolId = await this.getUserSchoolId(user.id, user.role);
+    
     // Create a refresh token payload (different from access token)
     const refreshPayload = {
       sub: user.id,
       email: user.email,
       role: user.role,
+      school_id: schoolId || undefined,
       jti,
       type: 'refresh',
     };

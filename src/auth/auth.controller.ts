@@ -23,11 +23,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { AuthenticatedUser } from './interfaces/authenticated-user.interface';
-
-interface AuthenticatedRequest extends Request {
-  user: AuthenticatedUser;
-}
+import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -111,6 +107,9 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   getProfile(@Request() req: AuthenticatedRequest) {
     const user = req.user;
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
     return {
       id: user.id,
       email: user.email,
