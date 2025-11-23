@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -10,6 +10,7 @@ import { EmailModule } from './email/email.module';
 import { ClassroomsModule } from './classrooms/classrooms.module';
 import { PrismaService } from './prisma/prisma.service';
 import { AcademicsModule } from './academics/academics.module';
+import { TenantMiddleware } from './common/middleware/tenant.middleware';
 
 @Module({
   imports: [
@@ -28,4 +29,10 @@ import { AcademicsModule } from './academics/academics.module';
   providers: [AppService, PrismaService],
   exports: [PrismaService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    // Apply tenant middleware to all routes
+    // It will safely handle cases where user is not authenticated
+    consumer.apply(TenantMiddleware).forRoutes('*');
+  }
+}

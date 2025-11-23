@@ -5,10 +5,7 @@ import { RolesGuard, Roles } from '../auth/guards/roles.guard';
 import type { Response as ExpressResponse } from 'express';
 import { UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-
-interface AuthenticatedRequest extends Request {
-  user: any;
-}
+import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
 
 @Controller('students')
 @UseGuards(JwtAuthGuard, RolesGuard)

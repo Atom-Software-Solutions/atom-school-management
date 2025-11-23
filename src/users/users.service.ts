@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -13,7 +14,25 @@ import { UserResponse, UserWithPassword } from './interfaces/user-response.inter
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(createUserDto: CreateUserDto): Promise<UserResponse> {
+  private async assertIsAdminOfSchool(schoolId: string, userId: string) {
+    const rel = await this.prisma.schoolAdmin.findUnique({
+      where: { school_id_user_id: { school_id: schoolId, user_id: userId } },
+    });
+    if (!rel) {
+      throw new ForbiddenException('Insufficient permissions for this school');
+    }
+  }
+
+  async create(
+    createUserDto: CreateUserDto,
+    tenantId?: string | null,
+    creatorUserId?: string,
+  ): Promise<UserResponse> {
+    // Validate tenant if provided (for non-SUPER_ADMIN roles)
+    if (tenantId && creatorUserId && createUserDto.role !== 'SUPER_ADMIN') {
+      await this.assertIsAdminOfSchool(tenantId, creatorUserId);
+    }
+
     // Check if user with email already exists
     const existingUser = await this.prisma.user.findUnique({
       where: { email: createUserDto.email },
@@ -52,11 +71,46 @@ export class UsersService {
       },
     });
 
+    // If tenantId provided and user is SCHOOL_ADMIN, create SchoolAdmin relationship
+    if (tenantId && createUserDto.role === 'SCHOOL_ADMIN') {
+      await this.prisma.schoolAdmin.create({
+        data: {
+          school_id: tenantId,
+          user_id: user.id,
+          is_super_admin: false,
+        },
+      }).catch(() => {
+        // Ignore if relationship already exists
+      });
+    }
+
     return user;
   }
 
-  async findAll(): Promise<UserResponse[]> {
+  async findAll(tenantId?: string | null): Promise<UserResponse[]> {
+    const where: any = {};
+    
+    // If tenantId is provided (not null), filter by school
+    // null means SUPER_ADMIN can see all users
+    if (tenantId !== undefined && tenantId !== null) {
+      // Get all user_ids for this school from SchoolAdmin relationship
+      const schoolAdmins = await this.prisma.schoolAdmin.findMany({
+        where: { school_id: tenantId },
+        select: { user_id: true },
+      });
+      const userIds = schoolAdmins.map(sa => sa.user_id);
+      
+      if (userIds.length === 0) {
+        // No users in this school
+        return [];
+      }
+      
+      where.id = { in: userIds };
+    }
+    // If tenantId is null (SUPER_ADMIN), no filter applied - returns all users
+    
     return this.prisma.user.findMany({
+      where,
       select: {
         id: true,
         email: true,
@@ -71,9 +125,24 @@ export class UsersService {
     });
   }
 
-  async findOne(id: string): Promise<UserResponse> {
+  async findOne(id: string, tenantId?: string | null): Promise<UserResponse> {
+    const where: any = { id };
+    
+    // If tenantId is provided (not null), verify user belongs to this tenant
+    if (tenantId !== undefined && tenantId !== null) {
+      const schoolAdmin = await this.prisma.schoolAdmin.findFirst({
+        where: { user_id: id, school_id: tenantId },
+      });
+      
+      if (!schoolAdmin) {
+        // User doesn't belong to this tenant
+        throw new NotFoundException(`User with ID ${id} not found`);
+      }
+    }
+    // If tenantId is null (SUPER_ADMIN), no tenant check - can access any user
+    
     const user = await this.prisma.user.findUnique({
-      where: { id },
+      where,
       select: {
         id: true,
         email: true,
@@ -100,8 +169,8 @@ export class UsersService {
     });
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<UserResponse> {
-    await this.findOne(id); // Check if user exists
+  async update(id: string, updateUserDto: UpdateUserDto, tenantId?: string | null): Promise<UserResponse> {
+    await this.findOne(id, tenantId); // Check if user exists and belongs to tenant
 
     const updateData: any = {};
     if (updateUserDto.firstName)
@@ -149,8 +218,8 @@ export class UsersService {
     });
   }
 
-  async remove(id: string) {
-    await this.findOne(id); // Check if user exists
+  async remove(id: string, tenantId?: string | null) {
+    await this.findOne(id, tenantId); // Check if user exists and belongs to tenant
 
     await this.prisma.user.delete({
       where: { id },

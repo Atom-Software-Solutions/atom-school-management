@@ -32,6 +32,18 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('User not found or inactive');
     }
 
+    // Get school_id from payload (already validated in token) or fetch from database
+    let schoolId: string | null = payload.school_id || null;
+    
+    // If not in payload (for backward compatibility), fetch from database
+    if (!schoolId && user.role !== 'SUPER_ADMIN') {
+      const schoolAdmin = await this.prisma.schoolAdmin.findFirst({
+        where: { user_id: user.id },
+        select: { school_id: true },
+      });
+      schoolId = schoolAdmin?.school_id || null;
+    }
+
     // Return user object without sensitive fields
     return {
       id: user.id,
@@ -39,6 +51,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       first_name: user.first_name,
       last_name: user.last_name,
       role: user.role,
+      school_id: schoolId,
       phone: user.phone,
       is_active: user.is_active,
       last_login: user.last_login,

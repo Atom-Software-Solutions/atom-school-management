@@ -48,10 +48,10 @@ export class StudentsService {
       if (e?.code === 'P2002' && Array.isArray(e?.meta?.target)) {
         const target = e.meta.target as string[];
         if (target.includes('student_no')) {
-          throw new BadRequestException('A student with this studentNo already exists');
+          throw new BadRequestException('A student with this studentNo already exists in this school');
         }
         if (target.includes('reg_no')) {
-          throw new BadRequestException('A student with this regNo already exists');
+          throw new BadRequestException('A student with this regNo already exists in this school');
         }
         if (target.includes('email')) {
           throw new BadRequestException('A student with this email already exists');
@@ -114,10 +114,10 @@ export class StudentsService {
       if (e?.code === 'P2002' && Array.isArray(e?.meta?.target)) {
         const target = e.meta.target as string[];
         if (target.includes('student_no')) {
-          throw new BadRequestException('A student with this studentNo already exists');
+          throw new BadRequestException('A student with this studentNo already exists in this school');
         }
         if (target.includes('reg_no')) {
-          throw new BadRequestException('A student with this regNo already exists');
+          throw new BadRequestException('A student with this regNo already exists in this school');
         }
       }
       throw e;
@@ -146,6 +146,7 @@ export class StudentsService {
     const student = await this.findOwned(studentId, adminUserId);
     const guardian = await this.prisma.guardian.create({
       data: {
+        school_id: student.school_id, // Set tenant context from student
         first_name: data.firstName,
         last_name: data.lastName,
         email: data.email,
@@ -243,12 +244,12 @@ export class StudentsService {
         const ekey = row.email.toLowerCase();
         if (fileEmails.has(ekey)) errors.push(`Row ${line}: duplicate email in file`);
         else fileEmails.add(ekey);
-        if (existingEmails.has(ekey)) errors.push(`Row ${line}: email already exists for this school`);
+        if (existingEmails.has(ekey)) errors.push(`Row ${line}: email already exists`);
       }
       if (row.phone) {
         if (filePhones.has(row.phone)) errors.push(`Row ${line}: duplicate phone in file`);
         else filePhones.add(row.phone);
-        if (existingPhones.has(row.phone)) errors.push(`Row ${line}: phone already exists for this school`);
+        if (existingPhones.has(row.phone)) errors.push(`Row ${line}: phone already exists`);
       }
     });
     return { valid: errors.length === 0, errors, total: rows.length };
@@ -300,11 +301,11 @@ export class StudentsService {
         continue;
       }
       if (row.email && emails.has(row.email.toLowerCase())) {
-        errors.push(`Row ${line}: email already exists for this school`);
+        errors.push(`Row ${line}: email already exists`);
         continue;
       }
       if (row.phone && phones.has(row.phone)) {
-        errors.push(`Row ${line}: phone already exists for this school`);
+        errors.push(`Row ${line}: phone already exists`);
         continue;
       }
       try {
