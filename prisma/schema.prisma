@@ -96,7 +96,6 @@ model SchoolAdmin {
 model Student {
   id         String    @id @default(uuid())
   school_id  String
-  class_id   String?
   student_no String // Tenant-scoped uniqueness (composite with school_id)
   reg_no     String? // Tenant-scoped uniqueness (composite with school_id)
   first_name String
@@ -110,26 +109,11 @@ model Student {
 
   // Note: school_id references user_mgt.School.id (cross-schema, no Prisma relation)
   guardians StudentGuardian[]
-  classroom Classroom?        @relation(fields: [class_id], references: [id])
 
   @@unique([school_id, student_no]) // Tenant-scoped: unique per school
   @@unique([school_id, reg_no]) // Tenant-scoped: unique per school (if provided)
   @@index([school_id])
   @@index([deleted_at])
-  @@schema("student_mgt")
-}
-
-model Classroom {
-  id         String   @id @default(uuid())
-  school_id  String
-  name       String
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  students Student[]
-
-  @@unique([school_id, name])
-  @@index([school_id])
   @@schema("student_mgt")
 }
 

@@ -25,26 +25,6 @@ export class ClassroomsService {
     throw error;
   }
 
-  // Legacy endpoints (kept for backward compat). Proxy to definitions list/create
-  async list(schoolId: string, adminUserId: string) {
-    await this.assertIsAdminOfSchool(schoolId, adminUserId);
-    return (this.prisma as any).classroomDefinition.findMany({
-      where: { school_id: schoolId, is_archived: false },
-      orderBy: { name: 'asc' },
-    });
-  }
-
-  async create(schoolId: string, adminUserId: string, data: { name: string }) {
-    await this.assertIsAdminOfSchool(schoolId, adminUserId);
-    try {
-      return await (this.prisma as any).classroomDefinition.create({
-        data: { school_id: schoolId, name: data.name.trim() },
-      });
-    } catch (e: any) {
-      this.handlePrismaUniqueError(e, 'name');
-    }
-  }
-
   // Definitions
   async listDefinitions(schoolId: string, adminUserId: string) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);

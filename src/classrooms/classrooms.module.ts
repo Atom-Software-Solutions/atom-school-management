@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { ClassroomsService } from './classrooms.service';
-import { ClassroomsController } from './classrooms.controller';
 import { ClassroomDefinitionsController } from './classroom-definitions.controller';
 import { ClassroomDefinitionsUpdateController } from './classroom-definitions-update.controller';
 import { ClassroomOfferingsController } from './classroom-offerings.controller';
@@ -12,7 +11,6 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 
 @Module({
   controllers: [
-    ClassroomsController,
     ClassroomDefinitionsController,
     ClassroomDefinitionsUpdateController,
     ClassroomOfferingsController,

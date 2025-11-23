@@ -309,19 +309,9 @@ export class StudentsService {
         continue;
       }
       try {
-        let classroomId: string | undefined = undefined;
-        if (row.className) {
-          const cls = await this.prisma.classroom.upsert({
-            where: { school_id_name: { school_id: schoolId, name: row.className } },
-            create: { school_id: schoolId, name: row.className },
-            update: {},
-          });
-          classroomId = cls.id;
-        }
-        await this.prisma.student.create({
+        const student = await this.prisma.student.create({
           data: {
             school_id: schoolId,
-            class_id: classroomId,
             student_no: row.studentNo,
             reg_no: row.regNo || undefined,
             first_name: row.firstName,
@@ -330,6 +320,94 @@ export class StudentsService {
             phone: row.phone,
           },
         });
+        
+        // If className is provided, create enrollment in new system
+        if (row.className) {
+          try {
+            // Find or create ClassroomDefinition
+            let definition = await (this.prisma as any).classroomDefinition.findUnique({
+              where: { school_id_name: { school_id: schoolId, name: row.className.trim() } },
+            });
+            
+            if (!definition) {
+              definition = await (this.prisma as any).classroomDefinition.create({
+                data: {
+                  school_id: schoolId,
+                  name: row.className.trim(),
+                },
+              });
+            }
+            
+            // Get the active academic year (or most recent if none active)
+            const activeYear = await (this.prisma as any).academicYear.findFirst({
+              where: {
+                school_id: schoolId,
+                status: 'active',
+              },
+              orderBy: { start_date: 'desc' },
+            });
+            
+            // If no active year, get the most recent year
+            const academicYear = activeYear || await (this.prisma as any).academicYear.findFirst({
+              where: { school_id: schoolId },
+              orderBy: { start_date: 'desc' },
+            });
+            
+            if (academicYear) {
+              // Find or create ClassroomOffering
+              let offering = await (this.prisma as any).classroomOffering.findUnique({
+                where: {
+                  academic_year_id_classroom_definition_id: {
+                    academic_year_id: academicYear.id,
+                    classroom_definition_id: definition.id,
+                  },
+                },
+              });
+              
+              if (!offering) {
+                offering = await (this.prisma as any).classroomOffering.create({
+                  data: {
+                    academic_year_id: academicYear.id,
+                    classroom_definition_id: definition.id,
+                    is_active: true,
+                  },
+                });
+              }
+              
+              // Check for existing active enrollment in this academic year
+              const existingEnrollment = await (this.prisma as any).studentEnrollment.findFirst({
+                where: {
+                  student_id: student.id,
+                  academic_year_id: academicYear.id,
+                  end_date: null, // Active enrollment
+                },
+              });
+              
+              if (!existingEnrollment) {
+                // Create StudentEnrollment only if one doesn't already exist
+                await (this.prisma as any).studentEnrollment.create({
+                  data: {
+                    student_id: student.id,
+                    classroom_offering_id: offering.id,
+                    academic_year_id: academicYear.id,
+                    start_date: new Date(),
+                    status: 'active',
+                  },
+                });
+              } else {
+                // Enrollment already exists - log info but don't fail
+                console.log(`Student ${student.id} already has an active enrollment in academic year ${academicYear.id}`);
+              }
+            } else {
+              // No academic year found - log warning but don't fail import
+              errors.push(`Row ${line}: className "${row.className}" specified but no academic year found for school. Student imported without enrollment.`);
+            }
+          } catch (enrollmentError: any) {
+            // Log enrollment error but don't fail the student import
+            errors.push(`Row ${line}: Failed to create enrollment for className "${row.className}": ${enrollmentError.message}`);
+          }
+        }
+        
         imported += 1;
         // Update sets so subsequent rows are checked against new inserts
         studentNos.add(row.studentNo);
