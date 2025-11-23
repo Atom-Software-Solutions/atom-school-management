@@ -77,12 +77,14 @@ Legend:
 
 ## Classroom Management
 
-- [ ] `GET /schools/:schoolId/classroom-definitions` - List classroom definitions (school-defined names)
-- [ ] `POST /schools/:schoolId/classroom-definitions` - Create classroom definition (name, level)
-- [ ] `PATCH /classroom-definitions/:id` - Update classroom definition (rename, archive)
-- [ ] `GET /years/:yearId/classroom-offerings` - List classroom offerings for an academic year
-- [ ] `POST /years/:yearId/classroom-offerings` - Create classroom offering from a definition
-- [ ] `PATCH /classroom-offerings/:id` - Update offering (displayName, isActive)
+- [x] `GET /schools/:schoolId/classroom-definitions` - List classroom definitions (school-defined names)
+- [x] `POST /schools/:schoolId/classroom-definitions` - Create classroom definition (name, level)
+- [x] `GET /classroom-definitions/:id` - Get single classroom definition by ID
+- [x] `PATCH /classroom-definitions/:id` - Update classroom definition (rename, archive)
+- [x] `GET /years/:yearId/classroom-offerings` - List classroom offerings for an academic year
+- [x] `POST /years/:yearId/classroom-offerings` - Create classroom offering from a definition
+- [x] `GET /classroom-offerings/:id` - Get single classroom offering by ID
+- [x] `PATCH /classroom-offerings/:id` - Update offering (displayName, isActive)
 
 ---
 
@@ -168,11 +170,11 @@ Legend:
 
 ## Summary
 
-- **Total Endpoints**: 87
-- **Implemented**: 41
+- **Total Endpoints**: 89
+- **Implemented**: 49
 - **In Progress**: 0
-- **Not Implemented**: 46
-- **Completion**: 47.1%
+- **Not Implemented**: 40
+- **Completion**: 55.1%
 
 ---
 

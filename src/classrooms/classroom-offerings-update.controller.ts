@@ -1,39 +1,39 @@
-import { Body, Controller, ForbiddenException, Get, Param, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Param, Patch, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { ClassroomsService } from './classrooms.service';
-import { CreateClassroomDefinitionDto } from './dto/create-classroom-definition.dto';
+import { UpdateClassroomOfferingDto } from './dto/update-classroom-offering.dto';
 import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
 
-@Controller('schools/:schoolId/classroom-definitions')
+@Controller('classroom-offerings')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('SCHOOL_ADMIN')
-export class ClassroomDefinitionsController {
+export class ClassroomOfferingsUpdateController {
   constructor(private readonly classroomsService: ClassroomsService) {}
 
-  @Get()
-  list(@Param('schoolId') schoolId: string, @Request() req: AuthenticatedRequest) {
+  @Get(':id')
+  getOne(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
     }
     const adminUserId = req.user.id;
-    return this.classroomsService.listDefinitions(schoolId, adminUserId);
+    return this.classroomsService.getOfferingById(id, adminUserId);
   }
 
-  @Post()
-  create(
-    @Param('schoolId') schoolId: string,
-    @Body() dto: CreateClassroomDefinitionDto,
+  @Patch(':id')
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateClassroomOfferingDto,
     @Request() req: AuthenticatedRequest,
   ) {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
     }
     const adminUserId = req.user.id;
-    return this.classroomsService.createDefinition(schoolId, adminUserId, {
-      name: dto.name,
-      level: dto.level || null,
+    return this.classroomsService.updateOffering(id, adminUserId, {
+      displayName: dto.displayName,
+      isActive: dto.isActive,
     });
   }
-
 }
+

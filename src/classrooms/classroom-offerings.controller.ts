@@ -1,10 +1,10 @@
-import { BadRequestException, Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { ClassroomsService } from './classrooms.service';
-import { Request } from 'express';
-
-interface AuthenticatedRequest extends Request { user: any }
+import { CreateClassroomOfferingDto } from './dto/create-classroom-offering.dto';
+import { UpdateClassroomOfferingDto } from './dto/update-classroom-offering.dto';
+import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
 
 @Controller('years/:yearId/classroom-offerings')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -13,43 +13,28 @@ export class ClassroomOfferingsController {
   constructor(private readonly classroomsService: ClassroomsService) {}
 
   @Get()
-  list(
-    @Param('yearId') yearId: string,
-    @Query('schoolId') schoolId: string,
-    @Req() req: AuthenticatedRequest,
-  ) {
-    const adminUserId = (req as any).user?.id as string;
-    if (!yearId) throw new BadRequestException('Missing yearId');
-    if (!schoolId) throw new BadRequestException('Missing schoolId');
-    return this.classroomsService.listOfferings(yearId, adminUserId, schoolId);
+  list(@Param('yearId') yearId: string, @Request() req: AuthenticatedRequest) {
+    if (!req.user) {
+      throw new ForbiddenException('Authentication required');
+    }
+    const adminUserId = req.user.id;
+    return this.classroomsService.listOfferings(yearId, adminUserId);
   }
 
   @Post()
   create(
     @Param('yearId') yearId: string,
-    @Query('schoolId') schoolId: string,
-    @Body() body: { classroomDefinitionId: string; displayName?: string | null },
-    @Req() req: AuthenticatedRequest,
+    @Body() dto: CreateClassroomOfferingDto,
+    @Request() req: AuthenticatedRequest,
   ) {
-    const adminUserId = (req as any).user?.id as string;
-    if (!yearId) throw new BadRequestException('Missing yearId');
-    if (!schoolId) throw new BadRequestException('Missing schoolId');
-    if (!body?.classroomDefinitionId) throw new BadRequestException('Missing body.classroomDefinitionId');
-    return this.classroomsService.createOffering(yearId, adminUserId, schoolId, body);
+    if (!req.user) {
+      throw new ForbiddenException('Authentication required');
+    }
+    const adminUserId = req.user.id;
+    return this.classroomsService.createOffering(yearId, adminUserId, {
+      classroomDefinitionId: dto.classroomDefinitionId,
+      displayName: dto.displayName,
+    });
   }
 
-  @Patch(':id')
-  update(
-    @Param('yearId') yearId: string,
-    @Param('id') id: string,
-    @Query('schoolId') schoolId: string,
-    @Body() body: { displayName?: string | null; isActive?: boolean },
-    @Req() req: AuthenticatedRequest,
-  ) {
-    const adminUserId = (req as any).user?.id as string;
-    if (!yearId) throw new BadRequestException('Missing yearId');
-    if (!schoolId) throw new BadRequestException('Missing schoolId');
-    if (!id) throw new BadRequestException('Missing id');
-    return this.classroomsService.updateOffering(id, adminUserId, schoolId, body);
-  }
 }
