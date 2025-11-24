@@ -8,49 +8,51 @@ No login is required—the image is public on GHCR.
 
 ---
 
-## Pull
+## Clone + enter the repo
 ```bash
-docker pull ghcr.io/atom-software-solutions/atom-school-management:develop
-```
-Use `:main` or `:latest` if needed.
-
----
-
-## Run
-```bash
-docker run --rm -p 3000:3000 --env-file /path/to/.env \
-  ghcr.io/atom-software-solutions/atom-school-management:develop
+git clone https://github.com/atom-software-solutions/atom-school-management.git
+cd atom-school-management
 ```
 
-Detach and name it:
+## Start everything with Compose
 ```bash
-docker run -d --name atom-school-app -p 3000:3000 --env-file /path/to/.env \
-  ghcr.io/atom-school-solutions/atom-school-management:develop
-
-docker stop atom-school-app
+docker compose -f docker-compose.quickstart.yml up
 ```
+- Pulls the public image from GHCR (no manual `docker pull` needed).
+- No `.env` file required—the compose file already wires reasonable defaults.
+- Launches PostgreSQL + the app, applies migrations, and streams logs.
+- The compose file pins the app service to `linux/amd64`, so Apple Silicon hosts
+  work out of the box.
+
+Run it in the background with `... up -d` and watch logs via
+`docker compose -f docker-compose.quickstart.yml logs -f app`.
+
+## Stop the stack
+```bash
+docker compose -f docker-compose.quickstart.yml down
+```
+Add `-v` if you also want to remove the local `pgdata_quickstart` volume.
 
 ---
 
 ## Check it
-- Health: http://localhost:3000/api/health  
+- App health: http://localhost:3000/api/health  
 - Swagger/docs: http://localhost:3000/api
+- Postgres: localhost:5433 (user/pass `postgres` / `postgres`)
+- App login: `admin@example.com` / `ChangeMe123!`
 
 ---
 
 ## Common issues
 | Problem | Fix |
 |---------|-----|
-| Exit on start | Check env vars + DB connection (`docker logs …`). |
-| Port conflict | Change to `-p 3001:3000`. |
-| Different tag | Replace `:develop` with `:main`, `:latest`, or a semver tag. |
+| Docker not running | Start Docker Desktop/Engine, then rerun the compose command. |
+| Port conflict | Edit `docker-compose.quickstart.yml` (ports 3000/5433) before running. |
+| Clean slate needed | `docker compose -f docker-compose.quickstart.yml down -v`. |
+| Need custom env | Duplicate the compose file and edit the `environment` block. |
 
 ---
 
-Need DB + app with zero config? Use the provided quickstart compose file:
-```bash
-docker compose -f docker-compose.quickstart.yml up
+Share these instructions with anyone who needs the container locally—everything
+they need is in this repo + the compose quickstart.*** End Patch*** End Patch
 ```
-This spins up PostgreSQL (with local data in `pgdata_quickstart`) plus the app, using the defaults baked into the compose file (`admin@example.com` / `ChangeMe123!`).
-
-That’s it—share these commands with anyone who needs the container locally.
