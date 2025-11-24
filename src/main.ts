@@ -3,6 +3,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { PrismaService } from './prisma/prisma.service';
+import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 import * as bcrypt from 'bcrypt';
 
 async function ensureSuperAdmin(prisma: PrismaService) {
@@ -64,6 +65,9 @@ async function bootstrap() {
   // Ensure PrismaService is connected before checking for SUPER_ADMIN
   await prismaService.$connect();
   await ensureSuperAdmin(prismaService);
+
+  // Enable global exception filter for Prisma errors
+  app.useGlobalFilters(new PrismaExceptionFilter());
 
   // Enable global validation
   app.useGlobalPipes(
