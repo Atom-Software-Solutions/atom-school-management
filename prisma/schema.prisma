@@ -6,41 +6,26 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["user_mgt", "payment_mgt", "student_mgt"]
-}
-
-// ==========================================
-// USER & SCHOOL MANAGEMENT SCHEMA
-// ==========================================
-
-enum Role {
-  SUPER_ADMIN
-  SCHOOL_ADMIN
-  PARENT
-  STUDENT
-
-  @@schema("user_mgt")
+  schemas  = ["payment_mgt", "student_mgt", "user_mgt"]
 }
 
 model School {
-  id         String    @id @default(uuid())
-  code       String    @unique
+  id         String        @id @default(uuid())
   name       String
-  domain     String
-  email      String
-  phone      String
+  created_at DateTime      @default(now())
+  updated_at DateTime      @updatedAt
   address    String?
+  code       String        @unique
+  currency   String        @default("UGX")
+  email      String
+  is_active  Boolean       @default(true)
   logo_url   String?
-  currency   String    @default("UGX")
-  time_zone  String    @default("Africa/Kampala")
-  is_active  Boolean   @default(true)
-  deleted_at DateTime? // Soft delete timestamp
-  settings   Json? // Flexible settings storage
-  created_at DateTime  @default(now())
-  updated_at DateTime  @updatedAt
-
-  // Relations
-  admins SchoolAdmin[]
+  phone      String
+  time_zone  String        @default("Africa/Kampala")
+  settings   Json?
+  deleted_at DateTime?
+  domain     String
+  admins     SchoolAdmin[]
 
   @@index([code])
   @@index([deleted_at])
@@ -56,32 +41,30 @@ model User {
   last_name              String
   role                   Role
   is_active              Boolean       @default(true)
-  email_verified         Boolean       @default(false)
-  verification_token     String?       @unique
-  email_verified_at      DateTime?
-  password_reset_token   String?       @unique
-  password_reset_expires DateTime?
   last_login             DateTime?
   created_at             DateTime      @default(now())
   updated_at             DateTime      @updatedAt
-  sessions               Session[]
+  email_verified         Boolean       @default(false)
+  email_verified_at      DateTime?
+  verification_token     String?       @unique
+  password_reset_token   String?       @unique
+  password_reset_expires DateTime?
   adminOf                SchoolAdmin[]
+  sessions               Session[]
 
   @@index([verification_token])
   @@index([password_reset_token])
   @@schema("user_mgt")
 }
 
-// Join table to associate multiple admins to a school
 model SchoolAdmin {
   id             String   @id @default(uuid())
   school_id      String
   user_id        String
   is_super_admin Boolean  @default(false)
   created_at     DateTime @default(now())
-
-  school School @relation(fields: [school_id], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  school         School   @relation(fields: [school_id], references: [id], onDelete: Cascade)
+  user           User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@unique([school_id, user_id])
   @@index([school_id])
@@ -89,45 +72,37 @@ model SchoolAdmin {
   @@schema("user_mgt")
 }
 
-// ==========================================
-// STUDENT MANAGEMENT SCHEMA
-// ==========================================
-
 model Student {
-  id         String    @id @default(uuid())
+  id         String            @id @default(uuid())
   school_id  String
-  student_no String // Tenant-scoped uniqueness (composite with school_id)
-  reg_no     String? // Tenant-scoped uniqueness (composite with school_id)
   first_name String
   last_name  String
-  email      String?   @unique // Global uniqueness (used for communication)
-  phone      String?   @unique // Global uniqueness (used for communication)
-  is_active  Boolean   @default(true)
+  email      String?           @unique
+  phone      String?           @unique
+  is_active  Boolean           @default(true)
   deleted_at DateTime?
-  created_at DateTime  @default(now())
-  updated_at DateTime  @updatedAt
+  created_at DateTime          @default(now())
+  updated_at DateTime          @updatedAt
+  reg_no     String?
+  student_no String
+  guardians  StudentGuardian[]
 
-  // Note: school_id references user_mgt.School.id (cross-schema, no Prisma relation)
-  guardians StudentGuardian[]
-
-  @@unique([school_id, student_no]) // Tenant-scoped: unique per school
-  @@unique([school_id, reg_no]) // Tenant-scoped: unique per school (if provided)
+  @@unique([school_id, student_no])
   @@index([school_id])
   @@index([deleted_at])
   @@schema("student_mgt")
 }
 
 model Guardian {
-  id         String   @id @default(uuid())
-  school_id  String // Tenant identifier - reference to user_mgt.School.id (cross-schema, no Prisma relation)
+  id         String            @id @default(uuid())
   first_name String
   last_name  String
   email      String?
   phone      String?
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  students StudentGuardian[]
+  created_at DateTime          @default(now())
+  updated_at DateTime          @updatedAt
+  school_id  String
+  students   StudentGuardian[]
 
   @@index([school_id])
   @@schema("student_mgt")
@@ -139,9 +114,8 @@ model StudentGuardian {
   guardian_id String
   relation    String?
   created_at  DateTime @default(now())
-
-  student  Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
-  guardian Guardian @relation(fields: [guardian_id], references: [id], onDelete: Cascade)
+  guardian    Guardian @relation(fields: [guardian_id], references: [id], onDelete: Cascade)
+  student     Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
 
   @@unique([student_id, guardian_id])
   @@index([student_id])
@@ -152,7 +126,6 @@ model StudentGuardian {
 model Session {
   id         String    @id @default(uuid())
   user_id    String
-  user       User?     @relation(fields: [user_id], references: [id], onDelete: Cascade)
   jti        String    @unique
   is_active  Boolean   @default(true)
   ip_address String?
@@ -160,29 +133,26 @@ model Session {
   created_at DateTime  @default(now())
   expires_at DateTime
   revoked_at DateTime?
+  user       User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([user_id])
   @@schema("user_mgt")
 }
 
-// ==========================================
-// PAYMENT MANAGEMENT SCHEMA
-// ==========================================
-
 model Payment {
   id             String               @id @default(uuid())
-  user_id        String // Reference to user in user_mgt schema
-  school_id      String // Tenant identifier - reference to user_mgt.School.id (cross-schema, no Prisma relation)
+  user_id        String
   amount         Decimal              @db.Decimal(10, 2)
   currency       String               @default("UGX")
-  status         String // PENDING, COMPLETED, FAILED, REFUNDED
-  payment_method String // MOMO, BANK, CASH, CARD
+  status         String
+  payment_method String
   reference      String               @unique
   description    String?
   created_at     DateTime             @default(now())
   updated_at     DateTime             @updatedAt
   completed_at   DateTime?
-  transactions   PaymentTransaction[] // One-to-many relation to transactions
+  school_id      String?
+  transactions   PaymentTransaction[]
 
   @@index([user_id])
   @@index([school_id])
@@ -194,13 +164,13 @@ model Payment {
 model PaymentTransaction {
   id         String   @id @default(uuid())
   payment_id String
-  payment    Payment  @relation(fields: [payment_id], references: [id], onDelete: Cascade)
   amount     Decimal  @db.Decimal(10, 2)
-  type       String // CHARGE, REFUND, FEE
-  status     String // SUCCESS, FAILED, PENDING
+  type       String
+  status     String
   reference  String   @unique
   metadata   Json?
   created_at DateTime @default(now())
+  payment    Payment  @relation(fields: [payment_id], references: [id], onDelete: Cascade)
 
   @@index([payment_id])
   @@index([status])
@@ -208,100 +178,11 @@ model PaymentTransaction {
   @@schema("payment_mgt")
 }
 
-// ==========================================
-// ACADEMICS & CLASSROOMS (Versioned by Year)
-// ==========================================
+enum Role {
+  SUPER_ADMIN
+  SCHOOL_ADMIN
+  PARENT
+  STUDENT
 
-model TermTemplate {
-  id        String  @id @default(uuid())
-  school_id String
-  name      String
-  structure Json // e.g., [{ordinal:1,name:"Term 1"}, {ordinal:2,name:"Term 2"}]
-  is_locked Boolean @default(false) // Locked once referenced by an AcademicYear
-
-  years AcademicYear[]
-
-  @@unique([school_id, name])
-  @@index([school_id])
-  @@schema("student_mgt")
-}
-
-model AcademicYear {
-  id               String   @id @default(uuid())
-  school_id        String
-  name             String
-  start_date       DateTime
-  end_date         DateTime
-  status           String // planned | active | closed
-  term_template_id String
-
-  term_template TermTemplate        @relation(fields: [term_template_id], references: [id])
-  terms         Term[]
-  offerings     ClassroomOffering[]
-
-  @@unique([school_id, name])
-  @@index([school_id])
-  @@schema("student_mgt")
-}
-
-model Term {
-  id               String   @id @default(uuid())
-  academic_year_id String
-  ordinal          Int
-  name             String
-  start_date       DateTime
-  end_date         DateTime
-
-  academic_year AcademicYear @relation(fields: [academic_year_id], references: [id])
-
-  @@unique([academic_year_id, ordinal])
-  @@index([academic_year_id])
-  @@schema("student_mgt")
-}
-
-model ClassroomDefinition {
-  id          String  @id @default(uuid())
-  school_id   String
-  name        String
-  level       String?
-  is_archived Boolean @default(false)
-
-  offerings ClassroomOffering[]
-
-  @@unique([school_id, name])
-  @@index([school_id])
-  @@schema("student_mgt")
-}
-
-model ClassroomOffering {
-  id                      String  @id @default(uuid())
-  academic_year_id        String
-  classroom_definition_id String
-  display_name            String?
-  is_active               Boolean @default(true)
-
-  academic_year        AcademicYear        @relation(fields: [academic_year_id], references: [id])
-  classroom_definition ClassroomDefinition @relation(fields: [classroom_definition_id], references: [id])
-  enrollments          StudentEnrollment[]
-
-  @@unique([academic_year_id, classroom_definition_id])
-  @@index([academic_year_id])
-  @@index([classroom_definition_id])
-  @@schema("student_mgt")
-}
-
-model StudentEnrollment {
-  id                    String    @id @default(uuid())
-  student_id            String
-  classroom_offering_id String
-  academic_year_id      String
-  start_date            DateTime
-  end_date              DateTime?
-  status                String // active | completed | withdrawn
-
-  classroom_offering ClassroomOffering @relation(fields: [classroom_offering_id], references: [id])
-
-  @@index([student_id, academic_year_id])
-  @@index([classroom_offering_id])
-  @@schema("student_mgt")
+  @@schema("user_mgt")
 }
