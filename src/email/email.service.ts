@@ -9,18 +9,49 @@ export class EmailService {
   private transporter: nodemailer.Transporter;
 
   constructor(private configService: ConfigService) {
+    const emailUser = this.configService.get<string>('EMAIL_USER');
+    const emailPass = this.configService.get<string>('EMAIL_PASSWORD');
+    const nodeEnv = this.configService.get<string>('NODE_ENV', 'development');
+    const isTest = nodeEnv === 'test';
+
+    // In test mode, use a mock transporter if credentials are missing
+    if (isTest && (!emailUser || !emailPass)) {
+      this.transporter = nodemailer.createTransport({
+        host: 'localhost',
+        port: 587,
+        secure: false,
+        // No auth needed for test mode
+      });
+      this.logger.debug('Email service initialized in test mode (no SMTP connection)');
+      return;
+    }
+
+    // Production/development mode - require credentials
+    if (!emailUser || !emailPass) {
+      this.logger.warn('Email credentials not configured. Email functionality will be limited.');
+      this.transporter = nodemailer.createTransport({
+        host: this.configService.get<string>('EMAIL_HOST', 'smtp.gmail.com'),
+        port: this.configService.get<number>('EMAIL_PORT', 587),
+        secure: false,
+        // No auth - will fail on send, but won't error on init
+      });
+      return;
+    }
+
     this.transporter = nodemailer.createTransport({
       host: this.configService.get<string>('EMAIL_HOST', 'smtp.gmail.com'),
       port: this.configService.get<number>('EMAIL_PORT', 587),
       secure: false, // true for 465, false for other ports
       auth: {
-        user: this.configService.get<string>('EMAIL_USER'),
-        pass: this.configService.get<string>('EMAIL_PASSWORD'),
+        user: emailUser,
+        pass: emailPass,
       },
     });
 
-    // Verify connection configuration
-    this.verifyConnection();
+    // Verify connection configuration (only in non-test environments)
+    if (!isTest) {
+      this.verifyConnection();
+    }
   }
 
   /**
@@ -31,7 +62,8 @@ export class EmailService {
       await this.transporter.verify();
       this.logger.log('Email server connection verified');
     } catch (error) {
-      this.logger.error('Email server connection failed:', error);
+      // Only log as warning, not error, to avoid cluttering test output
+      this.logger.warn('Email server connection verification failed (emails may not work):', error.message || error);
     }
   }
 
