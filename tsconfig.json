@@ -23,7 +23,10 @@
     "noFallthroughCasesInSwitch": false,
     "paths": {
       "@prisma/client": ["./generated/prisma"],
-      "@generated/prisma": ["./generated/prisma"]
-    }
-  }
+      "@generated/prisma": ["./generated/prisma"],
+      "@generated/*": ["./generated/*"]
+    },
+    "types": ["node", "jest"]
+  },
+  "include": ["src/**/*", "generated/**/*", "scripts/**/*"]
 }

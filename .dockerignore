@@ -8,6 +8,7 @@ dist
 build
 coverage
 *.tsbuildinfo
+generated
 
 # Environment files
 .env
@@ -35,12 +36,11 @@ Thumbs.db
 !README.md
 docs
 
-# Tests
-test
+# Tests (keep test directory and config for E2E tests in Docker)
 *.spec.ts
 *.test.ts
 jest.config.js
-jest-e2e.json
+# Note: test/ directory and jest-e2e.json are needed for E2E tests
 
 # Docker
 Dockerfile*

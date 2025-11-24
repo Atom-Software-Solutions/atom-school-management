@@ -13,8 +13,9 @@ This guide explains how to run the Atom School Management API using Docker.
 
 ```bash
 cd atom-school-management
-cp .env.example .env
 ```
+
+**Note**: Create a `.env` file based on the environment variables listed below. The `.env.example` file is referenced in documentation but you'll need to create your own `.env` file with the required variables.
 
 ### 2. Configure Environment Variables
 
@@ -53,6 +54,90 @@ docker-compose -f docker-compose.dev.yml up
 - Health Check: http://localhost:3000/api/health
 - Swagger Documentation: http://localhost:3000/api
 
+## Testing Docker Build Locally
+
+Before pushing to avoid CI/CD failures, test your Docker build and tests locally:
+
+### Quick Build Tests
+
+```bash
+# Quick build test
+npm run docker:build
+
+# Build without cache (more thorough)
+npm run docker:build:no-cache
+
+# Test with same platform as CI/CD
+npm run docker:build:ci
+
+# Quick verification
+npm run docker:test
+```
+
+### Running Docker Tests Locally (Same as CI/CD)
+
+**Run the exact same tests as the CI/CD "Docker Test" workflow:**
+
+```bash
+# Easiest way - runs everything (matches CI/CD exactly)
+npm run docker:test:ci
+
+# Or run the script directly
+./test-docker-ci.sh
+```
+
+This script will:
+1. Check for PostgreSQL and start it if needed
+2. Build the Docker image (target: build)
+3. Run unit tests (`npm test`)
+4. Run E2E tests (`npm run test:e2e`)
+
+**Manual steps (if you prefer):**
+
+```bash
+# 1. Start PostgreSQL
+docker-compose up -d postgres
+
+# 2. Build image
+docker build --target build -t atom-school-management:test .
+
+# 3. Run unit tests
+docker run --rm --network host \
+  -e DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atom_school_db_test \
+  -e NODE_ENV=test \
+  atom-school-management:test \
+  npm test
+
+# 4. Run E2E tests
+docker run --rm --network host \
+  -e DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atom_school_db_test \
+  -e NODE_ENV=test \
+  atom-school-management:test \
+  npm run test:e2e
+```
+
+**Note:** On macOS, `--network host` may not work. If tests fail to connect to PostgreSQL, you may need to use container networking or adjust the connection string.
+
+### Manual Testing
+
+```bash
+# Test full production build
+docker build -t atom-school-management:test .
+
+# Test individual stages
+docker build --target dependencies -t atom-school-management:deps .
+docker build --target build -t atom-school-management:build .
+docker build --target production -t atom-school-management:prod .
+
+# Run tests manually (requires PostgreSQL)
+docker build --target build -t atom-school-management:test .
+docker run --rm --network host \
+  -e DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atom_school_db_test \
+  -e NODE_ENV=test \
+  atom-school-management:test \
+  npm test
+```
+
 ## Development Workflow
 
 ### Start Development Environment
@@ -63,6 +148,7 @@ docker-compose -f docker-compose.dev.yml up
 
 This will:
 - Start PostgreSQL database
+- Automatically run database migrations on startup
 - Start the NestJS app in watch mode (auto-reload on code changes)
 - Mount your local code for live development
 
@@ -250,6 +336,47 @@ POSTGRES_PORT=5433
 docker-compose exec app npx prisma generate
 ```
 
+### Build Failures
+
+#### Invalid Docker Tag Format
+**Error:** `invalid tag "ghcr.io/.../atom-school-management:-219a06b": invalid reference format`
+
+**Solution:** This was fixed in the GitHub Actions workflow. If you see this, ensure you're using the latest workflow file.
+
+#### Missing Prisma Client
+**Error:** `Cannot find module '@generated/prisma'` or `Generated Prisma Client not found`
+
+**Solutions:**
+- Verify `prisma/schema.prisma` is valid
+- Check that the output path `../generated/prisma` is correct
+- Ensure Prisma CLI version matches `package.json` version
+- Run `npx prisma generate` locally to test
+
+#### TypeScript Compilation Errors
+**Symptoms:** Build fails during `npm run build`
+
+**Solutions:**
+- Run `npm run build` locally to catch errors before pushing
+- Check `tsconfig.json` paths are correct
+- Ensure all imports resolve correctly
+- Verify `generated/prisma` exists before TypeScript compilation
+
+#### Missing Dependencies
+**Symptoms:** Build fails with "Cannot find module" errors
+
+**Solutions:**
+- Ensure `package.json` and `package-lock.json` are committed
+- Verify all dependencies are listed in `package.json`
+- Check that `npm ci` completes successfully
+
+#### Build Cache Issues
+**Symptoms:** Build uses stale dependencies or code
+
+**Solutions:**
+- Clear Docker build cache: `docker builder prune`
+- Rebuild without cache: `docker build --no-cache`
+- In CI/CD, check that cache is working correctly
+
 ### Reset everything
 
 ```bash
@@ -270,14 +397,19 @@ docker-compose up -d
    - Change default database passwords
    - Use secrets management (Docker secrets, AWS Secrets Manager, etc.)
    - Enable SSL/TLS for database connections
+   - Application runs as non-root user (already implemented)
+   - Resource limits configured to prevent resource exhaustion
 
 2. **Performance**
    - Use connection pooling for database
-   - Configure appropriate resource limits
-   - Use multi-stage builds (already implemented)
-   - Enable health checks
+   - Resource limits configured (App: 512MB RAM, DB: 1GB RAM)
+   - Multi-stage builds for optimized image size (already implemented)
+   - Health checks enabled for both app and database
+   - Automatic database migrations on startup
 
 3. **Monitoring**
+   - Health check endpoint: `GET /api/health`
+   - Container health checks configured
    - Set up logging aggregation
    - Monitor container health
    - Track application metrics
@@ -302,6 +434,22 @@ services:
 
 This file is automatically loaded by Docker Compose.
 
+## Recent Improvements
+
+The Docker setup has been enhanced with the following improvements:
+
+1. **Automatic Migrations**: Both production and development setups now automatically run database migrations on startup
+2. **Resource Limits**: Configured CPU and memory limits to prevent resource exhaustion:
+   - App container: 512MB RAM limit, 256MB reservation
+   - Database container: 1GB RAM limit, 512MB reservation
+3. **Health Checks**: Added health check to production app container in docker-compose
+4. **Improved Build Process**: Optimized multi-stage Dockerfile for better caching and smaller images
+5. **Better Startup Sequence**: Improved wait times and startup commands for more reliable container initialization
+6. **Error Handling**: Added `set -e` to startup commands for fail-fast behavior
+7. **Build Verification**: Added verification steps for Prisma Client and critical build outputs
+8. **CI/CD Fixes**: Fixed Docker tag format issues in GitHub Actions workflow
+9. **Build Context Optimization**: Excluded `generated` directory from Docker build context
+
 ## Next Steps
 
 1. Set up CI/CD pipeline
@@ -310,5 +458,3 @@ This file is automatically loaded by Docker Compose.
 4. Configure monitoring and logging
 5. Set up SSL/TLS certificates
 6. Configure reverse proxy (nginx, traefik, etc.)
-
-
