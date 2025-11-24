@@ -74,8 +74,37 @@ async function bootstrap() {
     }),
   );
 
-  // Enable CORS
-  app.enableCors();
+  // Enable CORS based on env configuration
+  const corsOriginSetting = process.env.CORS_ORIGIN?.trim() ?? '*';
+  const allowAllOrigins =
+    corsOriginSetting === '*' || corsOriginSetting.toLowerCase() === 'true';
+  const allowedOrigins = allowAllOrigins
+    ? []
+    : corsOriginSetting
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean);
+
+  if (allowAllOrigins) {
+    app.enableCors({
+      origin: true, // reflect the request origin
+      credentials: true,
+    });
+  } else {
+    app.enableCors({
+      credentials: true,
+      origin: (
+        origin: string | undefined,
+        callback: (err: Error | null, allow?: boolean) => void,
+      ) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error(`Origin ${origin} not allowed by CORS`));
+        }
+      },
+    });
+  }
 
   // Set global API prefix
   app.setGlobalPrefix('api');
