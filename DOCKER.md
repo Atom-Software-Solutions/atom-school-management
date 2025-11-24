@@ -56,9 +56,9 @@ docker-compose -f docker-compose.dev.yml up
 
 ## Testing Docker Build Locally
 
-Before pushing to avoid CI/CD failures, test your Docker build locally:
+Before pushing to avoid CI/CD failures, test your Docker build and tests locally:
 
-### Quick Tests
+### Quick Build Tests
 
 ```bash
 # Quick build test
@@ -74,6 +74,50 @@ npm run docker:build:ci
 npm run docker:test
 ```
 
+### Running Docker Tests Locally (Same as CI/CD)
+
+**Run the exact same tests as the CI/CD "Docker Test" workflow:**
+
+```bash
+# Easiest way - runs everything (matches CI/CD exactly)
+npm run docker:test:ci
+
+# Or run the script directly
+./test-docker-ci.sh
+```
+
+This script will:
+1. Check for PostgreSQL and start it if needed
+2. Build the Docker image (target: build)
+3. Run unit tests (`npm test`)
+4. Run E2E tests (`npm run test:e2e`)
+
+**Manual steps (if you prefer):**
+
+```bash
+# 1. Start PostgreSQL
+docker-compose up -d postgres
+
+# 2. Build image
+docker build --target build -t atom-school-management:test .
+
+# 3. Run unit tests
+docker run --rm --network host \
+  -e DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atom_school_db_test \
+  -e NODE_ENV=test \
+  atom-school-management:test \
+  npm test
+
+# 4. Run E2E tests
+docker run --rm --network host \
+  -e DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atom_school_db_test \
+  -e NODE_ENV=test \
+  atom-school-management:test \
+  npm run test:e2e
+```
+
+**Note:** On macOS, `--network host` may not work. If tests fail to connect to PostgreSQL, you may need to use container networking or adjust the connection string.
+
 ### Manual Testing
 
 ```bash
@@ -84,6 +128,14 @@ docker build -t atom-school-management:test .
 docker build --target dependencies -t atom-school-management:deps .
 docker build --target build -t atom-school-management:build .
 docker build --target production -t atom-school-management:prod .
+
+# Run tests manually (requires PostgreSQL)
+docker build --target build -t atom-school-management:test .
+docker run --rm --network host \
+  -e DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atom_school_db_test \
+  -e NODE_ENV=test \
+  atom-school-management:test \
+  npm test
 ```
 
 ## Development Workflow

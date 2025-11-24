@@ -21,7 +21,11 @@
     "docker:build": "docker build -t atom-school-management:test .",
     "docker:build:no-cache": "docker build --no-cache -t atom-school-management:test .",
     "docker:build:ci": "docker buildx build --platform linux/amd64 --load -t atom-school-management:test .",
-    "docker:test": "docker build -t atom-school-management:test . && docker run --rm atom-school-management:test sh -c \"test -f dist/src/main.js && test -d generated/prisma && echo '✅ Build verified'\""
+    "docker:test": "docker build -t atom-school-management:test . && docker run --rm atom-school-management:test sh -c \"test -f dist/src/main.js && test -d generated/prisma && echo '✅ Build verified'\"",
+    "docker:test:ci": "./test-docker-ci.sh",
+    "docker:test:unit": "docker build --target build -t atom-school-management:test . && docker run --rm atom-school-management:test npm test",
+    "docker:test:e2e": "docker build --target build -t atom-school-management:test . && docker run --rm --network host -e DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atom_school_db_test -e NODE_ENV=test atom-school-management:test npm run test:e2e",
+    "docker:test:all": "docker build --target build -t atom-school-management:test . && docker run --rm --network host -e DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atom_school_db_test -e NODE_ENV=test atom-school-management:test sh -c 'npm test && npm run test:e2e'"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
