@@ -4,6 +4,7 @@ import {
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -42,34 +43,63 @@ export class UsersService {
       throw new ConflictException('User with this email already exists');
     }
 
+    // If phone provided, ensure unique before hitting DB constraint
+    if (createUserDto.phone) {
+      const existingPhone = await this.prisma.user.findUnique({
+        where: { phone: createUserDto.phone },
+      });
+      if (existingPhone) {
+        throw new ConflictException('User with this phone already exists');
+      }
+    }
+
     // Hash the password
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
 
     // Create the user
-    const user = await this.prisma.user.create({
-      data: {
-        email: createUserDto.email,
-        password_hash: hashedPassword,
-        first_name: createUserDto.firstName,
-        last_name: createUserDto.lastName,
-        role: createUserDto.role,
-        phone: createUserDto.phone,
-        verification_token: (createUserDto as any).verificationToken || null,
-      },
-      select: {
-        id: true,
-        email: true,
-        first_name: true,
-        last_name: true,
-        role: true,
-        phone: true,
-        is_active: true,
-        email_verified: true,
-        verification_token: true,
-        created_at: true,
-        updated_at: true,
-      },
-    });
+    let user: UserResponse;
+    try {
+      user = await this.prisma.user.create({
+        data: {
+          email: createUserDto.email,
+          password_hash: hashedPassword,
+          first_name: createUserDto.firstName,
+          last_name: createUserDto.lastName,
+          role: createUserDto.role,
+          phone: createUserDto.phone,
+          verification_token: (createUserDto as any).verificationToken || null,
+        },
+        select: {
+          id: true,
+          email: true,
+          first_name: true,
+          last_name: true,
+          role: true,
+          phone: true,
+          is_active: true,
+          email_verified: true,
+          verification_token: true,
+          created_at: true,
+          updated_at: true,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const target = Array.isArray(error.meta?.target)
+          ? error.meta?.target[0]
+          : undefined;
+        if (target === 'phone') {
+          throw new ConflictException('User with this phone already exists');
+        }
+        if (target === 'email') {
+          throw new ConflictException('User with this email already exists');
+        }
+      }
+      throw error;
+    }
 
     // If tenantId provided and user is SCHOOL_ADMIN, create SchoolAdmin relationship
     if (tenantId && createUserDto.role === 'SCHOOL_ADMIN') {

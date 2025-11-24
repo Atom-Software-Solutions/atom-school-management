@@ -16,6 +16,7 @@ services:
 
   app:
     image: ghcr.io/atom-software-solutions/atom-school-management:develop
+    platform: linux/amd64
     container_name: asm-quickstart-app
     restart: unless-stopped
     depends_on:
@@ -42,6 +43,10 @@ services:
       sh -c "
         echo 'Running database migrations...' &&
         npx prisma migrate deploy &&
+        echo 'Generating Prisma client...' &&
+        npx prisma generate &&
+        echo 'Syncing Prisma client for compiled code...' &&
+        rm -rf dist/generated && mkdir -p dist && cp -R generated dist/ &&
         echo 'Starting application...' &&
         node dist/src/main.js
       "
