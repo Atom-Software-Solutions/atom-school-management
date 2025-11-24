@@ -39,6 +39,7 @@ jobs:
           file: ./Dockerfile
           target: build
           push: false
+          load: true
           tags: atom-school-management:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
