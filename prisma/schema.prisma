@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["payment_mgt", "student_mgt", "user_mgt"]
+  schemas  = ["payment_mgt", "student_mgt", "user_mgt", "academics"]
 }
 
 model School {
@@ -121,6 +121,100 @@ model StudentGuardian {
   @@index([student_id])
   @@index([guardian_id])
   @@schema("student_mgt")
+}
+
+// ==========================================
+// ACADEMIC RESULTS MODELS
+// ==========================================
+
+model Subject {
+  id          String       @id @default(uuid())
+  school_id   String
+  name        String
+  code        String?      // Subject code (e.g., "MATH", "ENG")
+  description String?
+  is_active   Boolean      @default(true)
+  created_at  DateTime     @default(now())
+  updated_at  DateTime     @updatedAt
+  assessments Assessment[]
+  grades      Grade[]
+
+  @@unique([school_id, name])
+  @@index([school_id])
+  @@index([is_active])
+  @@schema("academics")
+}
+
+model Assessment {
+  id                String   @id @default(uuid())
+  school_id         String
+  term_id           String   // Reference to Term (academic term)
+  subject_id        String
+  name              String   // e.g., "Mid-Term Exam", "Assignment 1"
+  type              String   // "exam", "test", "assignment", "project", "quiz"
+  max_score         Decimal  @db.Decimal(5, 2) // Maximum possible score
+  weight             Decimal  @db.Decimal(5, 2) // Weight for grade calculation (e.g., 0.3 for 30%)
+  assessment_date   DateTime?
+  due_date          DateTime?
+  is_published      Boolean  @default(false) // Whether results are published to students/parents
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+  subject           Subject  @relation(fields: [subject_id], references: [id], onDelete: Restrict)
+  grades            Grade[]
+
+  @@index([school_id])
+  @@index([term_id])
+  @@index([subject_id])
+  @@index([is_published])
+  @@schema("academics")
+}
+
+model Grade {
+  id            String     @id @default(uuid())
+  school_id     String
+  student_id    String     // Reference to Student
+  assessment_id String
+  subject_id    String
+  score         Decimal    @db.Decimal(5, 2) // Actual score obtained
+  percentage    Decimal?   @db.Decimal(5, 2) // Calculated percentage
+  letter_grade  String?    // A, B, C, D, F (optional, can be calculated)
+  remarks       String?
+  created_at    DateTime   @default(now())
+  updated_at    DateTime   @updatedAt
+  created_by    String?    // User ID who entered the grade
+  assessment    Assessment @relation(fields: [assessment_id], references: [id], onDelete: Cascade)
+
+  @@unique([student_id, assessment_id])
+  @@index([school_id])
+  @@index([student_id])
+  @@index([assessment_id])
+  @@index([subject_id])
+  @@schema("academics")
+}
+
+model ReportCard {
+  id              String   @id @default(uuid())
+  school_id       String
+  student_id      String
+  academic_year_id String // Reference to AcademicYear
+  term_id         String   // Reference to Term
+  overall_average Decimal? @db.Decimal(5, 2)
+  total_subjects  Int?
+  rank            Int?     // Class rank (optional)
+  total_students  Int?     // Total students in class (for rank context)
+  remarks         String?  // Teacher/Principal remarks
+  status          String   @default("draft") // "draft", "published", "archived"
+  generated_at    DateTime @default(now())
+  published_at    DateTime?
+  generated_by    String?  // User ID who generated the report
+  pdf_url         String?  // URL to generated PDF file
+
+  @@index([school_id])
+  @@index([student_id])
+  @@index([academic_year_id])
+  @@index([term_id])
+  @@index([status])
+  @@schema("academics")
 }
 
 model Session {

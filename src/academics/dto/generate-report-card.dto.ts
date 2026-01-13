@@ -1,0 +1,45 @@
+import { IsUUID, IsNotEmpty, IsOptional, IsBoolean } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+export class GenerateReportCardDto {
+  @ApiProperty({
+    description: 'Student ID',
+    example: 'uuid-of-student',
+  })
+  @IsUUID()
+  @IsNotEmpty()
+  studentId: string;
+
+  @ApiProperty({
+    description: 'Academic Year ID',
+    example: 'uuid-of-academic-year',
+  })
+  @IsUUID()
+  @IsNotEmpty()
+  academicYearId: string;
+
+  @ApiProperty({
+    description: 'Term ID',
+    example: 'uuid-of-term',
+  })
+  @IsUUID()
+  @IsNotEmpty()
+  termId: string;
+
+  @ApiPropertyOptional({
+    description: 'Include class rank',
+    default: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  includeRank?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Automatically publish the report card',
+    default: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  autoPublish?: boolean;
+}
+

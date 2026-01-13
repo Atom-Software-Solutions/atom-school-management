@@ -240,17 +240,36 @@ export class ClassroomsService {
   // Enrollments
   async enrollStudent(offeringId: string, studentId: string, adminUserId: string, schoolId: string, startDate?: Date) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
+    const student = await this.prisma.student.findUnique({ where: { id: studentId } });
+    if (!student || student.school_id !== schoolId) {
+      throw new ForbiddenException('Student not accessible for this school');
+    }
     const offering = await (this.prisma as any).classroomOffering.findUnique({
       where: { id: offeringId },
       include: { academic_year: true, classroom_definition: true },
     });
     if (!offering || offering.academic_year.school_id !== schoolId) throw new ForbiddenException('Offering not accessible');
+    if (offering.is_active === false) {
+      throw new BadRequestException('Classroom offering is not active');
+    }
 
     const academicYearId = offering.academic_year_id;
+    const effectiveStartDate = startDate ?? new Date();
+
+    if (offering.academic_year.start_date && effectiveStartDate < offering.academic_year.start_date) {
+      throw new BadRequestException('startDate must be within the academic year');
+    }
+    if (offering.academic_year.end_date && effectiveStartDate > offering.academic_year.end_date) {
+      throw new BadRequestException('startDate must be within the academic year');
+    }
 
     // Ensure no active enrollment for this student in this academic year
     const existing = await (this.prisma as any).studentEnrollment.findFirst({
-      where: { student_id: studentId, academic_year_id: academicYearId, end_date: null },
+      where: {
+        student_id: studentId,
+        academic_year_id: academicYearId,
+        OR: [{ end_date: null }, { status: 'active' }],
+      },
     });
     if (existing) throw new BadRequestException('Student already has an active enrollment in this academic year');
 
@@ -273,7 +292,7 @@ export class ClassroomsService {
         student_id: studentId,
         classroom_offering_id: offeringId,
         academic_year_id: academicYearId,
-        start_date: startDate ?? new Date(),
+        start_date: effectiveStartDate,
         status: 'active',
       },
     });
@@ -287,9 +306,13 @@ export class ClassroomsService {
     });
     if (!enr || enr.classroom_offering.academic_year.school_id !== schoolId) throw new ForbiddenException('Enrollment not accessible');
     if (enr.end_date) throw new BadRequestException('Enrollment already closed');
+    const effectiveEndDate = endDate ?? new Date();
+    if (enr.start_date && effectiveEndDate < enr.start_date) {
+      throw new BadRequestException('endDate cannot be before startDate');
+    }
     return (this.prisma as any).studentEnrollment.update({
       where: { id: enrollmentId },
-      data: { end_date: endDate ?? new Date(), status },
+      data: { end_date: effectiveEndDate, status },
     });
   }
 }

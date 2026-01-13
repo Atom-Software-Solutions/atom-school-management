@@ -90,11 +90,50 @@ Legend:
 
 ## Enrollments & Student Progression
 
-- [ ] `POST /classroom-offerings/:offeringId/enrollments` - Enroll student in offering
-- [ ] `PATCH /enrollments/:id/complete` - Complete/withdraw enrollment with endDate
-- [ ] `GET /students/:studentId/enrollments/history` - Enrollment history for student
-- [ ] `POST /students/:studentId/promote` - Promote to next-year offering (no same classroom definition)
-- [ ] `POST /students/:studentId/retain` - Retain student (enroll into an allowed alternative; narration later)
+- [x] `POST /classroom-offerings/:offeringId/enrollments` - Enroll student in offering
+- [x] `PATCH /enrollments/:id/complete` - Complete/withdraw enrollment with endDate
+- [x] `GET /students/:studentId/enrollments/history` - Enrollment history for student
+- [x] `POST /students/:studentId/promote` - Promote to next-year offering (no same classroom definition)
+- [x] `POST /students/:studentId/retain` - Retain student (enroll into an allowed alternative; narration later)
+
+---
+
+## Academic Results & Grades
+
+### Subject Management
+
+- [x] `GET /schools/:schoolId/subjects` - List all subjects
+- [x] `POST /schools/:schoolId/subjects` - Create a new subject
+- [x] `GET /schools/:schoolId/subjects/:id` - Get subject details
+- [x] `PATCH /schools/:schoolId/subjects/:id` - Update subject
+
+### Assessment Management
+
+- [x] `GET /schools/:schoolId/assessments` - List assessments (optional filters: termId, subjectId)
+- [x] `POST /schools/:schoolId/assessments` - Create a new assessment
+- [x] `GET /schools/:schoolId/assessments/:id` - Get assessment details
+- [x] `PATCH /schools/:schoolId/assessments/:id` - Update assessment
+- [x] `DELETE /schools/:schoolId/assessments/:id` - Delete assessment (only if no grades exist)
+
+### Grade Management
+
+- [x] `POST /schools/:schoolId/grades` - Create a single grade
+- [x] `POST /schools/:schoolId/grades/bulk` - Bulk create grades for multiple students
+- [x] `GET /schools/:schoolId/grades/:id` - Get grade details
+- [x] `PATCH /schools/:schoolId/grades/:id` - Update grade
+- [x] `DELETE /schools/:schoolId/grades/:id` - Delete grade
+
+### Student Results
+
+- [x] `GET /students/:studentId/results` - Get student's grades (optional filters: termId, subjectId)
+- [x] `GET /students/:studentId/results/summary?termId=:termId` - Get academic summary for a term
+
+### Report Cards
+
+- [x] `POST /schools/:schoolId/report-cards` - Generate a new report card
+- [x] `GET /schools/:schoolId/report-cards/:id` - Get report card details
+- [x] `PATCH /schools/:schoolId/report-cards/:id/publish` - Publish a report card
+- [x] `GET /students/:studentId/report-cards` - List all report cards for a student
 
 ---
 
@@ -165,16 +204,17 @@ Legend:
 ## Health Check
 
 - [x] `GET /api/health` - Health check
+- [x] `GET /api` - Swagger Documentation
 
 ---
 
 ## Summary
 
-- **Total Endpoints**: 89
-- **Implemented**: 49
+- **Total Endpoints**: 110
+- **Implemented**: 75
 - **In Progress**: 0
-- **Not Implemented**: 40
-- **Completion**: 55.1%
+- **Not Implemented**: 35
+- **Completion**: 68.2%
 
 ---
 

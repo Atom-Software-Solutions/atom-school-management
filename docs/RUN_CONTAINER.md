@@ -35,6 +35,50 @@ Add `-v` if you also want to remove the local `pgdata_quickstart` volume.
 
 ---
 
+## Updating after code changes
+
+### Development mode (`docker-compose.dev.yml`)
+
+**For code changes only:**
+- No rebuild needed. Code is mounted as a volume and hot-reload is enabled, so changes are picked up automatically.
+
+**If you need to rebuild** (e.g., after dependency changes or Dockerfile updates):
+```bash
+docker compose -f docker-compose.dev.yml build --no-cache
+docker compose -f docker-compose.dev.yml up
+```
+
+Or rebuild and restart in one command:
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+
+**To restart the container** (if hot-reload isn't picking up changes):
+```bash
+docker compose -f docker-compose.dev.yml restart app
+```
+
+### Production mode (`docker-compose.yml`)
+
+**Always rebuild after code changes** (no volume mounts):
+```bash
+docker compose build
+docker compose up
+```
+
+Or rebuild and restart together:
+```bash
+docker compose up --build
+```
+
+**Force a clean rebuild** (ignores cache):
+```bash
+docker compose build --no-cache
+docker compose up
+```
+
+---
+
 ## Check it
 - App health: http://localhost:3000/api/health  
 - Swagger/docs: http://localhost:3000/api
@@ -54,5 +98,4 @@ Add `-v` if you also want to remove the local `pgdata_quickstart` volume.
 ---
 
 Share these instructions with anyone who needs the container locally—everything
-they need is in this repo + the compose quickstart.*** End Patch*** End Patch
-```
+they need is in this repo + the compose quickstart.
