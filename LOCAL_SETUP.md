@@ -101,9 +101,11 @@ The project includes a `package-lock.json`, so using `npm` is recommended.
 
 ## 5. Run the application
 
-### Standard run
+You can run the application either directly in dev mode, or from the compiled `dist` output.
 
-To start the application in standard (non-watch) mode:
+### 5.1 Dev run (simplest)
+
+To start the application in standard (non-watch) mode using the Nest CLI:
 
 ```bash
 npm run start
@@ -116,6 +118,22 @@ Behavior:
 - On first startup, the app connects to PostgreSQL and ensures a `SUPER_ADMIN` user exists using the values from `.env`.
 
 If the server starts without Prisma connection errors and you see logs about the SUPER_ADMIN user and the server listening, you are successfully connected to the local `school-management` database.
+
+### 5.2 Build + run from dist (recommended for consistent Prisma client loading)
+
+This project generates the Prisma client into `generated/prisma` and then copies it into `dist/generated/prisma` in a **postbuild** step, so that compiled code can resolve `@generated/prisma` correctly.
+
+When you want to run from the compiled output (e.g. for a more production-like run), use:\r
+
+```bash
+npm run build
+npm run start:prod
+```
+
+- `npm run build` runs `nest build` and then executes the `postbuild` script, which copies the Prisma client from `generated/prisma` to `dist/generated/prisma`.
+- `npm run start:prod` runs the compiled app from `dist/src/main.js` and will now successfully load the Prisma client from `dist/generated/prisma`.
+
+If you see errors like `Cannot find module '../../generated/prisma/index.js'`, make sure you have run `npm run build` first so the postbuild step has copied the Prisma client into `dist`.
 
 ### Optional: Dev mode with hot reload on Windows
 
@@ -147,9 +165,14 @@ This starts the server in watch mode with path aliases enabled.
    ```bash
    npx prisma migrate dev
    ```
-5. Application running:
+5. Application running (dev):
    ```bash
    npm run start
    ```
+6. Application running from compiled dist (with Prisma client copied automatically):
+   ```bash
+   npm run build
+   npm run start:prod
+   ```
 
-You should now have the application connected to your local `school-management` PostgreSQL database and running locally.
+You should now have the application connected to your local `school-management` PostgreSQL database and running locally, either in dev mode or from the compiled `dist` build.

@@ -7,6 +7,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
+    "postbuild": "node scripts/postbuild-copy-prisma.cjs",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "NODE_OPTIONS='-r tsconfig-paths/register' nest start --watch",
