@@ -1,5 +1,6 @@
 import { IsString, IsNotEmpty, IsUUID, IsNumber, IsOptional, Min, Max } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 
 export class CreateGradeDto {
   @ApiProperty({
@@ -24,6 +25,7 @@ export class CreateGradeDto {
   })
   @IsNumber()
   @Min(0)
+  @Type(() => Number)
   score: number;
 
   @ApiPropertyOptional({

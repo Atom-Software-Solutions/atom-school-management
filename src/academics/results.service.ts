@@ -8,6 +8,7 @@ import { CreateGradeDto } from './dto/create-grade.dto';
 import { UpdateGradeDto } from './dto/update-grade.dto';
 import { BulkCreateGradesDto } from './dto/bulk-create-grades.dto';
 import { GenerateReportCardDto } from './dto/generate-report-card.dto';
+import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 
 @Injectable()
 export class ResultsService {
@@ -18,6 +19,50 @@ export class ResultsService {
       where: { school_id_user_id: { school_id: schoolId, user_id: userId } },
     });
     if (!rel) throw new ForbiddenException('Insufficient permissions for this school');
+  }
+
+  private async assertCanViewStudent(studentId: string, user: AuthenticatedUser) {
+    const student = await this.prisma.student.findUnique({ where: { id: studentId } });
+    if (!student) {
+      throw new NotFoundException('Student not found');
+    }
+
+    // School admins must be admins of the student's school
+    if (user.role === 'SCHOOL_ADMIN') {
+      await this.assertIsAdminOfSchool(student.school_id, user.id);
+      return student;
+    }
+
+    // Parents can only view their own children within the same school
+    if (user.role === 'PARENT') {
+      if (!user.school_id || user.school_id !== student.school_id) {
+        throw new ForbiddenException('Insufficient permissions for this student');
+      }
+
+      const guardians = await (this.prisma as any).guardian.findMany({
+        where: {
+          school_id: student.school_id,
+          email: user.email,
+        },
+        include: {
+          students: {
+            select: { student_id: true },
+          },
+        },
+      });
+
+      const canView = guardians.some((g: any) =>
+        g.students?.some((sg: any) => sg.student_id === student.id),
+      );
+
+      if (!canView) {
+        throw new ForbiddenException('Insufficient permissions for this student');
+      }
+
+      return student;
+    }
+
+    throw new ForbiddenException('Insufficient permissions');
   }
 
   private calculatePercentage(score: number, maxScore: number): number {
@@ -446,8 +491,17 @@ export class ResultsService {
 
     await this.assertIsAdminOfSchool(student.school_id, adminUserId);
 
+    return this.getStudentGradesInternal(student, termId, subjectId);
+  }
+
+  async getStudentGradesForViewer(studentId: string, user: AuthenticatedUser, termId?: string, subjectId?: string) {
+    const student = await this.assertCanViewStudent(studentId, user);
+    return this.getStudentGradesInternal(student, termId, subjectId);
+  }
+
+  private async getStudentGradesInternal(student: any, termId?: string, subjectId?: string) {
     const where: any = {
-      student_id: studentId,
+      student_id: student.id,
       school_id: student.school_id,
     };
     if (termId) {
@@ -484,6 +538,15 @@ export class ResultsService {
 
     await this.assertIsAdminOfSchool(student.school_id, adminUserId);
 
+    return this.getStudentAcademicSummaryInternal(student, termId);
+  }
+
+  async getStudentAcademicSummaryForViewer(studentId: string, user: AuthenticatedUser, termId: string) {
+    const student = await this.assertCanViewStudent(studentId, user);
+    return this.getStudentAcademicSummaryInternal(student, termId);
+  }
+
+  private async getStudentAcademicSummaryInternal(student: any, termId: string) {
     // Verify term exists
     const term = await (this.prisma as any).term.findUnique({
       where: { id: termId },
@@ -497,7 +560,7 @@ export class ResultsService {
     // Get all grades for this student in this term
     const grades = await (this.prisma as any).grade.findMany({
       where: {
-        student_id: studentId,
+        student_id: student.id,
         assessment: {
           term_id: termId,
         },
@@ -533,18 +596,23 @@ export class ResultsService {
     }
 
     // Calculate final averages
-    const subjectResults = Object.values(subjectAverages).map((subj) => ({
-      subject: subj.subject,
-      average: subj.totalWeight > 0 ? subj.totalScore / subj.totalWeight : 0,
-      letterGrade: this.calculateLetterGrade(subj.totalWeight > 0 ? subj.totalScore / subj.totalWeight : 0),
-      grades: subj.grades,
-    }));
+    const subjectResults = Object.values(subjectAverages).map((subj) => {
+      const avg = subj.totalWeight > 0 ? subj.totalScore / subj.totalWeight : 0;
+      const roundedAvg = Number(avg.toFixed(2));
+      return {
+        subject: subj.subject,
+        average: roundedAvg,
+        letterGrade: subj.totalWeight > 0 ? this.calculateLetterGrade(roundedAvg) : null,
+        grades: subj.grades,
+      };
+    });
 
     // Calculate overall average
-    const overallAverage =
+    const overallAverageRaw =
       subjectResults.length > 0
         ? subjectResults.reduce((sum, subj) => sum + subj.average, 0) / subjectResults.length
         : 0;
+    const overallAverage = Number(overallAverageRaw.toFixed(2));
 
     return {
       student: {
@@ -562,12 +630,9 @@ export class ResultsService {
         id: term.academic_year.id,
         name: term.academic_year.name,
       },
-      overallAverage: Number(overallAverage.toFixed(2)),
-      overallLetterGrade: this.calculateLetterGrade(overallAverage),
-      subjects: subjectResults.map((subj) => ({
-        ...subj,
-        average: Number(subj.average.toFixed(2)),
-      })),
+      overallAverage,
+      overallLetterGrade: subjectResults.length > 0 ? this.calculateLetterGrade(overallAverage) : null,
+      subjects: subjectResults,
       totalSubjects: subjectResults.length,
     };
   }
@@ -715,9 +780,18 @@ export class ResultsService {
 
     await this.assertIsAdminOfSchool(student.school_id, adminUserId);
 
+    return this.listStudentReportCardsInternal(student);
+  }
+
+  async listStudentReportCardsForViewer(studentId: string, user: AuthenticatedUser) {
+    const student = await this.assertCanViewStudent(studentId, user);
+    return this.listStudentReportCardsInternal(student);
+  }
+
+  private async listStudentReportCardsInternal(student: any) {
     return (this.prisma as any).reportCard.findMany({
       where: {
-        student_id: studentId,
+        student_id: student.id,
         school_id: student.school_id,
       },
       orderBy: {

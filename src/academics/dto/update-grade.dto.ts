@@ -2,6 +2,7 @@ import { PartialType } from '@nestjs/mapped-types';
 import { CreateGradeDto } from './create-grade.dto';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class UpdateGradeDto extends PartialType(CreateGradeDto) {
   @ApiPropertyOptional({
@@ -10,6 +11,7 @@ export class UpdateGradeDto extends PartialType(CreateGradeDto) {
   @IsNumber()
   @Min(0)
   @IsOptional()
+  @Type(() => Number)
   score?: number;
 
   @ApiPropertyOptional({

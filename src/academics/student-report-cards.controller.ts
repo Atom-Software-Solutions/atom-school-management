@@ -15,8 +15,7 @@ export class StudentReportCardsController {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
     }
-    // TODO: Add parent permission check
-    return this.resultsService.listStudentReportCards(studentId, req.user.id);
+    return this.resultsService.listStudentReportCardsForViewer(studentId, req.user);
   }
 }
 

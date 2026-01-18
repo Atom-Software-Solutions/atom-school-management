@@ -1,5 +1,6 @@
 import { IsUUID, IsNotEmpty, IsOptional, IsBoolean } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 
 export class GenerateReportCardDto {
   @ApiProperty({
@@ -32,6 +33,7 @@ export class GenerateReportCardDto {
   })
   @IsBoolean()
   @IsOptional()
+  @Type(() => Boolean)
   includeRank?: boolean;
 
   @ApiPropertyOptional({
@@ -40,6 +42,6 @@ export class GenerateReportCardDto {
   })
   @IsBoolean()
   @IsOptional()
+  @Type(() => Boolean)
   autoPublish?: boolean;
 }
-

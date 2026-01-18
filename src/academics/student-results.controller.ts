@@ -1,4 +1,4 @@
-import { Controller, ForbiddenException, Get, Param, Query, Request, UseGuards } from '@nestjs/common';
+import { BadRequestException, Controller, ForbiddenException, Get, Param, Query, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { ResultsService } from './results.service';
@@ -20,8 +20,7 @@ export class StudentResultsController {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
     }
-    // TODO: Add parent permission check (can only view their own children's results)
-    return this.resultsService.getStudentGrades(studentId, req.user.id, termId, subjectId);
+    return this.resultsService.getStudentGradesForViewer(studentId, req.user, termId, subjectId);
   }
 
   @Get('summary')
@@ -30,10 +29,9 @@ export class StudentResultsController {
       throw new ForbiddenException('Authentication required');
     }
     if (!termId) {
-      throw new ForbiddenException('termId query parameter is required');
+      throw new BadRequestException('termId query parameter is required');
     }
-    // TODO: Add parent permission check
-    return this.resultsService.getStudentAcademicSummary(studentId, req.user.id, termId);
+    return this.resultsService.getStudentAcademicSummaryForViewer(studentId, req.user, termId);
   }
 }
 
