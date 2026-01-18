@@ -361,8 +361,8 @@ export class ResultsService {
     }
 
     // Create grades in transaction
-    const results = [];
-    const errors = [];
+    const results: any[] = [];
+    const errors: string[] = [];
     const maxScore = Number(assessment.max_score);
 
     for (const gradeData of data.grades) {

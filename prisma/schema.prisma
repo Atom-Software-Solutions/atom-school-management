@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["payment_mgt", "student_mgt", "user_mgt", "academics"]
+  schemas  = ["payment_mgt", "student_mgt", "user_mgt", "results_mgt"]
 }
 
 model School {
@@ -142,7 +142,7 @@ model Subject {
   @@unique([school_id, name])
   @@index([school_id])
   @@index([is_active])
-  @@schema("academics")
+  @@schema("results_mgt")
 }
 
 model Assessment {
@@ -166,7 +166,7 @@ model Assessment {
   @@index([term_id])
   @@index([subject_id])
   @@index([is_published])
-  @@schema("academics")
+  @@schema("results_mgt")
 }
 
 model Grade {
@@ -183,13 +183,14 @@ model Grade {
   updated_at    DateTime   @updatedAt
   created_by    String?    // User ID who entered the grade
   assessment    Assessment @relation(fields: [assessment_id], references: [id], onDelete: Cascade)
+  subject       Subject    @relation(fields: [subject_id], references: [id], onDelete: Restrict)
 
   @@unique([student_id, assessment_id])
   @@index([school_id])
   @@index([student_id])
   @@index([assessment_id])
   @@index([subject_id])
-  @@schema("academics")
+  @@schema("results_mgt")
 }
 
 model ReportCard {
@@ -214,7 +215,7 @@ model ReportCard {
   @@index([academic_year_id])
   @@index([term_id])
   @@index([status])
-  @@schema("academics")
+  @@schema("results_mgt")
 }
 
 model Session {

@@ -6,7 +6,7 @@ This document describes the implementation of student results and academic repor
 
 ## Database Schema
 
-### New Models (in `academics` schema)
+### New Models (in `results_mgt` schema)
 
 1. **Subject** - Represents subjects/courses taught in schools
    - Fields: id, school_id, name, code, description, is_active

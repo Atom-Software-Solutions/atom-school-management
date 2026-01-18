@@ -33,7 +33,7 @@
 - ✅ All models have proper indexes
 - ✅ Foreign key relationships are defined
 - ✅ Unique constraints are in place
-- ✅ Schema is in the `academics` namespace
+- ✅ Schema is in the `results_mgt` namespace
 
 ### Service Layer
 - ✅ All CRUD operations implemented
