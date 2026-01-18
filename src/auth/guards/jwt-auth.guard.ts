@@ -9,10 +9,14 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
    * get a clearer 401 error when no Bearer token is supplied.
    */
   handleRequest(err: any, user: any, info: any): any {
-    console.log("user:user " + user);
     if (err || !user) {
-      // Prefer the original error if present, otherwise return a clearer message
-      throw err || new UnauthorizedException('Authentication token is missing or invalid. Please provide a valid Bearer token.');
+      // Extract a more specific message from the error or info object
+      const msg =
+        err?.message ||
+        (typeof info === 'string' ? info : info?.message) ||
+        'Authentication token is missing or invalid. Please provide a valid Bearer token.';
+
+      throw new UnauthorizedException(msg);
     }
     return user;
   }
