@@ -75,8 +75,13 @@ export class AuthService {
       where: { verification_token: token },
     });
 
+    // If the token is invalid or has already been consumed, respond gracefully
+    // instead of throwing a 404. This covers cases where the user clicks the link
+    // multiple times or the token has expired/been cleared.
     if (!user) {
-      throw new NotFoundException('Invalid or expired verification token');
+      return {
+        message: 'Email already verified or verification link is invalid/expired',
+      };
     }
 
     if (user.email_verified) {
