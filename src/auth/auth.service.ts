@@ -38,13 +38,19 @@ export class AuthService {
     };
 
     const user = await this.usersService.create(createUserDto);
-    
-    // Send verification email
-    await this.emailService.sendVerificationEmail(
-      user.email,
-      user.first_name,
-      verificationToken,
-    );
+
+    // Send verification email (best-effort only; do not fail registration if email sending fails)
+    try {
+      await this.emailService.sendVerificationEmail(
+        user.email,
+        user.first_name,
+        verificationToken,
+      );
+    } catch (error) {
+      // Log and continue. In local/dev environments email may not be configured.
+      // The user can still be verified manually via the /auth/verify-email endpoint.
+      console.error('Failed to send verification email:', (error as any)?.message ?? error);
+    }
 
     const accessToken = await this.generateAccessToken(user);
     const refreshToken = await this.generateRefreshToken(user);
