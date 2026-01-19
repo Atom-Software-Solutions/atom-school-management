@@ -32,20 +32,20 @@ services:
       - "9229:9229" # Debug port
     environment:
       NODE_ENV: development
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-atom_school_db}?schema=user_mgt&schema=payment_mgt&schema=student_mgt
       PORT: 3000
-      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
-      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL}
-      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD}
-      SUPER_ADMIN_FIRST_NAME: ${SUPER_ADMIN_FIRST_NAME:-Super}
-      SUPER_ADMIN_LAST_NAME: ${SUPER_ADMIN_LAST_NAME:-Admin}
-      SUPER_ADMIN_PHONE: ${SUPER_ADMIN_PHONE:-}
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASS: ${SMTP_PASS:-}
-      SMTP_FROM: ${SMTP_FROM:-}
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/atom_school_db?schema=user_mgt&schema=payment_mgt&schema=student_mgt
+      JWT_SECRET: quickstart-secret-change-me
+      JWT_EXPIRES_IN: 7d
+      SUPER_ADMIN_EMAIL: admin@example.com
+      SUPER_ADMIN_PASSWORD: ChangeMe123!
+      SUPER_ADMIN_FIRST_NAME: Quick
+      SUPER_ADMIN_LAST_NAME: Start
+      SUPER_ADMIN_PHONE: "+0000000000"
+      SMTP_HOST: ""
+      SMTP_PORT: 587
+      SMTP_USER: ""
+      SMTP_PASS: ""
+      SMTP_FROM: ""
     volumes:
       - .:/app
       - /app/node_modules

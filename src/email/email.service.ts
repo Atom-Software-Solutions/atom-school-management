@@ -224,9 +224,16 @@ export class EmailService {
     firstName: string,
     verificationToken: string,
   ): Promise<void> {
-    // Use backend verification endpoint so clicking the link verifies immediately
-    const backendBaseUrl = this.configService.get<string>('BACKEND_URL', this.configService.get<string>('API_URL', 'http://localhost:3000'));
-    const verificationUrl = `${backendBaseUrl}/auth/verify-email?token=${verificationToken}`;
+    // Use backend verification endpoint so clicking the link verifies immediately.
+    // Note: the API uses a global '/api' prefix (see app.setGlobalPrefix('api') in main.ts),
+    // so ensure the base URL includes '/api'. If BACKEND_URL or API_URL already contains
+    // a path, we avoid duplicating slashes.
+    const rawBase =
+      this.configService.get<string>('BACKEND_URL') ||
+      this.configService.get<string>('API_URL') ||
+      'http://localhost:3000/api';
+    const base = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
+    const verificationUrl = `${base}/auth/verify-email?token=${encodeURIComponent(verificationToken)}`;
     const subject = 'Verify Your Email Address';
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">

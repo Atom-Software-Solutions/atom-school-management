@@ -13,6 +13,17 @@ import type { AuthenticatedRequest } from '../common/middleware/tenant.middlewar
 export class StudentsController {
   constructor(private readonly studentsService: StudentsService) {}
 
+  private resolveTenantSchoolId(req: AuthenticatedRequest, providedSchoolId?: string): string {
+    const tenantSchoolId = req.user?.school_id as string | undefined;
+    if (!tenantSchoolId) {
+      throw new BadRequestException('Missing tenant school context');
+    }
+    if (providedSchoolId && providedSchoolId !== tenantSchoolId) {
+      throw new BadRequestException('schoolId does not match authenticated tenant');
+    }
+    return tenantSchoolId;
+  }
+
   @Get()
   list(@Query('schoolId') schoolId: string, @Request() req: AuthenticatedRequest) {
     const adminUserId = (req as any).user?.id as string;
@@ -180,21 +191,21 @@ export class StudentsController {
   promote(
     @Param('id') id: string,
     @Query('schoolId') schoolId: string,
-    @Body() body: { fromEnrollmentId?: string; toOfferingId?: string; endDate?: string; startDate?: string },
+    @Body() body: { fromEnrollmentId?: string; toOfferingId?: string; actionDate?: string; narration?: string },
     @Request() req: AuthenticatedRequest,
   ) {
     const adminUserId = (req as any).user?.id as string;
-    if (!schoolId || schoolId.trim() === '') throw new BadRequestException('Missing required query parameter: schoolId');
+    const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
     if (!body?.fromEnrollmentId || !body?.toOfferingId) throw new BadRequestException('Missing fromEnrollmentId/toOfferingId');
     return this.studentsService.promoteStudent(
       id,
       adminUserId,
-      schoolId,
+      tenantSchoolId,
       {
         fromEnrollmentId: body.fromEnrollmentId,
         toOfferingId: body.toOfferingId,
-        endDate: body.endDate ? new Date(body.endDate) : undefined,
-        startDate: body.startDate ? new Date(body.startDate) : undefined,
+        actionDate: body.actionDate ? new Date(body.actionDate) : undefined,
+        narration: body.narration,
       },
     );
   }
@@ -203,22 +214,40 @@ export class StudentsController {
   retain(
     @Param('id') id: string,
     @Query('schoolId') schoolId: string,
-    @Body() body: { fromEnrollmentId?: string; toOfferingId?: string; endDate?: string; startDate?: string },
+    @Body() body: { fromEnrollmentId?: string; toOfferingId?: string; actionDate?: string; narration?: string; reason?: string },
     @Request() req: AuthenticatedRequest,
   ) {
     const adminUserId = (req as any).user?.id as string;
-    if (!schoolId || schoolId.trim() === '') throw new BadRequestException('Missing required query parameter: schoolId');
+    const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
     if (!body?.fromEnrollmentId || !body?.toOfferingId) throw new BadRequestException('Missing fromEnrollmentId/toOfferingId');
     return this.studentsService.retainStudent(
       id,
       adminUserId,
-      schoolId,
+      tenantSchoolId,
       {
         fromEnrollmentId: body.fromEnrollmentId,
         toOfferingId: body.toOfferingId,
-        endDate: body.endDate ? new Date(body.endDate) : undefined,
-        startDate: body.startDate ? new Date(body.startDate) : undefined,
+        actionDate: body.actionDate ? new Date(body.actionDate) : undefined,
+        narration: body.narration,
+        reason: body.reason,
       },
     );
+  }
+
+  @Get(':id/enrollments/history')
+  history(
+    @Param('id') id: string,
+    @Query('schoolId') schoolId: string,
+    @Query('yearId') yearId: string,
+    @Query('includeInactive') includeInactive: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    const adminUserId = (req as any).user?.id as string;
+    const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
+    const includeInactiveBool = includeInactive === 'true';
+    return this.studentsService.getEnrollmentHistory(id, adminUserId, tenantSchoolId, {
+      yearId: yearId || undefined,
+      includeInactive: includeInactiveBool,
+    });
   }
 }

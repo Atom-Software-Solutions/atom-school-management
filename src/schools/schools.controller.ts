@@ -39,15 +39,33 @@ export class SchoolsController {
     status: 201,
     description: 'School created successfully',
   })
-  @ApiResponse({ status: 400, description: 'Bad request - validation error' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - insufficient permissions' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - validation error (e.g., missing required fields such as name, code, or email)',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - missing or invalid authentication token',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - only SCHOOL_ADMIN users can create schools',
+  })
   create(@Body() createSchoolDto: CreateSchoolDto, @Request() req: AuthenticatedRequest) {
-    const creatorUserId = (req as any).user?.id as string | undefined;
+    if (!req.user) {
+      // This is an extra safety net; normally JwtAuthGuard will already reject the request.
+      throw new ForbiddenException('Authentication required to create a school. Please provide a valid Bearer token.');
+    }
+    if (req.user.role !== 'SCHOOL_ADMIN') {
+      throw new ForbiddenException('Only SCHOOL_ADMIN users can create schools');
+    }
+
+    const creatorUserId = req.user.id as string;
     return this.schoolsService.create(createSchoolDto, creatorUserId);
   }
 
   @Get()
+
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPER_ADMIN')
   @ApiBearerAuth('JWT-auth')

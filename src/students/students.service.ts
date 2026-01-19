@@ -440,10 +440,11 @@ export class StudentsService {
     studentId: string,
     adminUserId: string,
     schoolId: string,
-    params: { fromEnrollmentId: string; toOfferingId: string; endDate?: Date; startDate?: Date },
+    params: { fromEnrollmentId: string; toOfferingId: string; actionDate?: Date; narration?: string },
   ) {
     const student = await this.findOwned(studentId, adminUserId);
     if (student.school_id !== schoolId) throw new ForbiddenException('Student not accessible');
+    const actionDate = params.actionDate ?? new Date();
     return this.prisma.$transaction(async (tx) => {
       const from = await (tx as any).studentEnrollment.findUnique({
         where: { id: params.fromEnrollmentId },
@@ -467,17 +468,29 @@ export class StudentsService {
       // Ensure no active enrollment in target year
       const overlap = await (tx as any).studentEnrollment.findFirst({ where: { student_id: student.id, academic_year_id: to.academic_year_id, end_date: null } });
       if (overlap) throw new BadRequestException('Student already has an active enrollment in target academic year');
-      // Close current and open new
-      await (tx as any).studentEnrollment.update({ where: { id: from.id }, data: { end_date: params.endDate ?? new Date(), status: 'completed' } });
-      return (tx as any).studentEnrollment.create({
+      if (from.start_date && actionDate < from.start_date) {
+        throw new BadRequestException('Promotion date cannot precede enrollment startDate');
+      }
+      if (to.academic_year.start_date && actionDate < to.academic_year.start_date) {
+        throw new BadRequestException('Promotion date must be within target academic year');
+      }
+      if (to.academic_year.end_date && actionDate > to.academic_year.end_date) {
+        throw new BadRequestException('Promotion date must be within target academic year');
+      }
+      const closed = await (tx as any).studentEnrollment.update({
+        where: { id: from.id },
+        data: { end_date: actionDate, status: 'promoted' },
+      });
+      const opened = await (tx as any).studentEnrollment.create({
         data: {
           student_id: student.id,
           classroom_offering_id: to.id,
           academic_year_id: to.academic_year_id,
-          start_date: params.startDate ?? new Date(),
+          start_date: actionDate,
           status: 'active',
         },
       });
+      return { promotedFrom: closed, promotedTo: opened };
     });
   }
 
@@ -485,10 +498,11 @@ export class StudentsService {
     studentId: string,
     adminUserId: string,
     schoolId: string,
-    params: { fromEnrollmentId: string; toOfferingId: string; endDate?: Date; startDate?: Date },
+    params: { fromEnrollmentId: string; toOfferingId: string; actionDate?: Date; narration?: string; reason?: string },
   ) {
     const student = await this.findOwned(studentId, adminUserId);
     if (student.school_id !== schoolId) throw new ForbiddenException('Student not accessible');
+    const actionDate = params.actionDate ?? new Date();
     return this.prisma.$transaction(async (tx) => {
       const from = await (tx as any).studentEnrollment.findUnique({
         where: { id: params.fromEnrollmentId },
@@ -511,16 +525,58 @@ export class StudentsService {
       }
       const overlap = await (tx as any).studentEnrollment.findFirst({ where: { student_id: student.id, academic_year_id: to.academic_year_id, end_date: null } });
       if (overlap) throw new BadRequestException('Student already has an active enrollment in target academic year');
-      await (tx as any).studentEnrollment.update({ where: { id: from.id }, data: { end_date: params.endDate ?? new Date(), status: 'completed' } });
-      return (tx as any).studentEnrollment.create({
+      if (from.start_date && actionDate < from.start_date) {
+        throw new BadRequestException('Retention date cannot precede enrollment startDate');
+      }
+      if (to.academic_year.start_date && actionDate < to.academic_year.start_date) {
+        throw new BadRequestException('Retention date must be within target academic year');
+      }
+      if (to.academic_year.end_date && actionDate > to.academic_year.end_date) {
+        throw new BadRequestException('Retention date must be within target academic year');
+      }
+      const closed = await (tx as any).studentEnrollment.update({
+        where: { id: from.id },
+        data: { end_date: actionDate, status: 'retained' },
+      });
+      const opened = await (tx as any).studentEnrollment.create({
         data: {
           student_id: student.id,
           classroom_offering_id: to.id,
           academic_year_id: to.academic_year_id,
-          start_date: params.startDate ?? new Date(),
+          start_date: actionDate,
           status: 'active',
         },
       });
+      return { retainedFrom: closed, retainedTo: opened };
+    });
+  }
+
+  async getEnrollmentHistory(
+    studentId: string,
+    adminUserId: string,
+    schoolId: string,
+    options: { yearId?: string; includeInactive?: boolean },
+  ) {
+    const student = await this.findOwned(studentId, adminUserId);
+    if (student.school_id !== schoolId) throw new ForbiddenException('Student not accessible');
+    const where: any = { student_id: studentId };
+    if (options?.yearId) {
+      where.academic_year_id = options.yearId;
+    }
+    if (!options?.includeInactive) {
+      where.OR = [{ end_date: null }, { status: 'active' }];
+    }
+    return (this.prisma as any).studentEnrollment.findMany({
+      where,
+      include: {
+        classroom_offering: {
+          include: {
+            academic_year: { select: { id: true, name: true, start_date: true, end_date: true, school_id: true } },
+            classroom_definition: { select: { id: true, name: true, level: true } },
+          },
+        },
+      },
+      orderBy: [{ start_date: 'asc' }],
     });
   }
 }

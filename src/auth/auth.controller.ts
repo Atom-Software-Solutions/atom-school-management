@@ -160,14 +160,23 @@ export class AuthController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Email verified successfully',
+    description: 'Email verification result',
     schema: {
-      example: {
-        message: 'Email verified successfully',
-      },
+      oneOf: [
+        {
+          example: { message: 'Email verified successfully' },
+        },
+        {
+          example: { message: 'Email already verified' },
+        },
+        {
+          example: {
+            message: 'Email already verified or verification link is invalid/expired',
+          },
+        },
+      ],
     },
   })
-  @ApiResponse({ status: 400, description: 'Invalid or expired token' })
   async verifyEmail(@Query('token') token: string) {
     return this.authService.verifyEmail(token);
   }

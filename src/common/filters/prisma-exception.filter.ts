@@ -77,7 +77,11 @@ export class PrismaExceptionFilter implements ExceptionFilter {
       }
     }
 
-    // For any other unhandled exceptions, return 500
+    // For any other unhandled exceptions, log and return 500
+    // This helps diagnose unexpected runtime/Prisma errors.
+    // eslint-disable-next-line no-console
+    console.error('Unhandled exception in PrismaExceptionFilter:', exception);
+
     return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
       message: 'Internal server error',

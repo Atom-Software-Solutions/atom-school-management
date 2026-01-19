@@ -79,9 +79,43 @@ Authenticate a user and receive a JWT access token.
 }
 ```
 
-### 3. Get Profile
+### 3. Verify Email Address
 
-**GET** `/auth/profile`
+**GET** `/api/auth/verify-email?token=<token>`
+
+Verify a user's email address using the verification token that was sent via email. The endpoint is idempotent: clicking the same link multiple times will always return a 200 response with an appropriate message.
+
+**Query Parameters:**
+
+- `token` (string, required): The verification token from the email.
+
+**Responses (200 OK):**
+
+```json
+{
+  "message": "Email verified successfully"
+}
+```
+or
+
+```json
+{
+  "message": "Email already verified"
+}
+```
+or
+
+```json
+{
+  "message": "Email already verified or verification link is invalid/expired"
+}
+```
+
+---
+
+### 4. Get Profile
+
+**GET** `/api/auth/profile`
 
 Get the current authenticated user's profile. Requires authentication.
 
@@ -89,6 +123,9 @@ Get the current authenticated user's profile. Requires authentication.
 ```
 Authorization: Bearer <accessToken>
 ```
+
+> Timestamps (e.g. `createdAt`, `updatedAt`, `lastLogin`) are returned as ISO 8601 strings in UTC (e.g. `2026-01-18T12:34:56.000Z`).
+If your school operates in a specific time zone (e.g. `Africa/Kampala` which is GMT+3), your frontend should convert these UTC timestamps to the school’s configured `timeZone` (see `School.time_zone`) before displaying them.
 
 **Response:**
 ```json
@@ -99,7 +136,10 @@ Authorization: Bearer <accessToken>
   "lastName": "Doe",
   "role": "STUDENT",
   "phone": "+1234567890",
-  "schoolId": "uuid-string"
+  "schoolId": "uuid-string",
+  "createdAt": "2026-01-18T12:34:56.000Z",
+  "updatedAt": "2026-01-18T12:34:56.000Z",
+  "lastLogin": "2026-01-18T12:34:56.000Z"
 }
 ```
 
