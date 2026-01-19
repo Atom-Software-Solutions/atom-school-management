@@ -32,18 +32,6 @@ export class ClassroomDefinitionsController {
       throw new ForbiddenException('Authentication required');
     }
 
-    // Debug: confirm all IDs used in the SchoolAdmin lookup
-    // Note: Nest's Logger.debug may be suppressed depending on log levels (e.g. prod).
-    // Keeping a console.log as well so you always see it.
-    this.logger.debug(
-      `POST classroom-definitions: schoolId(route)=${schoolId} userId(jwt)=${req.user.id} user.school_id(jwt)=${req.user.school_id}`,
-    );
-    console.log('POST classroom-definitions debug', {
-      schoolIdRoute: schoolId,
-      userIdJwt: req.user.id,
-      userSchoolIdJwt: req.user.school_id,
-    });
-
     const adminUserId = req.user.id;
     return this.classroomsService.createDefinition(schoolId, adminUserId, {
       name: dto.name,
