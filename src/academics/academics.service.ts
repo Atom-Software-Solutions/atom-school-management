@@ -282,10 +282,6 @@ export class AcademicsService {
     if (year.status === 'closed' && status !== 'closed') {
       throw new BadRequestException('Cannot change status of a closed academic year');
     }
-<<<<<<< Updated upstream
-    
-    return (this.prisma as any).academicYear.update({ where: { id: yearId }, data: { status } });
-=======
 
     // Ensure only one ACTIVE academic year per school.
     // Note: This is an application-level guard. For full protection against race conditions,
@@ -312,6 +308,5 @@ export class AcademicsService {
     }
 
     return this.prisma.academicYear.update({ where: { id: yearId }, data: { status } });
->>>>>>> Stashed changes
   }
 }
