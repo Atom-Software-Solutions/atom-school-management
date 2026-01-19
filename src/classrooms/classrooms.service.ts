@@ -1,15 +1,43 @@
-import { Injectable, ForbiddenException, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, ForbiddenException, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class ClassroomsService {
+  private readonly logger = new Logger(ClassroomsService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   private async assertIsAdminOfSchool(schoolId: string, userId: string) {
+    const normalizedSchoolId = (schoolId ?? '').trim();
+    const normalizedUserId = (userId ?? '').trim();
+
     const rel = await this.prisma.schoolAdmin.findUnique({
-      where: { school_id_user_id: { school_id: schoolId, user_id: userId } },
+      where: { school_id_user_id: { school_id: normalizedSchoolId, user_id: normalizedUserId } },
     });
-    if (!rel) throw new ForbiddenException('Insufficient permissions for this school');
+
+    if (!rel) {
+      // Helpful debug info (prints to console) to diagnose why a valid SCHOOL_ADMIN is getting 403.
+      // We log:
+      // - schoolId passed in the route
+      // - userId from JWT
+      // - all school_ids this user is an admin of (per SchoolAdmin)
+      const userSchoolAdmins = await this.prisma.schoolAdmin.findMany({
+        where: { user_id: normalizedUserId },
+        select: { school_id: true },
+      });
+      const userSchoolIds = userSchoolAdmins.map((r) => r.school_id);
+
+      this.logger.warn(
+        `Insufficient permissions for this school. schoolId(route)=${normalizedSchoolId} userId(jwt)=${normalizedUserId} userSchoolIds(SchoolAdmin)=${JSON.stringify(userSchoolIds)}`,
+      );
+      console.warn('Insufficient permissions for this school (debug)', {
+        schoolIdRoute: normalizedSchoolId,
+        userIdJwt: normalizedUserId,
+        userSchoolIds,
+      });
+
+      throw new ForbiddenException('Insufficient permissions for this school');
+    }
   }
 
   /**
