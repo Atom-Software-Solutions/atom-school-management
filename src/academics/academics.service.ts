@@ -79,7 +79,7 @@ export class AcademicsService {
   // Term templates
   async listTermTemplates(schoolId: string, adminUserId: string) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
-    return (this.prisma as any).termTemplate.findMany({ where: { school_id: schoolId }, orderBy: { name: 'asc' } });
+    return this.prisma.termTemplate.findMany({ where: { school_id: schoolId }, orderBy: { name: 'asc' } });
   }
 
   async createTermTemplate(schoolId: string, adminUserId: string, data: { name: string; structure: Array<{ ordinal: number; name: string }> }) {
@@ -87,7 +87,7 @@ export class AcademicsService {
     this.validateTermStructure(data.structure);
 
     try {
-      return await (this.prisma as any).termTemplate.create({
+      return await this.prisma.termTemplate.create({
         data: {
           school_id: schoolId,
           name: data.name.trim(),
@@ -100,7 +100,7 @@ export class AcademicsService {
   }
 
   async updateTermTemplate(id: string, adminUserId: string, data: { name?: string; structure?: Array<{ ordinal: number; name: string }> }) {
-    const tpl = await (this.prisma as any).termTemplate.findUnique({ where: { id } });
+    const tpl = await this.prisma.termTemplate.findUnique({ where: { id } });
     if (!tpl) throw new NotFoundException('Term template not found');
 
     await this.assertIsAdminOfSchool(tpl.school_id, adminUserId);
@@ -111,7 +111,7 @@ export class AcademicsService {
     if (data.name !== undefined) {
       const trimmedName = data.name.trim();
       if (trimmedName !== tpl.name) {
-        const existing = await (this.prisma as any).termTemplate.findUnique({
+        const existing = await this.prisma.termTemplate.findUnique({
           where: { school_id_name: { school_id: tpl.school_id, name: trimmedName } },
         });
         if (existing) {
@@ -139,7 +139,7 @@ export class AcademicsService {
     }
 
     try {
-      return await (this.prisma as any).termTemplate.update({
+      return await this.prisma.termTemplate.update({
         where: { id },
         data: updateData,
       });
@@ -149,7 +149,7 @@ export class AcademicsService {
   }
 
   async lockTemplate(id: string, adminUserId: string) {
-    const tpl = await (this.prisma as any).termTemplate.findUnique({ where: { id } });
+    const tpl = await this.prisma.termTemplate.findUnique({ where: { id } });
     if (!tpl) throw new NotFoundException('Term template not found');
     
     await this.assertIsAdminOfSchool(tpl.school_id, adminUserId);
@@ -158,13 +158,13 @@ export class AcademicsService {
       throw new BadRequestException('Template is already locked');
     }
     
-    return (this.prisma as any).termTemplate.update({ where: { id }, data: { is_locked: true } });
+    return this.prisma.termTemplate.update({ where: { id }, data: { is_locked: true } });
   }
 
   // Years
   async listYears(schoolId: string, adminUserId: string) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
-    return (this.prisma as any).academicYear.findMany({ 
+    return this.prisma.academicYear.findMany({ 
       where: { school_id: schoolId }, 
       orderBy: { start_date: 'desc' },
       include: {
@@ -187,7 +187,7 @@ export class AcademicsService {
       throw new BadRequestException('startDate must be before endDate');
     }
 
-    const tpl = await (this.prisma as any).termTemplate.findUnique({ where: { id: data.termTemplateId } });
+    const tpl = await this.prisma.termTemplate.findUnique({ where: { id: data.termTemplateId } });
     if (!tpl) throw new NotFoundException('Term template not found');
     if (tpl.school_id !== schoolId) throw new ForbiddenException('Template not accessible for this school');
     
@@ -197,7 +197,7 @@ export class AcademicsService {
     }
 
     // Check for duplicate year name in school
-    const existingYear = await (this.prisma as any).academicYear.findUnique({
+    const existingYear = await this.prisma.academicYear.findUnique({
       where: { school_id_name: { school_id: schoolId, name: data.name.trim() } },
     });
     if (existingYear) {
@@ -209,7 +209,7 @@ export class AcademicsService {
 
     // Create year and instantiate terms from template.structure
     const created = await this.prisma.$transaction(async (tx) => {
-      const year = await (tx as any).academicYear.create({
+      const year = await tx.academicYear.create({
         data: {
           school_id: schoolId,
           name: data.name.trim(),
@@ -220,7 +220,7 @@ export class AcademicsService {
         },
       });
       const structure: Array<{ ordinal: number; name: string }> = tpl.structure as any;
-      await (tx as any).term.createMany({
+      await tx.term.createMany({
         data: structure.map((t) => ({
           academic_year_id: year.id,
           ordinal: t.ordinal,
@@ -232,7 +232,7 @@ export class AcademicsService {
       });
       // Lock template if not already locked (auto-lock on first use)
       if (!tpl.is_locked) {
-        await (tx as any).termTemplate.update({ where: { id: tpl.id }, data: { is_locked: true } });
+        await tx.termTemplate.update({ where: { id: tpl.id }, data: { is_locked: true } });
       }
       return year;
     });
@@ -240,7 +240,7 @@ export class AcademicsService {
   }
 
   async getYear(yearId: string, adminUserId: string) {
-    const year = await (this.prisma as any).academicYear.findUnique({ 
+    const year = await this.prisma.academicYear.findUnique({ 
       where: { id: yearId },
       include: {
         term_template: {
@@ -262,18 +262,18 @@ export class AcademicsService {
   }
 
   async listTerms(yearId: string, adminUserId: string) {
-    const year = await (this.prisma as any).academicYear.findUnique({ where: { id: yearId } });
+    const year = await this.prisma.academicYear.findUnique({ where: { id: yearId } });
     if (!year) throw new NotFoundException('Academic year not found');
     
     await this.assertIsAdminOfSchool(year.school_id, adminUserId);
-    return (this.prisma as any).term.findMany({ 
+    return this.prisma.term.findMany({ 
       where: { academic_year_id: yearId }, 
       orderBy: { ordinal: 'asc' } 
     });
   }
 
   async updateYearStatus(yearId: string, adminUserId: string, status: 'planned' | 'active' | 'closed') {
-    const year = await (this.prisma as any).academicYear.findUnique({ where: { id: yearId } });
+    const year = await this.prisma.academicYear.findUnique({ where: { id: yearId } });
     if (!year) throw new NotFoundException('Academic year not found');
     
     await this.assertIsAdminOfSchool(year.school_id, adminUserId);
@@ -283,6 +283,6 @@ export class AcademicsService {
       throw new BadRequestException('Cannot change status of a closed academic year');
     }
     
-    return (this.prisma as any).academicYear.update({ where: { id: yearId }, data: { status } });
+    return this.prisma.academicYear.update({ where: { id: yearId }, data: { status } });
   }
 }

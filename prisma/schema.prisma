@@ -127,6 +127,64 @@ model StudentGuardian {
 // ACADEMIC RESULTS MODELS
 // ==========================================
 
+model TermTemplate {
+  id         String   @id @default(uuid())
+  school_id  String
+  name       String
+  structure  Json
+  is_locked  Boolean  @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  academic_years AcademicYear[]
+
+  @@unique([school_id, name])
+  @@index([school_id])
+  @@index([is_locked])
+  @@schema("results_mgt")
+}
+
+model AcademicYear {
+  id               String   @id @default(uuid())
+  school_id        String
+  name             String
+  start_date       DateTime
+  end_date         DateTime
+  status           String   @default("planned")
+  term_template_id String
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  term_template TermTemplate @relation(fields: [term_template_id], references: [id], onDelete: Restrict)
+  terms         Term[]
+
+  @@unique([school_id, name])
+  @@index([school_id])
+  @@index([start_date])
+  @@index([end_date])
+  @@index([term_template_id])
+  @@schema("results_mgt")
+}
+
+model Term {
+  id               String   @id @default(uuid())
+  academic_year_id String
+  ordinal          Int
+  name             String
+  start_date       DateTime
+  end_date         DateTime
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  academic_year AcademicYear @relation(fields: [academic_year_id], references: [id], onDelete: Cascade)
+
+  @@unique([academic_year_id, ordinal])
+  @@index([academic_year_id])
+  @@index([start_date])
+  @@index([end_date])
+  @@schema("results_mgt")
+}
+
 model Subject {
   id          String       @id @default(uuid())
   school_id   String
