@@ -8,8 +8,27 @@ export class ClassroomsService {
   constructor(private readonly prisma: PrismaService) {}
 
   private async assertIsAdminOfSchool(schoolId: string, userId: string) {
-    const normalizedSchoolId = (schoolId ?? '').trim();
+    let normalizedSchoolId = (schoolId ?? '').trim();
     const normalizedUserId = (userId ?? '').trim();
+
+    // Guard against malformed URLs where the Swagger-style placeholder "{schoolId}" wasn't replaced properly.
+    // We've seen values like: "<uuid>schoolId}" (i.e. only "{" got replaced), which will always fail the lookup.
+    if (normalizedSchoolId.toLowerCase().endsWith('schoolid}')) {
+      const match = normalizedSchoolId.match(
+        /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\{?schoolId\}$/i,
+      );
+
+      if (match?.[1]) {
+        this.logger.warn(
+          `Malformed schoolId param detected (trailing "schoolId}"). Normalizing from ${normalizedSchoolId} -> ${match[1]}`,
+        );
+        normalizedSchoolId = match[1];
+      } else {
+        throw new BadRequestException(
+          `Malformed schoolId parameter: ${normalizedSchoolId}. Your request URL likely still contains a "{schoolId}" placeholder that wasn't substituted correctly.`,
+        );
+      }
+    }
 
     const rel = await this.prisma.schoolAdmin.findUnique({
       where: { school_id_user_id: { school_id: normalizedSchoolId, user_id: normalizedUserId } },
