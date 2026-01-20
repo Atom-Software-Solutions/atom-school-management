@@ -79,6 +79,12 @@ model Student {
   last_name  String
   email      String?           @unique
   phone      String?           @unique
+  gender     String?
+  status     String?
+  date_of_birth DateTime?
+  religion   String?
+  address    String?
+  avatar_url String?
   is_active  Boolean           @default(true)
   deleted_at DateTime?
   created_at DateTime          @default(now())
@@ -126,6 +132,128 @@ model StudentGuardian {
 // ==========================================
 // ACADEMIC RESULTS MODELS
 // ==========================================
+
+model TermTemplate {
+  id         String   @id @default(uuid())
+  school_id  String
+  name       String
+  structure  Json
+  is_locked  Boolean  @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  academic_years AcademicYear[]
+
+  @@unique([school_id, name])
+  @@index([school_id])
+  @@index([is_locked])
+  @@schema("results_mgt")
+}
+
+model AcademicYear {
+  id               String   @id @default(uuid())
+  school_id        String
+  name             String
+  start_date       DateTime
+  end_date         DateTime
+  status           String   @default("planned")
+  term_template_id String
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  term_template TermTemplate @relation(fields: [term_template_id], references: [id], onDelete: Restrict)
+  terms         Term[]
+  offerings     ClassroomOffering[]
+  enrollments   StudentEnrollment[]
+
+  @@unique([school_id, name])
+  @@index([school_id])
+  @@index([start_date])
+  @@index([end_date])
+  @@index([term_template_id])
+  @@schema("results_mgt")
+}
+
+model Term {
+  id               String   @id @default(uuid())
+  academic_year_id String
+  ordinal          Int
+  name             String
+  start_date       DateTime
+  end_date         DateTime
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  academic_year AcademicYear @relation(fields: [academic_year_id], references: [id], onDelete: Cascade)
+
+  @@unique([academic_year_id, ordinal])
+  @@index([academic_year_id])
+  @@index([start_date])
+  @@index([end_date])
+  @@schema("results_mgt")
+}
+
+// ==========================================
+// CLASSROOMS & ENROLLMENTS MODELS
+// ==========================================
+
+model ClassroomDefinition {
+  id          String   @id @default(uuid())
+  school_id   String
+  name        String
+  level       String?
+  is_archived Boolean  @default(false)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  offerings ClassroomOffering[]
+
+  @@unique([school_id, name])
+  @@index([school_id])
+  @@index([is_archived])
+  @@schema("results_mgt")
+}
+
+model ClassroomOffering {
+  id                      String   @id @default(uuid())
+  academic_year_id        String
+  classroom_definition_id String
+  display_name            String?
+  is_active               Boolean  @default(true)
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  academic_year        AcademicYear        @relation(fields: [academic_year_id], references: [id], onDelete: Cascade)
+  classroom_definition ClassroomDefinition @relation(fields: [classroom_definition_id], references: [id], onDelete: Restrict)
+  enrollments          StudentEnrollment[]
+
+  @@unique([academic_year_id, classroom_definition_id])
+  @@index([academic_year_id])
+  @@index([classroom_definition_id])
+  @@index([is_active])
+  @@schema("results_mgt")
+}
+
+model StudentEnrollment {
+  id                    String   @id @default(uuid())
+  student_id            String
+  classroom_offering_id String
+  academic_year_id      String
+  start_date            DateTime @default(now())
+  end_date              DateTime?
+  status                String   @default("active")
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+
+  classroom_offering ClassroomOffering @relation(fields: [classroom_offering_id], references: [id], onDelete: Restrict)
+  academic_year      AcademicYear      @relation(fields: [academic_year_id], references: [id], onDelete: Cascade)
+
+  @@index([student_id])
+  @@index([academic_year_id])
+  @@index([classroom_offering_id])
+  @@index([status])
+  @@schema("results_mgt")
+}
 
 model Subject {
   id          String       @id @default(uuid())

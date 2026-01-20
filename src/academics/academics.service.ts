@@ -275,14 +275,38 @@ export class AcademicsService {
   async updateYearStatus(yearId: string, adminUserId: string, status: 'planned' | 'active' | 'closed') {
     const year = await (this.prisma as any).academicYear.findUnique({ where: { id: yearId } });
     if (!year) throw new NotFoundException('Academic year not found');
-    
+
     await this.assertIsAdminOfSchool(year.school_id, adminUserId);
-    
+
     // Validate status transitions
     if (year.status === 'closed' && status !== 'closed') {
       throw new BadRequestException('Cannot change status of a closed academic year');
     }
-    
-    return (this.prisma as any).academicYear.update({ where: { id: yearId }, data: { status } });
+
+    // Ensure only one ACTIVE academic year per school.
+    // Note: This is an application-level guard. For full protection against race conditions,
+    // consider adding a DB-level unique partial index on (school_id) where status = 'active'.
+    if (status === 'active') {
+      return this.prisma.$transaction(async (tx) => {
+        const existingActive = await tx.academicYear.findFirst({
+          where: {
+            school_id: year.school_id,
+            status: 'active',
+            NOT: { id: yearId },
+          },
+          select: { id: true, name: true },
+        });
+
+        if (existingActive) {
+          throw new BadRequestException(
+            `Cannot activate this academic year because another year is already active (${existingActive.name}). Close the active year first.`,
+          );
+        }
+
+        return tx.academicYear.update({ where: { id: yearId }, data: { status } });
+      });
+    }
+
+    return this.prisma.academicYear.update({ where: { id: yearId }, data: { status } });
   }
 }
