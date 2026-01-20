@@ -79,6 +79,12 @@ model Student {
   last_name  String
   email      String?           @unique
   phone      String?           @unique
+  gender     String?
+  status     String?
+  date_of_birth DateTime?
+  religion   String?
+  address    String?
+  avatar_url String?
   is_active  Boolean           @default(true)
   deleted_at DateTime?
   created_at DateTime          @default(now())

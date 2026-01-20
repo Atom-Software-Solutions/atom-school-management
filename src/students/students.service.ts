@@ -9,6 +9,37 @@ export class StudentsService {
     await this.assertIsAdminOfSchool(schoolId, userId);
   }
 
+  private nextCode(prefix: string, seq: number, minDigits = 3) {
+    const digits = Math.max(minDigits, String(seq).length);
+    return `${prefix}${String(seq).padStart(digits, '0')}`;
+  }
+
+  private async generateNextStudentNo(schoolId: string): Promise<string> {
+    const students = await this.prisma.student.findMany({
+      where: { school_id: schoolId },
+      select: { student_no: true },
+    });
+    let max = 0;
+    for (const s of students) {
+      const m = /^STU(\d+)$/.exec((s.student_no || '').trim());
+      if (m) max = Math.max(max, Number(m[1]));
+    }
+    return this.nextCode('STU', max + 1, 3);
+  }
+
+  private async generateNextRegNo(schoolId: string): Promise<string> {
+    const students = await this.prisma.student.findMany({
+      where: { school_id: schoolId, reg_no: { not: null } },
+      select: { reg_no: true },
+    });
+    let max = 0;
+    for (const s of students) {
+      const m = /^REG(\d+)$/.exec((s.reg_no || '').trim());
+      if (m) max = Math.max(max, Number(m[1]));
+    }
+    return this.nextCode('REG', max + 1, 3);
+  }
+
   private async assertIsAdminOfSchool(schoolId: string, userId: string) {
     const rel = await this.prisma.schoolAdmin.findUnique({
       where: { school_id_user_id: { school_id: schoolId, user_id: userId } },
@@ -29,39 +60,64 @@ export class StudentsService {
   async create(
     schoolId: string,
     adminUserId: string,
-    data: { studentNo: string; regNo?: string; firstName: string; lastName: string; email?: string; phone?: string },
+    data: {
+      firstName: string;
+      lastName: string;
+      email?: string;
+      phone?: string;
+      gender?: string;
+      status?: string;
+      dateOfBirth?: Date;
+      religion?: string;
+      address?: string;
+      avatarUrl?: string;
+    },
   ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
-    try {
-      return await this.prisma.student.create({
-        data: {
-          school_id: schoolId,
-          student_no: data.studentNo,
-          reg_no: data.regNo || undefined,
-          first_name: data.firstName,
-          last_name: data.lastName,
-          email: data.email,
-          phone: data.phone,
-        },
-      });
-    } catch (e: any) {
-      if (e?.code === 'P2002' && Array.isArray(e?.meta?.target)) {
-        const target = e.meta.target as string[];
-        if (target.includes('student_no')) {
-          throw new BadRequestException('A student with this studentNo already exists in this school');
+
+    // Autogenerate studentNo/regNo with retry on unique constraints (concurrent requests)
+    let attempt = 0;
+    const maxAttempts = 5;
+    while (attempt < maxAttempts) {
+      attempt += 1;
+      const studentNo = await this.generateNextStudentNo(schoolId);
+      const regNo = await this.generateNextRegNo(schoolId);
+      try {
+        return await this.prisma.student.create({
+          data: {
+            school_id: schoolId,
+            student_no: studentNo,
+            reg_no: regNo,
+            first_name: data.firstName,
+            last_name: data.lastName,
+            email: data.email,
+            phone: data.phone,
+            gender: data.gender,
+            status: data.status,
+            date_of_birth: data.dateOfBirth,
+            religion: data.religion,
+            address: data.address,
+            avatar_url: data.avatarUrl,
+          },
+        });
+      } catch (e: any) {
+        if (e?.code === 'P2002' && Array.isArray(e?.meta?.target)) {
+          const target = e.meta.target as string[];
+          if (target.includes('student_no') || target.includes('reg_no')) {
+            // collision - retry with next sequence
+            continue;
+          }
+          if (target.includes('email')) {
+            throw new BadRequestException('A student with this email already exists');
+          }
+          if (target.includes('phone')) {
+            throw new BadRequestException('A student with this phone already exists');
+          }
         }
-        if (target.includes('reg_no')) {
-          throw new BadRequestException('A student with this regNo already exists in this school');
-        }
-        if (target.includes('email')) {
-          throw new BadRequestException('A student with this email already exists');
-        }
-        if (target.includes('phone')) {
-          throw new BadRequestException('A student with this phone already exists');
-        }
+        throw e;
       }
-      throw e;
     }
+    throw new BadRequestException('Failed to generate unique student identifiers. Please retry.');
   }
 
   private async findOwned(studentId: string, adminUserId: string) {
@@ -77,13 +133,37 @@ export class StudentsService {
     return this.findOwned(studentId, adminUserId);
   }
 
-  async update(studentId: string, adminUserId: string, data: { firstName?: string; lastName?: string; email?: string; phone?: string }) {
+  async update(
+    studentId: string,
+    adminUserId: string,
+    data: {
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      phone?: string;
+      gender?: string;
+      status?: string;
+      dateOfBirth?: string;
+      religion?: string;
+      address?: string;
+      avatarUrl?: string;
+    },
+  ) {
     const student = await this.findOwned(studentId, adminUserId);
     const updateData: any = {};
     if (data.firstName !== undefined) updateData.first_name = data.firstName;
     if (data.lastName !== undefined) updateData.last_name = data.lastName;
     if (data.email !== undefined) updateData.email = data.email;
     if (data.phone !== undefined) updateData.phone = data.phone;
+    if (data.gender !== undefined) updateData.gender = data.gender;
+    if (data.status !== undefined) updateData.status = data.status;
+    if (data.religion !== undefined) updateData.religion = data.religion;
+    if (data.address !== undefined) updateData.address = data.address;
+    if (data.avatarUrl !== undefined) updateData.avatar_url = data.avatarUrl;
+    if (data.dateOfBirth !== undefined) {
+      const raw = (data.dateOfBirth ?? '').toString().trim();
+      updateData.date_of_birth = raw ? new Date(raw) : null;
+    }
     try {
       return await this.prisma.student.update({ where: { id: student.id }, data: updateData });
     } catch (e: any) {

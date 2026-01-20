@@ -36,22 +36,29 @@ export class StudentsController {
   @Post()
   create(
     @Query('schoolId') schoolId: string,
-    @Body() body: { studentNo: string; regNo?: string; firstName: string; lastName: string; email?: string; phone?: string },
+    @Body()
+    body: {
+      firstName: string;
+      lastName: string;
+      email?: string;
+      phone?: string;
+      gender?: string;
+      status?: string;
+      dateOfBirth?: string;
+      religion?: string;
+      address?: string;
+      avatarUrl?: string;
+    },
     @Request() req: AuthenticatedRequest,
   ) {
     const adminUserId = (req as any).user?.id as string;
     if (!schoolId || schoolId.trim() === '') {
       throw new BadRequestException('Missing required query parameter: schoolId');
     }
-    const studentNo = (body?.studentNo ?? '').toString().trim();
-    const regNo = body?.regNo?.toString().trim() || undefined;
     const firstName = (body?.firstName ?? '').toString().trim();
     const lastName = (body?.lastName ?? '').toString().trim();
     const email = body?.email?.toString().trim() || undefined;
     const phone = body?.phone?.toString().trim() || undefined;
-    if (!studentNo) {
-      throw new BadRequestException('Missing required field: studentNo');
-    }
     if (!firstName) {
       throw new BadRequestException('Missing required field: firstName');
     }
@@ -63,7 +70,31 @@ export class StudentsController {
         throw new BadRequestException('phone must be a 10-digit number string');
       }
     }
-    return this.studentsService.create(schoolId, adminUserId, { studentNo, regNo, firstName, lastName, email, phone });
+
+    const gender = body?.gender?.toString().trim() || undefined;
+    const status = body?.status?.toString().trim() || undefined;
+    const religion = body?.religion?.toString().trim() || undefined;
+    const address = body?.address?.toString().trim() || undefined;
+    const avatarUrl = body?.avatarUrl?.toString().trim() || undefined;
+
+    const dateOfBirthRaw = body?.dateOfBirth?.toString().trim() || undefined;
+    const dateOfBirth = dateOfBirthRaw ? new Date(dateOfBirthRaw) : undefined;
+    if (dateOfBirthRaw && (!dateOfBirth || Number.isNaN(dateOfBirth.getTime()))) {
+      throw new BadRequestException('dateOfBirth must be a valid ISO date string');
+    }
+
+    return this.studentsService.create(schoolId, adminUserId, {
+      firstName,
+      lastName,
+      email,
+      phone,
+      gender,
+      status,
+      dateOfBirth,
+      religion,
+      address,
+      avatarUrl,
+    });
   }
 
   @Get(':id')
@@ -75,7 +106,19 @@ export class StudentsController {
   @Patch(':id')
   update(
     @Param('id') id: string,
-    @Body() body: { firstName?: string; lastName?: string; email?: string; phone?: string },
+    @Body()
+    body: {
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      phone?: string;
+      gender?: string;
+      status?: string;
+      dateOfBirth?: string;
+      religion?: string;
+      address?: string;
+      avatarUrl?: string;
+    },
     @Request() req: AuthenticatedRequest,
   ) {
     const adminUserId = (req as any).user?.id as string;
@@ -89,6 +132,15 @@ export class StudentsController {
       const email = body.email.toString().trim();
       if (email !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         throw new BadRequestException('email is invalid');
+      }
+    }
+    if (body?.dateOfBirth !== undefined && body.dateOfBirth !== null) {
+      const raw = body.dateOfBirth.toString().trim();
+      if (raw !== '') {
+        const d = new Date(raw);
+        if (Number.isNaN(d.getTime())) {
+          throw new BadRequestException('dateOfBirth must be a valid ISO date string');
+        }
       }
     }
     return this.studentsService.update(id, adminUserId, body);
