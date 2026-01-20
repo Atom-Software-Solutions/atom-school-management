@@ -25,9 +25,13 @@ export class SubjectsController {
   }
 
   @Post()
-  create(@Param('schoolId') schoolId: string, @Body() dto: CreateSubjectDto, @Request() req: AuthenticatedRequest) {
+  create(@Param('schoolId') schoolId: string, @Body() dto: CreateSubjectDto | CreateSubjectDto[], @Request() req: AuthenticatedRequest) {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
+    }
+    // Support both single subject and array of subjects
+    if (Array.isArray(dto)) {
+      return this.resultsService.createSubjects(schoolId, req.user.id, dto);
     }
     return this.resultsService.createSubject(schoolId, req.user.id, dto);
   }

@@ -65,6 +65,11 @@ export class StudentsController {
     if (!lastName) {
       throw new BadRequestException('Missing required field: lastName');
     }
+    if (email !== undefined && email !== '') {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        throw new BadRequestException('email is invalid');
+      }
+    }
     if (phone !== undefined && phone !== '') {
       if (!/^\d{10}$/.test(phone)) {
         throw new BadRequestException('phone must be a 10-digit number string');
@@ -197,6 +202,14 @@ export class StudentsController {
     return res.send(buffer);
   }
 
+  @Get('import/csv/template')
+  downloadCsvTemplate(@Res() res: ExpressResponse) {
+    const csv = this.studentsService.generateCsvTemplate();
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="students_template.csv"');
+    return res.send(csv);
+  }
+
   @Post('import/validate')
   @UseInterceptors(FileInterceptor('file'))
   validateImport(
@@ -237,6 +250,40 @@ export class StudentsController {
       throw new BadRequestException('Missing required query parameter: schoolId');
     }
     return this.studentsService.importStudents(schoolId, adminUserId, file?.buffer || Buffer.alloc(0));
+  }
+
+  @Post('import/csv/validate')
+  @UseInterceptors(FileInterceptor('file'))
+  validateCsvImport(
+    @Query('schoolId') schoolId: string,
+    @UploadedFile() file: any,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    const adminUserId = (req as any).user?.id as string;
+    if (!schoolId || schoolId.trim() === '') {
+      throw new BadRequestException('Missing required query parameter: schoolId');
+    }
+    if (!file || !file.buffer) {
+      throw new BadRequestException('No file uploaded');
+    }
+    return this.studentsService.validateCsvFile(schoolId, adminUserId, file.buffer);
+  }
+
+  @Post('import/csv')
+  @UseInterceptors(FileInterceptor('file'))
+  importCsvStudents(
+    @Query('schoolId') schoolId: string,
+    @UploadedFile() file: any,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    const adminUserId = (req as any).user?.id as string;
+    if (!schoolId || schoolId.trim() === '') {
+      throw new BadRequestException('Missing required query parameter: schoolId');
+    }
+    if (!file || !file.buffer) {
+      throw new BadRequestException('No file uploaded');
+    }
+    return this.studentsService.importCsvStudents(schoolId, adminUserId, file.buffer);
   }
 
   @Post(':id/promote')
@@ -301,5 +348,19 @@ export class StudentsController {
       yearId: yearId || undefined,
       includeInactive: includeInactiveBool,
     });
+  }
+
+  @Get('enrolled/by-classroom')
+  getEnrolledStudentsByClassroom(
+    @Query('schoolId') schoolId: string,
+    @Query('academicYearId') academicYearId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    const adminUserId = (req as any).user?.id as string;
+    const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
+    if (!academicYearId || academicYearId.trim() === '') {
+      throw new BadRequestException('Missing required query parameter: academicYearId');
+    }
+    return this.studentsService.getEnrolledStudentsByClassroom(tenantSchoolId, academicYearId, adminUserId);
   }
 }

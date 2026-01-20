@@ -114,6 +114,46 @@ export class ResultsService {
     }
   }
 
+  async createSubjects(schoolId: string, adminUserId: string, dataArray: CreateSubjectDto[]) {
+    await this.assertIsAdminOfSchool(schoolId, adminUserId);
+
+    if (!Array.isArray(dataArray) || dataArray.length === 0) {
+      throw new BadRequestException('Array of subjects is required');
+    }
+
+    const results: any[] = [];
+    const errors: string[] = [];
+
+    for (let i = 0; i < dataArray.length; i++) {
+      const data = dataArray[i];
+      try {
+        const subject = await (this.prisma as any).subject.create({
+          data: {
+            school_id: schoolId,
+            name: data.name.trim(),
+            code: data.code?.trim() || null,
+            description: data.description?.trim() || null,
+            is_active: data.isActive !== undefined ? data.isActive : true,
+          },
+        });
+        results.push(subject);
+      } catch (e: any) {
+        if (e?.code === 'P2002') {
+          errors.push(`Subject ${i + 1} (${data.name}): A subject with this name already exists for this school`);
+        } else {
+          errors.push(`Subject ${i + 1} (${data.name}): ${e?.message || 'Failed to create'}`);
+        }
+      }
+    }
+
+    return {
+      created: results.length,
+      failed: errors.length,
+      subjects: results,
+      errors: errors.length > 0 ? errors : undefined,
+    };
+  }
+
   async getSubject(subjectId: string, adminUserId: string) {
     const subject = await (this.prisma as any).subject.findUnique({
       where: { id: subjectId },

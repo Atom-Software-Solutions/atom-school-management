@@ -34,6 +34,12 @@ export class UsersService {
       await this.assertIsAdminOfSchool(tenantId, creatorUserId);
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(createUserDto.email)) {
+      throw new ConflictException('Invalid email format');
+    }
+
     // Check if user with email already exists
     const existingUser = await this.prisma.user.findUnique({
       where: { email: createUserDto.email },
