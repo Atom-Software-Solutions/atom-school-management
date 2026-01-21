@@ -421,22 +421,22 @@ export class StudentsService {
 
     rows.forEach((row, idx) => {
       const line = idx + 2; // +1 header, +1 1-based
-      if (!row.studentNo) errors.push(`Row ${line}: studentNo is required`);
-      if (row.studentNo) {
-        const key = row.studentNo;
-        if (fileStudentNos.has(key)) errors.push(`Row ${line}: duplicate studentNo in file`);
-        else fileStudentNos.add(key);
-        if (existingStudentNos.has(key)) errors.push(`Row ${line}: studentNo already exists for this school`);
-      }
+      // if (!row.studentNo) errors.push(`Row ${line}: studentNo is required`);
+      // if (row.studentNo) {
+      //   const key = row.studentNo;
+      //   if (fileStudentNos.has(key)) errors.push(`Row ${line}: duplicate studentNo in file`);
+      //   else fileStudentNos.add(key);
+      //   if (existingStudentNos.has(key)) errors.push(`Row ${line}: studentNo already exists for this school`);
+      // }
       if (!row.firstName) errors.push(`Row ${line}: firstName is required`);
       if (!row.lastName) errors.push(`Row ${line}: lastName is required`);
       if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) errors.push(`Row ${line}: email is invalid`);
       if (row.phone && !/^\d{10}$/.test(row.phone)) errors.push(`Row ${line}: phone must be 10 digits`);
-      if (row.regNo) {
-        if (fileRegNos.has(row.regNo)) errors.push(`Row ${line}: duplicate regNo in file`);
-        else fileRegNos.add(row.regNo);
-        if (existingRegNos.has(row.regNo)) errors.push(`Row ${line}: regNo already exists for this school`);
-      }
+      // if (row.regNo) {
+      //   if (fileRegNos.has(row.regNo)) errors.push(`Row ${line}: duplicate regNo in file`);
+      //   else fileRegNos.add(row.regNo);
+      //   if (existingRegNos.has(row.regNo)) errors.push(`Row ${line}: regNo already exists for this school`);
+      // }
       if (row.email) {
         const ekey = row.email.toLowerCase();
         if (fileEmails.has(ekey)) errors.push(`Row ${line}: duplicate email in file`);
