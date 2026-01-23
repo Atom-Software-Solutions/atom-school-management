@@ -1,18 +1,8 @@
-import {
-  BadRequestException,
-  Body,
-  Controller,
-  ForbiddenException,
-  Param,
-  Patch,
-  Post,
-  Query,
-  Request,
-  UseGuards,
-} from '@nestjs/common';
+import { BadRequestException, Body, Controller, ForbiddenException, Param, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { ClassroomsService } from './classrooms.service';
+import { BulkEnrollStudentsDto } from './dto/bulk-enroll-students.dto';
 import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
 
 @Controller()
@@ -45,6 +35,24 @@ export class EnrollmentsController {
     const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
     const startDate = body.startDate ? new Date(body.startDate) : undefined;
     return this.classroomsService.enrollStudent(offeringId, body.studentId, adminUserId, tenantSchoolId, startDate);
+  }
+
+  @Post('classroom-offerings/:offeringId/enrollments/bulk')
+  bulkEnroll(
+    @Param('offeringId') offeringId: string,
+    @Query('schoolId') schoolId: string,
+    @Body() body: BulkEnrollStudentsDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    const adminUserId = (req as any).user?.id as string;
+    if (!offeringId) throw new BadRequestException('Missing offeringId');
+    if (!body?.enrollments || body.enrollments.length === 0) throw new BadRequestException('Missing or empty enrollments array');
+    const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
+    const enrollments = body.enrollments.map(e => ({
+      studentId: e.studentId,
+      startDate: e.startDate ? new Date(e.startDate) : undefined,
+    }));
+    return this.classroomsService.bulkEnrollStudents(offeringId, enrollments, adminUserId, tenantSchoolId);
   }
 
   @Patch('enrollments/:id/complete')

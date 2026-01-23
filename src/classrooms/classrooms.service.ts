@@ -362,4 +362,108 @@ export class ClassroomsService {
       data: { end_date: effectiveEndDate, status },
     });
   }
+
+  async bulkEnrollStudents(offeringId: string, enrollments: { studentId: string; startDate?: Date }[], adminUserId: string, schoolId: string) {
+    await this.assertIsAdminOfSchool(schoolId, adminUserId);
+
+    if (!enrollments || enrollments.length === 0) {
+      throw new BadRequestException('No enrollments provided');
+    }
+
+    // Get the offering once
+    const offering = await (this.prisma as any).classroomOffering.findUnique({
+      where: { id: offeringId },
+      include: { academic_year: true, classroom_definition: true },
+    });
+    if (!offering || offering.academic_year.school_id !== schoolId) throw new ForbiddenException('Offering not accessible');
+    if (offering.is_active === false) {
+      throw new BadRequestException('Classroom offering is not active');
+    }
+
+    const academicYearId = offering.academic_year_id;
+
+    // Validate all students exist and belong to the school
+    const studentIds = enrollments.map(e => e.studentId);
+    const students = await this.prisma.student.findMany({
+      where: { id: { in: studentIds }, school_id: schoolId },
+    });
+    const foundStudentIds = students.map(s => s.id);
+    const missingStudents = studentIds.filter(id => !foundStudentIds.includes(id));
+    if (missingStudents.length > 0) {
+      throw new BadRequestException(`Students not found or not accessible: ${missingStudents.join(', ')}`);
+    }
+
+    // Check for existing active enrollments
+    const existingEnrollments = await (this.prisma as any).studentEnrollment.findMany({
+      where: {
+        student_id: { in: studentIds },
+        academic_year_id: academicYearId,
+        OR: [{ end_date: null }, { status: 'active' }],
+      },
+      select: { student_id: true },
+    });
+    if (existingEnrollments.length > 0) {
+      const conflictingStudents = existingEnrollments.map(e => e.student_id);
+      throw new BadRequestException(`Students already have active enrollments in this academic year: ${conflictingStudents.join(', ')}`);
+    }
+
+    // Check for returning to same classroom definition in later years
+    const priorSameClassEnrollments = await (this.prisma as any).studentEnrollment.findMany({
+      where: {
+        student_id: { in: studentIds },
+        status: { in: ['completed'] },
+        classroom_offering: {
+          classroom_definition_id: offering.classroom_definition_id,
+          academic_year: { start_date: { lt: offering.academic_year.start_date } },
+        },
+      },
+      select: { student_id: true },
+    });
+    if (priorSameClassEnrollments.length > 0) {
+      const conflictingStudents = priorSameClassEnrollments.map(e => e.student_id);
+      throw new BadRequestException(`Students cannot return to the same classroom in a later academic year: ${conflictingStudents.join(', ')}`);
+    }
+
+    // Create enrollments in a transaction
+    return await this.prisma.$transaction(async (tx: any) => {
+      const createdEnrollments: any[] = [];
+      const errors: { studentId: string; error: string }[] = [];
+
+      for (const enrollment of enrollments) {
+        try {
+          const effectiveStartDate = enrollment.startDate ?? new Date();
+
+          if (offering.academic_year.start_date && effectiveStartDate < offering.academic_year.start_date) {
+            throw new BadRequestException('startDate must be within the academic year');
+          }
+          if (offering.academic_year.end_date && effectiveStartDate > offering.academic_year.end_date) {
+            throw new BadRequestException('startDate must be within the academic year');
+          }
+
+          const created = await tx.studentEnrollment.create({
+            data: {
+              student_id: enrollment.studentId,
+              classroom_offering_id: offeringId,
+              academic_year_id: academicYearId,
+              start_date: effectiveStartDate,
+              status: 'active',
+            },
+          });
+          createdEnrollments.push(created);
+        } catch (error) {
+          errors.push({
+            studentId: enrollment.studentId,
+            error: `Failed to enroll student ${enrollment.studentId}: ${error.message || 'Unknown error'}`,
+          });
+        }
+      }
+
+      return {
+        created: createdEnrollments.length,
+        failed: errors.length,
+        enrollments: createdEnrollments,
+        errors,
+      };
+    });
+  }
 }

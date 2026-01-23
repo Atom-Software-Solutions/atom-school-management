@@ -321,11 +321,212 @@ Pick one term to use for results, e.g. `termId = <term1Id>`.
 
 ---
 
-## 4. Configure Classrooms and Enroll Students
+## 4. CSV Bulk Import Endpoints
+
+These endpoints allow school administrators to efficiently import student data from CSV files instead of creating students individually.
+
+### 4.1 GET `/students/import/csv/template`
+
+Downloads a CSV template file for bulk importing student data.
+
+**Authentication:**
+- Required: JWT Bearer Token
+- Role: SCHOOL_ADMIN
+
+**Response:**
+- **Status**: `200 OK`
+- **Content-Type**: `text/csv`
+- **File**: `students_template.csv`
+
+**Template Content:**
+```csv
+firstName,lastName,email,phone,gender,status,dateOfBirth,religion,address,className
+```
+
+**Purpose:**
+Provides a properly formatted template ensuring users follow the correct CSV structure.
+
+**Example Usage:**
+```bash
+curl -X GET http://localhost:3000/api/students/import/csv/template \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -o students_template.csv
+```
+
+---
+
+### 4.2 POST `/students/import/csv/validate`
+
+Validates a CSV file for correctness before importing. Returns detailed validation errors including row-by-row feedback.
+
+**Authentication:**
+- Required: JWT Bearer Token
+- Role: SCHOOL_ADMIN
+
+**Query Parameters:**
+- `schoolId` (required): ID of the school to import students into
+
+**Request Body:**
+- **Content-Type**: `multipart/form-data`
+- **Field**: `file` (binary CSV file)
+
+**File Validation Rules:**
+- **Size Limit**: 5MB (configurable via `MAX_IMPORT_FILE_SIZE` env var)
+- **File Extension**: Must be `.csv`
+- **MIME Type**: `text/csv`, `application/csv`, or `text/plain`
+
+**Response (200 OK - valid file):**
+```json
+{
+  "valid": true,
+  "errors": [],
+  "total": 150,
+  "processed": 150,
+  "failed": 0
+}
+```
+
+**Response (422 Unprocessable Entity - validation errors):**
+```json
+{
+  "valid": false,
+  "errors": [
+    "Row 2: firstName is required",
+    "Row 3: email is invalid",
+    "Row 5: phone must be 10 digits",
+    "Row 5: email already exists",
+    "Row 5: phone already exists for this school",
+    "Row 10: dateOfBirth must be a valid date (YYYY-MM-DD)"
+  ],
+  "total": 100,
+  "processed": 100,
+  "failed": 1
+}
+```
+
+**CSV Field Specifications:**
+
+| Field | Required | Validation | Description |
+|-------|----------|-----------|-------------|
+| `firstName` | Yes | Non-empty string | Student's first name |
+| `lastName` | Yes | Non-empty string | Student's last name |
+| `email` | No | RFC 5322 format + unique per school | Email address |
+| `phone` | No | Exactly 10 digits + unique per school | Phone number |
+| `gender` | No | Any string | Gender/sex identifier |
+| `status` | No | Any string | Student status |
+| `dateOfBirth` | No | ISO 8601 (YYYY-MM-DD) | Date of birth |
+| `religion` | No | Any string | Religious affiliation |
+| `address` | No | Any string | Residential address |
+| `className` | No | Any string | Classroom name (auto-enrolls if exists) |
+
+**Validation Logic:**
+1. **Required Fields**: `firstName` and `lastName` must be present and non-empty
+2. **Email**: Must match pattern `^[^\s@]+@[^\s@]+\.[^\s@]+$` if provided
+3. **Phone**: Must be exactly 10 digits if provided
+4. **Date**: Must be a valid ISO 8601 date if provided
+5. **Uniqueness**: Email and phone checked against file duplicates AND existing school records
+
+**Example Usage:**
+```bash
+curl -X POST "http://localhost:3000/api/students/import/csv/validate?schoolId=school-123" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -F "file=@students.csv"
+```
+
+---
+
+### 4.3 POST `/students/import/csv`
+
+Imports validated CSV data and creates student records. Each student receives auto-generated `studentNo` and `regNo`. Optionally enrolls students in classrooms if `className` is provided.
+
+**Authentication:**
+- Required: JWT Bearer Token
+- Role: SCHOOL_ADMIN
+
+**Query Parameters:**
+- `schoolId` (required): ID of the school to import students into
+
+**Request Body:**
+- **Content-Type**: `multipart/form-data`
+- **Field**: `file` (binary CSV file)
+
+**Response (201 Created):**
+```json
+{
+  "imported": 148,
+  "failed": 2,
+  "errors": [
+    "Row 15: email already exists",
+    "Row 42: Failed to create enrollment for className \"Unrecognized Class\": classroom not found. Student imported without enrollment."
+  ],
+  "total": 150,
+  "processed": 150
+}
+```
+
+**Import Process:**
+
+1. **File Validation**: Checks file size and type (same as 4.2)
+2. **CSV Parsing**: RFC 4180 compliant CSV parsing with quoted field support
+3. **Per-Row Processing**:
+   - Validates required fields (`firstName`, `lastName`)
+   - Validates optional field formats (email, phone, dates)
+   - Checks uniqueness constraints against existing records
+   - Auto-generates `studentNo` (format: `STU001`, `STU002`, etc.)
+   - Auto-generates `regNo` (format: `REG001`, `REG002`, etc.)
+   - Creates student record in database
+4. **Optional Enrollment** (if `className` provided):
+   - Finds or creates `ClassroomDefinition` by name
+   - Locates active academic year (or most recent)
+   - Finds or creates `ClassroomOffering` for that year
+   - Creates `StudentEnrollment` linking student to classroom
+   - **Note**: Enrollment errors don't block student creation
+
+**Auto-Generation Details:**
+- `studentNo`: Scanned from existing records, increments from max found
+- `regNo`: Scanned from existing records, increments from max found
+- **Retry Logic**: If collision occurs (concurrent imports), retries up to 5 times
+- Guarantees uniqueness within school
+
+**Error Handling:**
+- Non-blocking: Individual row failures don't stop import
+- Granular errors: Each error includes row number and specific issue
+- Database constraints: Unique constraint violations caught and reported
+- Enrollment issues: Logged as warnings but don't prevent student creation
+
+**Sample CSV Content:**
+```csv
+firstName,lastName,email,phone,gender,status,dateOfBirth,religion,address,className
+John,Doe,john.doe@example.com,1234567890,Male,active,2008-05-15,Christian,123 Main St,Form 4A
+Jane,Smith,jane.smith@example.com,0987654321,Female,active,2009-03-20,Muslim,456 Oak Ave,Form 4A
+Ahmed,Hassan,,0911223344,Male,active,2008-11-10,Muslim,789 Elm Rd,Form 3B
+```
+
+**Example Usage:**
+```bash
+curl -X POST "http://localhost:3000/api/students/import/csv?schoolId=school-123" \
+  -H "Authorization: Bearer <ACCESS_TOKEN>" \
+  -F "file=@students.csv"
+```
+
+**Response Example:**
+```json
+{
+  "imported": 3,
+  "failed": 0,
+  "errors": [],
+  "total": 3,
+  "processed": 3
+}
+```
+
+---
+
+## 5. Configure Classrooms and Enroll Students
 
 For report card ranking to work, students must be enrolled in a classroom offering for the same academic year.
 
-### 4.1 Create a classroom definition
+### 5.1 Create a classroom definition
 
 **Endpoint**
 
@@ -355,7 +556,7 @@ For report card ranking to work, students must be enrolled in a classroom offeri
 }
 ```
 
-### 4.2 Create a classroom offering for the academic year
+### 5.2 Create a classroom offering for the academic year
 
 **Endpoint**
 
@@ -387,9 +588,9 @@ For report card ranking to work, students must be enrolled in a classroom offeri
 
 Record `offeringId`.
 
-### 4.3 Create students
+### 5.3 Create students
 
-Students are created per school.
+Students can be created individually or via bulk CSV import (see section 4.3).
 
 **Endpoint**
 
@@ -427,7 +628,7 @@ Students are created per school.
 
 Repeat for at least one more student (e.g. `STU002`) to test ranking.
 
-### 4.4 Enroll students into the classroom offering
+### 5.4 Enroll students into the classroom offering
 
 **Endpoint**
 
@@ -460,11 +661,68 @@ Repeat for at least one more student (e.g. `STU002`) to test ranking.
 
 Repeat for each student you created.
 
+### 5.5 Bulk enroll students into the classroom offering (Optional)
+
+For convenience when enrolling multiple students at once, use the bulk enrollment endpoint.
+
+**Endpoint**
+
+- `POST /classroom-offerings/{offeringId}/enrollments/bulk?schoolId={schoolId}`
+
+**Headers**
+
+- `Authorization: Bearer <ACCESS_TOKEN>`
+
+**Request body**
+
+```json
+{
+  "enrollments": [
+    {
+      "studentId": "<studentId1>",
+      "startDate": "2025-02-01T00:00:00.000Z"
+    },
+    {
+      "studentId": "<studentId2>",
+      "startDate": "2025-02-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Response (200)** – example
+
+```json
+{
+  "created": 2,
+  "failed": 0,
+  "enrollments": [
+    {
+      "id": "<enrollmentId1>",
+      "student_id": "<studentId1>",
+      "classroom_offering_id": "<offeringId>",
+      "academic_year_id": "<yearId>",
+      "status": "active"
+    },
+    {
+      "id": "<enrollmentId2>",
+      "student_id": "<studentId2>",
+      "classroom_offering_id": "<offeringId>",
+      "academic_year_id": "<yearId>",
+      "status": "active"
+    }
+  ],
+  "errors": []
+}
+```
+
+If some enrollments fail (e.g., student already enrolled), the response will include both successful enrollments and error details.
+
 ---
 
-## 5. Define Subjects
+## 6. Define Subjects
 
-### 5.1 Create subjects for the school
+### 6.1 Create subjects for the school
 
 **Endpoint**
 
@@ -498,7 +756,7 @@ Repeat for each student you created.
 
 Repeat for another subject, e.g. English, and record `subjectIdEng`.
 
-### 5.2 (Optional) List subjects
+### 6.2 (Optional) List subjects
 
 **Endpoint**
 
@@ -512,11 +770,11 @@ Use this to confirm the subject IDs.
 
 ---
 
-## 6. Create Assessments
+## 7. Create Assessments
 
 Create at least one assessment per subject in the chosen term.
 
-### 6.1 Create an assessment
+### 7.1 Create an assessment
 
 **Endpoint**
 
@@ -557,7 +815,7 @@ Create at least one assessment per subject in the chosen term.
 
 Repeat for other combinations you want (e.g. English Mid-Term with `weight: 0.4`, and maybe smaller tests with `weight: 0.1` each). Ensure the total weights per subject are sensible (they do not have to sum to 1, but they influence averages).
 
-### 6.2 (Optional) List assessments
+### 7.2 (Optional) List assessments
 
 **Endpoint**
 
@@ -571,11 +829,11 @@ Use this to confirm `assessmentId` values.
 
 ---
 
-## 7. Capture Grades
+## 8. Capture Grades
 
 You can create grades one-by-one or in bulk. For manual testing, bulk creation is convenient.
 
-### 7.1 Bulk create grades for an assessment
+### 8.1 Bulk create grades for an assessment
 
 **Endpoint**
 
@@ -634,7 +892,7 @@ You can create grades one-by-one or in bulk. For manual testing, bulk creation i
 
 Repeat for other assessments (e.g. English).
 
-### 7.2 (Optional) Create / update a single grade
+### 8.2 (Optional) Create / update a single grade
 
 **Create single grade**
 
@@ -662,11 +920,11 @@ Repeat for other assessments (e.g. English).
 
 ---
 
-## 8. View Student Results and Summary
+## 9. View Student Results and Summary
 
 Once grades are entered, you can fetch detailed results and summaries.
 
-### 8.1 Detailed grades per student
+### 9.1 Detailed grades per student
 
 **Endpoint**
 
@@ -706,7 +964,7 @@ You can also filter by `subjectId`:
 
 - `GET /students/{studentId}/results?termId={termId}&subjectId={subjectIdMath}`
 
-### 8.2 Academic summary for a term
+### 9.2 Academic summary for a term
 
 **Endpoint**
 
@@ -759,9 +1017,9 @@ Use this to confirm averages before generating report cards.
 
 ---
 
-## 9. Generate a Report Card
+## 10. Generate a Report Card
 
-### 9.1 Generate report card for a student and term
+### 10.1 Generate report card for a student and term
 
 **Endpoint**
 
@@ -814,7 +1072,7 @@ Use this to confirm averages before generating report cards.
 
 > **Rank & total_students** will only be non-null if the student (and classmates) are enrolled in a classroom offering for this academic year with `status: active` (step 4.4).
 
-### 9.2 Retrieve a report card with summary
+### 10.2 Retrieve a report card with summary
 
 **Endpoint**
 
@@ -828,7 +1086,7 @@ Use this to confirm averages before generating report cards.
 
 Same structure as above (report card + `summary`).
 
-### 9.3 Publish a report card
+### 10.3 Publish a report card
 
 If you did **not** set `autoPublish: true` when generating:
 
@@ -850,7 +1108,7 @@ If you did **not** set `autoPublish: true` when generating:
 }
 ```
 
-### 9.4 List all report cards for a student
+### 10.4 List all report cards for a student
 
 **Endpoint**
 
@@ -876,11 +1134,11 @@ If you did **not** set `autoPublish: true` when generating:
 
 ---
 
-## 10. Optional: Set Up Guardians and (Future) Parent Access
+## 11. Optional: Set Up Guardians and (Future) Parent Access
 
 There is partial support for guardians and parent users, but full parent-based access control for results is not yet complete.
 
-### 10.1 Add a guardian for a student
+### 11.1 Add a guardian for a student
 
 **Endpoint**
 
@@ -904,7 +1162,7 @@ There is partial support for guardians and parent users, but full parent-based a
 
 This creates a `Guardian` record and links it to the student.
 
-### 10.2 Create a PARENT user (for future use)
+### 11.2 Create a PARENT user (for future use)
 
 **Endpoint**
 
@@ -932,7 +1190,7 @@ This creates a `Guardian` record and links it to the student.
 
 ---
 
-## 11. Known Gaps / Crucial Missing or Implicit Steps
+## 12. Known Gaps / Crucial Missing or Implicit Steps
 
 These are important considerations discovered while tracing the code that are **not fully covered** by the current public endpoints or behavior:
 
@@ -964,7 +1222,7 @@ These are important considerations discovered while tracing the code that are **
 
 ---
 
-## 12. Quick Checklist for a Full Manual Test
+## 13. Quick Checklist for a Full Manual Test
 
 Use this as a high-level checklist:
 
@@ -975,16 +1233,32 @@ Use this as a high-level checklist:
 5. [ ] List terms (`GET /years/{yearId}/terms`) and choose `termId`
 6. [ ] Create classroom definition (`POST /schools/{schoolId}/classroom-definitions`) and record `classroomDefinitionId`
 7. [ ] Create classroom offering (`POST /years/{yearId}/classroom-offerings`) and record `offeringId`
-8. [ ] Create at least two students (`POST /students?schoolId={schoolId}`) and record their `studentId`s
-9. [ ] Enroll students into offering (`POST /classroom-offerings/{offeringId}/enrollments?schoolId={schoolId}`)
-10. [ ] Create subjects (`POST /schools/{schoolId}/subjects`) and record `subjectId`s
-11. [ ] Create assessments for each subject + term (`POST /schools/{schoolId}/assessments`) and record `assessmentId`s
-12. [ ] Enter grades (`POST /schools/{schoolId}/grades/bulk` or `/grades`)
-13. [ ] Verify raw grades (`GET /students/{studentId}/results?termId={termId}`)
-14. [ ] Verify academic summary (`GET /students/{studentId}/results/summary?termId={termId}`)
-15. [ ] Generate report card (`POST /schools/{schoolId}/report-cards`)
-16. [ ] View report card and summary (`GET /schools/{schoolId}/report-cards/{reportCardId}`)
-17. [ ] Publish report card (`PATCH /schools/{schoolId}/report-cards/{reportCardId}/publish`)
-18. [ ] List student’s report cards (`GET /students/{studentId}/report-cards`)
+8. [ ] **[OPTIONAL]** Download CSV template (`GET /students/import/csv/template`)
+9. [ ] **[OPTIONAL]** Validate CSV file (`POST /students/import/csv/validate?schoolId={schoolId}`)
+10. [ ] **[OPTIONAL]** Import students via CSV (`POST /students/import/csv?schoolId={schoolId}`) OR create manually via `POST /students?schoolId={schoolId}` and record their `studentId`s
+11. [ ] Enroll students into offering (`POST /classroom-offerings/{offeringId}/enrollments?schoolId={schoolId}`)
+12. [ ] Create subjects (`POST /schools/{schoolId}/subjects`) and record `subjectId`s
+13. [ ] Create assessments for each subject + term (`POST /schools/{schoolId}/assessments`) and record `assessmentId`s
+14. [ ] Enter grades (`POST /schools/{schoolId}/grades/bulk` or `/grades`)
+15. [ ] Verify raw grades (`GET /students/{studentId}/results?termId={termId}`)
+16. [ ] Verify academic summary (`GET /students/{studentId}/results/summary?termId={termId}`)
+17. [ ] Generate report card (`POST /schools/{schoolId}/report-cards`)
+18. [ ] View report card and summary (`GET /schools/{schoolId}/report-cards/{reportCardId}`)
+19. [ ] Publish report card (`PATCH /schools/{schoolId}/report-cards/{reportCardId}/publish`)
+20. [ ] List student's report cards (`GET /students/{studentId}/report-cards`)
 
 If you complete all the above successfully, the results management flow—from SCHOOL_ADMIN and SCHOOL creation all the way to report card generation and publication—has been exercised end-to-end.
+
+
+ - We need to set remarks in the DB such that we don't need to manually set them when we are entering grades for assessments as below.
+
+"95 – 100 → Outstanding
+90 – 94.99 → Excellent 
+85 – 89.99 → Good performance 
+75 – 84.99 → Very good
+65 – 74.99 → Good
+50 – 64.99 → Satisfactory
+40 – 49.99 → Needs improvement
+Below 40 → Poor"
+
+ - 

@@ -2,6 +2,42 @@ import { Injectable, ForbiddenException, NotFoundException, BadRequestException 
 import { PrismaService } from '../prisma/prisma.service';
 import * as XLSX from 'xlsx';
 
+// File validation constants
+const MAX_FILE_SIZE = parseInt(process.env.MAX_IMPORT_FILE_SIZE || '5242880'); // 5MB default
+const ALLOWED_MIME_TYPES = ['text/csv', 'application/csv', 'text/plain'];
+const ALLOWED_EXTENSIONS = ['.csv'];
+
+// File validation helper
+interface FileValidationResult {
+  valid: boolean;
+  error?: string;
+}
+
+function validateFileSize(buffer: Buffer): FileValidationResult {
+  if (!buffer || buffer.length === 0) {
+    return { valid: false, error: 'No file uploaded' };
+  }
+  if (buffer.length > MAX_FILE_SIZE) {
+    const maxSizeMB = Math.round(MAX_FILE_SIZE / 1024 / 1024);
+    return { valid: false, error: `File size exceeds maximum of ${maxSizeMB}MB` };
+  }
+  return { valid: true };
+}
+
+function validateFileType(mimeType: string | undefined, originalName: string | undefined): FileValidationResult {
+  if (!originalName) {
+    return { valid: false, error: 'File name is required' };
+  }
+  const extension = originalName.toLowerCase().substring(originalName.lastIndexOf('.'));
+  if (!ALLOWED_EXTENSIONS.includes(extension)) {
+    return { valid: false, error: `Invalid file extension. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}` };
+  }
+  if (mimeType && !ALLOWED_MIME_TYPES.includes(mimeType)) {
+    return { valid: false, error: `Invalid file type. Must be CSV` };
+  }
+  return { valid: true };
+}
+
 @Injectable()
 export class StudentsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -399,17 +435,20 @@ export class StudentsService {
   async validateCsvFile(schoolId: string, adminUserId: string, buffer: Buffer) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
     if (!buffer || buffer.length === 0) {
-      return { valid: false, errors: ['No file uploaded'] };
+      return { valid: false, errors: ['No file uploaded'], total: 0 };
     }
-    const rows = this.parseCsv(buffer);
+    let rows;
+    try {
+      rows = this.parseCsv(buffer);
+    } catch (e: any) {
+      return { valid: false, errors: [`CSV parsing error: ${e?.message || 'Failed to parse CSV'}`], total: 0 };
+    }
     const errors: string[] = [];
     // Load existing values in this school for uniqueness checks
     const existing = await this.prisma.student.findMany({
       where: { school_id: schoolId },
-      select: { student_no: true, reg_no: true, email: true, phone: true },
+      select: { email: true, phone: true },
     });
-    const existingStudentNos = new Set<string>(existing.map(e => e.student_no).filter(Boolean) as string[]);
-    const existingRegNos = new Set<string>(existing.map(e => e.reg_no!).filter(Boolean) as string[]);
     const existingEmails = new Set<string>(existing.map(e => (e.email || '').toLowerCase()).filter(v => v));
     const existingPhones = new Set<string>(existing.map(e => e.phone!).filter(Boolean) as string[]);
 
@@ -432,6 +471,12 @@ export class StudentsService {
       if (!row.lastName) errors.push(`Row ${line}: lastName is required`);
       if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) errors.push(`Row ${line}: email is invalid`);
       if (row.phone && !/^\d{10}$/.test(row.phone)) errors.push(`Row ${line}: phone must be 10 digits`);
+      if (row.dateOfBirth) {
+        const dob = new Date(row.dateOfBirth);
+        if (isNaN(dob.getTime())) {
+          errors.push(`Row ${line}: dateOfBirth must be a valid date (YYYY-MM-DD)`);
+        }
+      }
       // if (row.regNo) {
       //   if (fileRegNos.has(row.regNo)) errors.push(`Row ${line}: duplicate regNo in file`);
       //   else fileRegNos.add(row.regNo);
@@ -446,18 +491,29 @@ export class StudentsService {
       if (row.phone) {
         if (filePhones.has(row.phone)) errors.push(`Row ${line}: duplicate phone in file`);
         else filePhones.add(row.phone);
-        if (existingPhones.has(row.phone)) errors.push(`Row ${line}: phone already exists`);
+        if (existingPhones.has(row.phone)) errors.push(`Row ${line}: phone already exists for this school`);
       }
     });
-    return { valid: errors.length === 0, errors, total: rows.length };
+    return {
+      valid: errors.length === 0,
+      errors,
+      total: rows.length,
+      processed: rows.length,
+      failed: errors.length > 0 ? rows.length : 0,
+    };
   }
 
   async importStudents(schoolId: string, adminUserId: string, buffer: Buffer) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
     if (!buffer || buffer.length === 0) {
-      return { imported: 0, errors: ['No file uploaded'] };
+      return { imported: 0, failed: 0, errors: ['No file uploaded'], total: 0 };
     }
-    const rows = this.parseWorkbook(buffer);
+    let rows;
+    try {
+      rows = this.parseWorkbook(buffer);
+    } catch (e: any) {
+      return { imported: 0, failed: 0, errors: [`File parsing error: ${e?.message || 'Failed to parse file'}`], total: 0 };
+    }
     const errors: string[] = [];
     let imported = 0;
     // Load existing values for school-wide uniqueness, and update as we import
@@ -630,15 +686,26 @@ export class StudentsService {
         }
       }
     }
-    return { imported, failed: rows.length - imported, errors };
+    return {
+      imported,
+      failed: rows.length - imported,
+      errors,
+      total: rows.length,
+      processed: rows.length,
+    };
   }
 
   async importCsvStudents(schoolId: string, adminUserId: string, buffer: Buffer) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
     if (!buffer || buffer.length === 0) {
-      return { imported: 0, errors: ['No file uploaded'] };
+      return { imported: 0, failed: 0, errors: ['No file uploaded'], total: 0 };
     }
-    const rows = this.parseCsv(buffer);
+    let rows;
+    try {
+      rows = this.parseCsv(buffer);
+    } catch (e: any) {
+      return { imported: 0, failed: 0, errors: [`CSV parsing error: ${e?.message || 'Failed to parse CSV'}`], total: 0 };
+    }
     const errors: string[] = [];
     let imported = 0;
     // Load existing values for school-wide uniqueness, and update as we import

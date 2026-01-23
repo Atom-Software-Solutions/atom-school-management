@@ -243,6 +243,19 @@ export class ResultsService {
       throw new ForbiddenException('Subject does not belong to this school');
     }
 
+    // Check for duplicate assessment (same term, subject, name, and type)
+    const existing = await (this.prisma as any).assessment.findFirst({
+      where: {
+        term_id: data.termId,
+        subject_id: data.subjectId,
+        name: data.name.trim(),
+        type: data.type,
+      },
+    });
+    if (existing) {
+      throw new BadRequestException('An assessment with this name and type already exists for this subject and term');
+    }
+
     return (this.prisma as any).assessment.create({
       data: {
         school_id: schoolId,
@@ -289,6 +302,24 @@ export class ResultsService {
 
     if (Object.keys(updateData).length === 0) {
       throw new BadRequestException('No fields to update');
+    }
+
+    // Check for duplicate assessment if name or type is being updated
+    if (data.name !== undefined || data.type !== undefined) {
+      const checkName = data.name !== undefined ? data.name.trim() : assessment.name;
+      const checkType = data.type !== undefined ? data.type : assessment.type;
+      const existing = await (this.prisma as any).assessment.findFirst({
+        where: {
+          term_id: assessment.term_id,
+          subject_id: assessment.subject_id,
+          name: checkName,
+          type: checkType,
+          id: { not: assessmentId }, // Exclude current assessment
+        },
+      });
+      if (existing) {
+        throw new BadRequestException('An assessment with this name and type already exists for this subject and term');
+      }
     }
 
     return (this.prisma as any).assessment.update({
