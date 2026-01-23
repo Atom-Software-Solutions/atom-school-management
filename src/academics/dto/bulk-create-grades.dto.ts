@@ -1,12 +1,12 @@
 import { IsUUID, IsNotEmpty, IsArray, ValidateNested } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { CreateGradeDto } from './create-grade.dto';
+import { BulkGradeItemDto } from './bulk-grade-item.dto';
 
 export class BulkCreateGradesDto {
   @ApiProperty({
     description: 'Assessment ID',
-    example: 'uuid-of-assessment',
+    example: '2bbfdf69-fe9e-439a-a927-f1461238cbec',
   })
   @IsUUID()
   @IsNotEmpty()
@@ -14,11 +14,11 @@ export class BulkCreateGradesDto {
 
   @ApiProperty({
     description: 'Array of grades to create',
-    type: [CreateGradeDto],
+    type: [BulkGradeItemDto],
   })
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => CreateGradeDto)
-  grades: CreateGradeDto[];
+  @Type(() => BulkGradeItemDto)
+  grades: BulkGradeItemDto[];
 }
 
