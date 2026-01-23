@@ -240,10 +240,10 @@ export class StudentsController {
 
   @Get('import/csv/template')
   downloadCsvTemplate(@Res() res: ExpressResponse) {
-    const csv = this.studentsService.generateCsvTemplate();
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename="students_template.csv"');
-    return res.send(csv);
+    const buffer = this.studentsService.generateImportTemplate();
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="students_template.xlsx"');
+    return res.send(buffer);
   }
 
   @Post('import/validate')
