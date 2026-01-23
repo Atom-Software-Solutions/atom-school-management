@@ -325,9 +325,21 @@ Pick one term to use for results, e.g. `termId = <term1Id>`.
 
 These endpoints allow school administrators to efficiently import student data from CSV files instead of creating students individually.
 
+> **Note:** There are also XLSX template endpoints (`GET /students/import/template` for XLSX format). This section covers the CSV-specific import workflow. Choose either CSV or XLSX format based on your preference.
+
+#### Template Types Available:
+- **XLSX Template** (`GET /students/import/template`): Spreadsheet format - returns `.xlsx` file
+- **CSV Template** (`GET /students/import/csv/template`): Comma-separated values - returns `.csv` file
+- **CSV Validate** (`POST /students/import/csv/validate`): Validates CSV before import
+- **CSV Import** (`POST /students/import/csv`): Performs the actual CSV import with auto-generated IDs
+
+---
+
 ### 4.1 GET `/students/import/csv/template`
 
-Downloads a CSV template file for bulk importing student data.
+Downloads a CSV template file for bulk importing student data. Use this endpoint to get a CSV-formatted template.
+
+**Alternative:** For XLSX (Excel spreadsheet) format, use `GET /students/import/template` instead.
 
 **Authentication:**
 - Required: JWT Bearer Token
@@ -337,14 +349,15 @@ Downloads a CSV template file for bulk importing student data.
 - **Status**: `200 OK`
 - **Content-Type**: `text/csv`
 - **File**: `students_template.csv`
+- **Format**: CSV with comma-separated values
 
-**Template Content:**
+**Template Header Row:**
 ```csv
 firstName,lastName,email,phone,gender,status,dateOfBirth,religion,address,className
 ```
 
 **Purpose:**
-Provides a properly formatted template ensuring users follow the correct CSV structure.
+Provides a properly formatted template ensuring users follow the correct CSV structure for imports via endpoint 4.3.
 
 **Example Usage:**
 ```bash
