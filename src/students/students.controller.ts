@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, UseGuards, Res, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, UseGuards, Res, BadRequestException, UnprocessableEntityException, HttpCode } from '@nestjs/common';
 import { StudentsService } from './students.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard, Roles } from '../auth/guards/roles.guard';
@@ -6,6 +6,42 @@ import type { Response as ExpressResponse } from 'express';
 import { UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
+
+// File validation constants
+const MAX_FILE_SIZE = parseInt(process.env.MAX_IMPORT_FILE_SIZE || '5242880'); // 5MB default
+const ALLOWED_MIME_TYPES = ['text/csv', 'application/csv', 'text/plain'];
+const ALLOWED_EXTENSIONS = ['.csv'];
+
+// File validation helper
+interface FileValidationError {
+  valid: boolean;
+  error?: string;
+}
+
+function validateFileSize(buffer: Buffer | undefined): FileValidationError {
+  if (!buffer || buffer.length === 0) {
+    return { valid: false, error: 'No file uploaded' };
+  }
+  if (buffer.length > MAX_FILE_SIZE) {
+    const maxSizeMB = Math.round(MAX_FILE_SIZE / 1024 / 1024);
+    return { valid: false, error: `File size exceeds maximum of ${maxSizeMB}MB` };
+  }
+  return { valid: true };
+}
+
+function validateFileType(mimeType: string | undefined, originalName: string | undefined): FileValidationError {
+  if (!originalName) {
+    return { valid: false, error: 'File name is required' };
+  }
+  const extension = originalName.toLowerCase().substring(originalName.lastIndexOf('.'));
+  if (!ALLOWED_EXTENSIONS.includes(extension)) {
+    return { valid: false, error: `Invalid file extension. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}` };
+  }
+  if (mimeType && !ALLOWED_MIME_TYPES.includes(mimeType)) {
+    return { valid: false, error: `Invalid file type. Must be CSV` };
+  }
+  return { valid: true };
+}
 
 @Controller('students')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -64,6 +100,11 @@ export class StudentsController {
     }
     if (!lastName) {
       throw new BadRequestException('Missing required field: lastName');
+    }
+    if (email !== undefined && email !== '') {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        throw new BadRequestException('email is invalid');
+      }
     }
     if (phone !== undefined && phone !== '') {
       if (!/^\d{10}$/.test(phone)) {
@@ -197,6 +238,14 @@ export class StudentsController {
     return res.send(buffer);
   }
 
+  @Get('import/csv/template')
+  downloadCsvTemplate(@Res() res: ExpressResponse) {
+    const buffer = this.studentsService.generateImportTemplate();
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="students_template.xlsx"');
+    return res.send(buffer);
+  }
+
   @Post('import/validate')
   @UseInterceptors(FileInterceptor('file'))
   validateImport(
@@ -237,6 +286,67 @@ export class StudentsController {
       throw new BadRequestException('Missing required query parameter: schoolId');
     }
     return this.studentsService.importStudents(schoolId, adminUserId, file?.buffer || Buffer.alloc(0));
+  }
+
+  @Post('import/csv/validate')
+  @UseInterceptors(FileInterceptor('file'))
+  @HttpCode(200)
+  validateCsvImport(
+    @Query('schoolId') schoolId: string,
+    @UploadedFile() file: any,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    const adminUserId = (req as any).user?.id as string;
+    if (!schoolId || schoolId.trim() === '') {
+      throw new BadRequestException('Missing required query parameter: schoolId');
+    }
+    
+    // Validate file size
+    const sizeValidation = validateFileSize(file?.buffer);
+    if (!sizeValidation.valid) {
+      throw new BadRequestException(sizeValidation.error);
+    }
+    
+    // Validate file type
+    const typeValidation = validateFileType(file?.mimetype, file?.originalname);
+    if (!typeValidation.valid) {
+      throw new BadRequestException(typeValidation.error);
+    }
+    
+    return this.studentsService.validateCsvFile(schoolId, adminUserId, file.buffer).then((result) => {
+      // Return 422 if validation failed
+      if (!result.valid) {
+        throw new UnprocessableEntityException(result);
+      }
+      return result;
+    });
+  }
+
+  @Post('import/csv')
+  @UseInterceptors(FileInterceptor('file'))
+  importCsvStudents(
+    @Query('schoolId') schoolId: string,
+    @UploadedFile() file: any,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    const adminUserId = (req as any).user?.id as string;
+    if (!schoolId || schoolId.trim() === '') {
+      throw new BadRequestException('Missing required query parameter: schoolId');
+    }
+    
+    // Validate file size
+    const sizeValidation = validateFileSize(file?.buffer);
+    if (!sizeValidation.valid) {
+      throw new BadRequestException(sizeValidation.error);
+    }
+    
+    // Validate file type
+    const typeValidation = validateFileType(file?.mimetype, file?.originalname);
+    if (!typeValidation.valid) {
+      throw new BadRequestException(typeValidation.error);
+    }
+    
+    return this.studentsService.importCsvStudents(schoolId, adminUserId, file.buffer);
   }
 
   @Post(':id/promote')
@@ -301,5 +411,19 @@ export class StudentsController {
       yearId: yearId || undefined,
       includeInactive: includeInactiveBool,
     });
+  }
+
+  @Get('enrolled/by-classroom')
+  getEnrolledStudentsByClassroom(
+    @Query('schoolId') schoolId: string,
+    @Query('academicYearId') academicYearId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    const adminUserId = (req as any).user?.id as string;
+    const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
+    if (!academicYearId || academicYearId.trim() === '') {
+      throw new BadRequestException('Missing required query parameter: academicYearId');
+    }
+    return this.studentsService.getEnrolledStudentsByClassroom(tenantSchoolId, academicYearId, adminUserId);
   }
 }

@@ -92,6 +92,7 @@ model Student {
   reg_no     String?
   student_no String
   guardians  StudentGuardian[]
+  enrollments          StudentEnrollment[]
 
   @@unique([school_id, student_no])
   @@index([school_id])
@@ -247,6 +248,7 @@ model StudentEnrollment {
 
   classroom_offering ClassroomOffering @relation(fields: [classroom_offering_id], references: [id], onDelete: Restrict)
   academic_year      AcademicYear      @relation(fields: [academic_year_id], references: [id], onDelete: Cascade)
+  student     Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
 
   @@index([student_id])
   @@index([academic_year_id])

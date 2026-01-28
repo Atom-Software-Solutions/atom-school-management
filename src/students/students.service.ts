@@ -2,6 +2,42 @@ import { Injectable, ForbiddenException, NotFoundException, BadRequestException 
 import { PrismaService } from '../prisma/prisma.service';
 import * as XLSX from 'xlsx';
 
+// File validation constants
+const MAX_FILE_SIZE = parseInt(process.env.MAX_IMPORT_FILE_SIZE || '5242880'); // 5MB default
+const ALLOWED_MIME_TYPES = ['text/csv', 'application/csv', 'text/plain'];
+const ALLOWED_EXTENSIONS = ['.csv'];
+
+// File validation helper
+interface FileValidationResult {
+  valid: boolean;
+  error?: string;
+}
+
+function validateFileSize(buffer: Buffer): FileValidationResult {
+  if (!buffer || buffer.length === 0) {
+    return { valid: false, error: 'No file uploaded' };
+  }
+  if (buffer.length > MAX_FILE_SIZE) {
+    const maxSizeMB = Math.round(MAX_FILE_SIZE / 1024 / 1024);
+    return { valid: false, error: `File size exceeds maximum of ${maxSizeMB}MB` };
+  }
+  return { valid: true };
+}
+
+function validateFileType(mimeType: string | undefined, originalName: string | undefined): FileValidationResult {
+  if (!originalName) {
+    return { valid: false, error: 'File name is required' };
+  }
+  const extension = originalName.toLowerCase().substring(originalName.lastIndexOf('.'));
+  if (!ALLOWED_EXTENSIONS.includes(extension)) {
+    return { valid: false, error: `Invalid file extension. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}` };
+  }
+  if (mimeType && !ALLOWED_MIME_TYPES.includes(mimeType)) {
+    return { valid: false, error: `Invalid file type. Must be CSV` };
+  }
+  return { valid: true };
+}
+
 @Injectable()
 export class StudentsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -241,12 +277,12 @@ export class StudentsService {
 
   generateImportTemplate(): Buffer {
     const worksheet = XLSX.utils.aoa_to_sheet([
-      ['studentNo', 'regNo', 'firstName', 'lastName', 'email', 'phone', 'className'],
+      ['firstName', 'lastName', 'email', 'phone', 'gender', 'status', 'dateOfBirth', 'religion', 'address', 'className'],
     ]);
     // Freeze header row
     (worksheet as any)['!freeze'] = { xSplit: 0, ySplit: 1 };
     // Make header read-only by protecting sheet and unlocking data rows
-    const cols = ['A','B','C','D','E','F','G'];
+    const cols = ['A','B','C','D','E','F','G','H','I','J'];
     const maxRows = 1000; // editable rows to guide users
     for (let r = 2; r <= maxRows + 1; r += 1) {
       for (let c = 0; c < cols.length; c += 1) {
@@ -256,25 +292,89 @@ export class StudentsService {
         (worksheet as any)[ref].s = { protection: { locked: false } } as any;
       }
     }
-    (worksheet as any)['!ref'] = `A1:G${maxRows + 1}`;
+    (worksheet as any)['!ref'] = `A1:J${maxRows + 1}`;
     (worksheet as any)['!protect'] = { password: 'upload', selectLockedCells: true, selectUnlockedCells: true } as any;
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Students');
     return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
   }
 
-  private parseWorkbook(buffer: Buffer): Array<{ studentNo: string; regNo?: string; firstName: string; lastName: string; email?: string; phone?: string; className?: string }>{
+  generateCsvTemplate(): string {
+    return 'firstName,lastName,email,phone,gender,status,dateOfBirth,religion,address,className\n';
+  }
+
+  private parseCsv(buffer: Buffer): Array<{ firstName: string; lastName: string; email?: string; phone?: string; gender?: string; status?: string; dateOfBirth?: string; religion?: string; address?: string; className?: string }> {
+    const text = buffer.toString('utf-8');
+    const lines = text.split('\n').filter(line => line.trim() !== '');
+    if (lines.length === 0) return [];
+    
+    // Parse header
+    const header = lines[0].split(',').map(h => h.trim());
+    const headerMap: Record<string, number> = {};
+    header.forEach((h, idx) => {
+      headerMap[h.toLowerCase()] = idx;
+    });
+    
+    // Parse data rows
+    const rows: Array<{ firstName: string; lastName: string; email?: string; phone?: string; gender?: string; status?: string; dateOfBirth?: string; religion?: string; address?: string; className?: string }> = [];
+    for (let i = 1; i < lines.length; i++) {
+      const values = this.parseCsvLine(lines[i]);
+      const row: any = {};
+      if (headerMap['firstname'] !== undefined) row.firstName = (values[headerMap['firstname']] || '').trim();
+      if (headerMap['lastname'] !== undefined) row.lastName = (values[headerMap['lastname']] || '').trim();
+      if (headerMap['email'] !== undefined) row.email = (values[headerMap['email']] || '').trim() || undefined;
+      if (headerMap['phone'] !== undefined) row.phone = (values[headerMap['phone']] || '').trim() || undefined;
+      if (headerMap['gender'] !== undefined) row.gender = (values[headerMap['gender']] || '').trim() || undefined;
+      if (headerMap['status'] !== undefined) row.status = (values[headerMap['status']] || '').trim() || undefined;
+      if (headerMap['dateofbirth'] !== undefined) row.dateOfBirth = (values[headerMap['dateofbirth']] || '').trim() || undefined;
+      if (headerMap['religion'] !== undefined) row.religion = (values[headerMap['religion']] || '').trim() || undefined;
+      if (headerMap['address'] !== undefined) row.address = (values[headerMap['address']] || '').trim() || undefined;
+      if (headerMap['classname'] !== undefined) row.className = (values[headerMap['classname']] || '').trim() || undefined;
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  private parseCsvLine(line: string): string[] {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++; // Skip next quote
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        result.push(current);
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current);
+    return result;
+  }
+
+  private parseWorkbook(buffer: Buffer): Array<{ firstName: string; lastName: string; email?: string; phone?: string; gender?: string; status?: string; dateOfBirth?: string; religion?: string; address?: string; className?: string }>{
     const wb = XLSX.read(buffer, { type: 'buffer' });
     const sheetName = wb.SheetNames[0];
     const ws = wb.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(ws, { defval: '', raw: true }) as any[];
     return rows.map((r) => ({
-      studentNo: String(r.studentNo || r['studentNo'] || '').trim(),
-      regNo: (String(r.regNo || r['regNo'] || '').trim() || undefined),
       firstName: String(r.firstName || r['firstName'] || '').trim(),
       lastName: String(r.lastName || r['lastName'] || '').trim(),
       email: String(r.email || r['email'] || '').trim() || undefined,
       phone: String(r.phone || r['phone'] || '').trim() || undefined,
+      gender: String(r.gender || r['gender'] || '').trim() || undefined,
+      status: String(r.status || r['status'] || '').trim() || undefined,
+      dateOfBirth: String(r.dateOfBirth || r['dateOfBirth'] || '').trim() || undefined,
+      religion: String(r.religion || r['religion'] || '').trim() || undefined,
+      address: String(r.address || r['address'] || '').trim() || undefined,
       className: String(r.className || r['className'] || '').trim() || undefined,
     }));
   }
@@ -282,17 +382,77 @@ export class StudentsService {
   async validateImportFile(schoolId: string, adminUserId: string, buffer: Buffer) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
     if (!buffer || buffer.length === 0) {
-      return { valid: false, errors: ['No file uploaded'] };
+      return { valid: false, errors: ['No file uploaded'], total: 0 };
     }
-    const rows = this.parseWorkbook(buffer);
+    let rows;
+    try {
+      rows = this.parseWorkbook(buffer);
+    } catch (e: any) {
+      return { valid: false, errors: [`File parsing error: ${e?.message || 'Failed to parse file'}`], total: 0 };
+    }
     const errors: string[] = [];
     // Load existing values in this school for uniqueness checks
     const existing = await this.prisma.student.findMany({
       where: { school_id: schoolId },
-      select: { student_no: true, reg_no: true, email: true, phone: true },
+      select: { email: true, phone: true },
     });
-    const existingStudentNos = new Set<string>(existing.map(e => e.student_no).filter(Boolean) as string[]);
-    const existingRegNos = new Set<string>(existing.map(e => e.reg_no!).filter(Boolean) as string[]);
+    const existingEmails = new Set<string>(existing.map(e => (e.email || '').toLowerCase()).filter(v => v));
+    const existingPhones = new Set<string>(existing.map(e => e.phone!).filter(Boolean) as string[]);
+
+    // Track duplicates inside the file
+    const fileEmails = new Set<string>();
+    const filePhones = new Set<string>();
+
+    rows.forEach((row, idx) => {
+      const line = idx + 2; // +1 header, +1 1-based
+      if (!row.firstName) errors.push(`Row ${line}: firstName is required`);
+      if (!row.lastName) errors.push(`Row ${line}: lastName is required`);
+      if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) errors.push(`Row ${line}: email is invalid`);
+      if (row.phone && !/^\d{10}$/.test(row.phone)) errors.push(`Row ${line}: phone must be 10 digits`);
+      if (row.dateOfBirth) {
+        const dob = new Date(row.dateOfBirth);
+        if (isNaN(dob.getTime())) {
+          errors.push(`Row ${line}: dateOfBirth must be a valid date (YYYY-MM-DD)`);
+        }
+      }
+      if (row.email) {
+        const ekey = row.email.toLowerCase();
+        if (fileEmails.has(ekey)) errors.push(`Row ${line}: duplicate email in file`);
+        else fileEmails.add(ekey);
+        if (existingEmails.has(ekey)) errors.push(`Row ${line}: email already exists`);
+      }
+      if (row.phone) {
+        if (filePhones.has(row.phone)) errors.push(`Row ${line}: duplicate phone in file`);
+        else filePhones.add(row.phone);
+        if (existingPhones.has(row.phone)) errors.push(`Row ${line}: phone already exists for this school`);
+      }
+    });
+    return {
+      valid: errors.length === 0,
+      errors,
+      total: rows.length,
+      processed: rows.length,
+      failed: errors.length > 0 ? rows.length : 0,
+    };
+  }
+
+  async validateCsvFile(schoolId: string, adminUserId: string, buffer: Buffer) {
+    await this.assertIsAdminOfSchool(schoolId, adminUserId);
+    if (!buffer || buffer.length === 0) {
+      return { valid: false, errors: ['No file uploaded'], total: 0 };
+    }
+    let rows;
+    try {
+      rows = this.parseCsv(buffer);
+    } catch (e: any) {
+      return { valid: false, errors: [`CSV parsing error: ${e?.message || 'Failed to parse CSV'}`], total: 0 };
+    }
+    const errors: string[] = [];
+    // Load existing values in this school for uniqueness checks
+    const existing = await this.prisma.student.findMany({
+      where: { school_id: schoolId },
+      select: { email: true, phone: true },
+    });
     const existingEmails = new Set<string>(existing.map(e => (e.email || '').toLowerCase()).filter(v => v));
     const existingPhones = new Set<string>(existing.map(e => e.phone!).filter(Boolean) as string[]);
 
@@ -304,22 +464,28 @@ export class StudentsService {
 
     rows.forEach((row, idx) => {
       const line = idx + 2; // +1 header, +1 1-based
-      if (!row.studentNo) errors.push(`Row ${line}: studentNo is required`);
-      if (row.studentNo) {
-        const key = row.studentNo;
-        if (fileStudentNos.has(key)) errors.push(`Row ${line}: duplicate studentNo in file`);
-        else fileStudentNos.add(key);
-        if (existingStudentNos.has(key)) errors.push(`Row ${line}: studentNo already exists for this school`);
-      }
+      // if (!row.studentNo) errors.push(`Row ${line}: studentNo is required`);
+      // if (row.studentNo) {
+      //   const key = row.studentNo;
+      //   if (fileStudentNos.has(key)) errors.push(`Row ${line}: duplicate studentNo in file`);
+      //   else fileStudentNos.add(key);
+      //   if (existingStudentNos.has(key)) errors.push(`Row ${line}: studentNo already exists for this school`);
+      // }
       if (!row.firstName) errors.push(`Row ${line}: firstName is required`);
       if (!row.lastName) errors.push(`Row ${line}: lastName is required`);
       if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) errors.push(`Row ${line}: email is invalid`);
       if (row.phone && !/^\d{10}$/.test(row.phone)) errors.push(`Row ${line}: phone must be 10 digits`);
-      if (row.regNo) {
-        if (fileRegNos.has(row.regNo)) errors.push(`Row ${line}: duplicate regNo in file`);
-        else fileRegNos.add(row.regNo);
-        if (existingRegNos.has(row.regNo)) errors.push(`Row ${line}: regNo already exists for this school`);
+      if (row.dateOfBirth) {
+        const dob = new Date(row.dateOfBirth);
+        if (isNaN(dob.getTime())) {
+          errors.push(`Row ${line}: dateOfBirth must be a valid date (YYYY-MM-DD)`);
+        }
       }
+      // if (row.regNo) {
+      //   if (fileRegNos.has(row.regNo)) errors.push(`Row ${line}: duplicate regNo in file`);
+      //   else fileRegNos.add(row.regNo);
+      //   if (existingRegNos.has(row.regNo)) errors.push(`Row ${line}: regNo already exists for this school`);
+      // }
       if (row.email) {
         const ekey = row.email.toLowerCase();
         if (fileEmails.has(ekey)) errors.push(`Row ${line}: duplicate email in file`);
@@ -329,36 +495,41 @@ export class StudentsService {
       if (row.phone) {
         if (filePhones.has(row.phone)) errors.push(`Row ${line}: duplicate phone in file`);
         else filePhones.add(row.phone);
-        if (existingPhones.has(row.phone)) errors.push(`Row ${line}: phone already exists`);
+        if (existingPhones.has(row.phone)) errors.push(`Row ${line}: phone already exists for this school`);
       }
     });
-    return { valid: errors.length === 0, errors, total: rows.length };
+    return {
+      valid: errors.length === 0,
+      errors,
+      total: rows.length,
+      processed: rows.length,
+      failed: errors.length > 0 ? rows.length : 0,
+    };
   }
 
   async importStudents(schoolId: string, adminUserId: string, buffer: Buffer) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
     if (!buffer || buffer.length === 0) {
-      return { imported: 0, errors: ['No file uploaded'] };
+      return { imported: 0, failed: 0, errors: ['No file uploaded'], total: 0 };
     }
-    const rows = this.parseWorkbook(buffer);
+    let rows;
+    try {
+      rows = this.parseWorkbook(buffer);
+    } catch (e: any) {
+      return { imported: 0, failed: 0, errors: [`File parsing error: ${e?.message || 'Failed to parse file'}`], total: 0 };
+    }
     const errors: string[] = [];
     let imported = 0;
     // Load existing values for school-wide uniqueness, and update as we import
     const existing = await this.prisma.student.findMany({
       where: { school_id: schoolId },
-      select: { student_no: true, reg_no: true, email: true, phone: true },
+      select: { email: true, phone: true },
     });
-    const studentNos = new Set<string>(existing.map(e => e.student_no).filter(Boolean) as string[]);
-    const regNos = new Set<string>(existing.map(e => e.reg_no!).filter(Boolean) as string[]);
     const emails = new Set<string>(existing.map(e => (e.email || '').toLowerCase()).filter(v => v));
     const phones = new Set<string>(existing.map(e => e.phone!).filter(Boolean) as string[]);
     for (let i = 0; i < rows.length; i += 1) {
       const row = rows[i];
       const line = i + 2;
-      if (!row.studentNo) {
-        errors.push(`Row ${line}: studentNo is required`);
-        continue;
-      }
       if (!row.firstName || !row.lastName) {
         errors.push(`Row ${line}: firstName and lastName are required`);
         continue;
@@ -371,15 +542,14 @@ export class StudentsService {
         errors.push(`Row ${line}: phone must be 10 digits`);
         continue;
       }
+      if (row.dateOfBirth) {
+        const dob = new Date(row.dateOfBirth);
+        if (isNaN(dob.getTime())) {
+          errors.push(`Row ${line}: dateOfBirth must be a valid date (YYYY-MM-DD)`);
+          continue;
+        }
+      }
       // Uniqueness against already-imported and existing DB records for this school
-      if (studentNos.has(row.studentNo)) {
-        errors.push(`Row ${line}: studentNo already exists for this school`);
-        continue;
-      }
-      if (row.regNo && regNos.has(row.regNo)) {
-        errors.push(`Row ${line}: regNo already exists for this school`);
-        continue;
-      }
       if (row.email && emails.has(row.email.toLowerCase())) {
         errors.push(`Row ${line}: email already exists`);
         continue;
@@ -389,17 +559,65 @@ export class StudentsService {
         continue;
       }
       try {
-        const student = await this.prisma.student.create({
-          data: {
-            school_id: schoolId,
-            student_no: row.studentNo,
-            reg_no: row.regNo || undefined,
-            first_name: row.firstName,
-            last_name: row.lastName,
-            email: row.email,
-            phone: row.phone,
-          },
-        });
+        // Auto-generate studentNo and regNo
+        let studentNo = await this.generateNextStudentNo(schoolId);
+        let regNo = await this.generateNextRegNo(schoolId);
+        
+        // Retry on unique constraint violations for studentNo/regNo
+        let attempt = 0;
+        const maxAttempts = 5;
+        let student;
+        while (attempt < maxAttempts) {
+          attempt += 1;
+          try {
+            const dateOfBirth = row.dateOfBirth ? new Date(row.dateOfBirth) : undefined;
+            student = await this.prisma.student.create({
+              data: {
+                school_id: schoolId,
+                student_no: studentNo,
+                reg_no: regNo,
+                first_name: row.firstName,
+                last_name: row.lastName,
+                email: row.email,
+                phone: row.phone,
+                gender: row.gender,
+                status: row.status,
+                date_of_birth: dateOfBirth,
+                religion: row.religion,
+                address: row.address,
+              },
+            });
+            break; // Success, exit retry loop
+          } catch (e: any) {
+            if (e?.code === 'P2002' && Array.isArray(e?.meta?.target)) {
+              const target = e.meta.target as string[];
+              if (target.includes('student_no') || target.includes('reg_no')) {
+                // Regenerate and retry
+                studentNo = await this.generateNextStudentNo(schoolId);
+                regNo = await this.generateNextRegNo(schoolId);
+                if (attempt < maxAttempts) {
+                  continue;
+                }
+                // Max attempts reached
+                break;
+              }
+              if (target.includes('email')) {
+                errors.push(`Row ${line}: email already exists`);
+                break;
+              }
+              if (target.includes('phone')) {
+                errors.push(`Row ${line}: phone already exists`);
+                break;
+              }
+            }
+            throw e;
+          }
+        }
+        
+        if (!student) {
+          errors.push(`Row ${line}: Failed to generate unique student identifiers. Please retry.`);
+          continue;
+        }
         
         // If className is provided, create enrollment in new system
         if (row.className) {
@@ -490,8 +708,6 @@ export class StudentsService {
         
         imported += 1;
         // Update sets so subsequent rows are checked against new inserts
-        studentNos.add(row.studentNo);
-        if (row.regNo) regNos.add(row.regNo);
         if (row.email) emails.add(row.email.toLowerCase());
         if (row.phone) phones.add(row.phone);
       } catch (e: any) {
@@ -502,6 +718,233 @@ export class StudentsService {
           } else if (target.includes('reg_no')) {
             errors.push(`Row ${line}: duplicate regNo`);
           } else if (target.includes('email')) {
+            errors.push(`Row ${line}: duplicate email`);
+          } else if (target.includes('phone')) {
+            errors.push(`Row ${line}: duplicate phone`);
+          } else {
+            errors.push(`Row ${line}: unique constraint violation`);
+          }
+        } else {
+          errors.push(`Row ${line}: ${e?.message || 'failed to insert'}`);
+        }
+      }
+    }
+    return {
+      imported,
+      failed: rows.length - imported,
+      errors,
+      total: rows.length,
+      processed: rows.length,
+    };
+  }
+
+  async importCsvStudents(schoolId: string, adminUserId: string, buffer: Buffer) {
+    await this.assertIsAdminOfSchool(schoolId, adminUserId);
+    if (!buffer || buffer.length === 0) {
+      return { imported: 0, failed: 0, errors: ['No file uploaded'], total: 0 };
+    }
+    let rows;
+    try {
+      rows = this.parseCsv(buffer);
+    } catch (e: any) {
+      return { imported: 0, failed: 0, errors: [`CSV parsing error: ${e?.message || 'Failed to parse CSV'}`], total: 0 };
+    }
+    const errors: string[] = [];
+    let imported = 0;
+    // Load existing values for school-wide uniqueness, and update as we import
+    const existing = await this.prisma.student.findMany({
+      where: { school_id: schoolId },
+      select: { email: true, phone: true },
+    });
+    const emails = new Set<string>(existing.map(e => (e.email || '').toLowerCase()).filter(v => v));
+    const phones = new Set<string>(existing.map(e => e.phone!).filter(Boolean) as string[]);
+    for (let i = 0; i < rows.length; i += 1) {
+      const row = rows[i];
+      const line = i + 2;
+      if (!row.firstName || !row.lastName) {
+        errors.push(`Row ${line}: firstName and lastName are required`);
+        continue;
+      }
+      if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) {
+        errors.push(`Row ${line}: email is invalid`);
+        continue;
+      }
+      if (row.phone && !/^\d{10}$/.test(row.phone)) {
+        errors.push(`Row ${line}: phone must be 10 digits`);
+        continue;
+      }
+      if (row.dateOfBirth) {
+        const dob = new Date(row.dateOfBirth);
+        if (isNaN(dob.getTime())) {
+          errors.push(`Row ${line}: dateOfBirth must be a valid date (YYYY-MM-DD)`);
+          continue;
+        }
+      }
+      // Uniqueness against already-imported and existing DB records for this school
+      if (row.email && emails.has(row.email.toLowerCase())) {
+        errors.push(`Row ${line}: email already exists`);
+        continue;
+      }
+      if (row.phone && phones.has(row.phone)) {
+        errors.push(`Row ${line}: phone already exists`);
+        continue;
+      }
+      try {
+        // Auto-generate studentNo and regNo
+        let studentNo = await this.generateNextStudentNo(schoolId);
+        let regNo = await this.generateNextRegNo(schoolId);
+        
+        // Retry on unique constraint violations for studentNo/regNo
+        let attempt = 0;
+        const maxAttempts = 5;
+        let student;
+        while (attempt < maxAttempts) {
+          attempt += 1;
+          try {
+            const dateOfBirth = row.dateOfBirth ? new Date(row.dateOfBirth) : undefined;
+            student = await this.prisma.student.create({
+              data: {
+                school_id: schoolId,
+                student_no: studentNo,
+                reg_no: regNo,
+                first_name: row.firstName,
+                last_name: row.lastName,
+                email: row.email,
+                phone: row.phone,
+                gender: row.gender,
+                status: row.status,
+                date_of_birth: dateOfBirth,
+                religion: row.religion,
+                address: row.address,
+              },
+            });
+            break; // Success, exit retry loop
+          } catch (e: any) {
+            if (e?.code === 'P2002' && Array.isArray(e?.meta?.target)) {
+              const target = e.meta.target as string[];
+              if (target.includes('student_no') || target.includes('reg_no')) {
+                // Regenerate and retry
+                studentNo = await this.generateNextStudentNo(schoolId);
+                regNo = await this.generateNextRegNo(schoolId);
+                if (attempt < maxAttempts) {
+                  continue;
+                }
+                // Max attempts reached
+                break;
+              }
+              if (target.includes('email')) {
+                errors.push(`Row ${line}: email already exists`);
+                break;
+              }
+              if (target.includes('phone')) {
+                errors.push(`Row ${line}: phone already exists`);
+                break;
+              }
+            }
+            throw e;
+          }
+        }
+        
+        if (!student) {
+          errors.push(`Row ${line}: Failed to generate unique student identifiers. Please retry.`);
+          continue;
+        }
+        
+        // If className is provided, create enrollment in new system
+        if (row.className) {
+          try {
+            // Find or create ClassroomDefinition
+            let definition = await (this.prisma as any).classroomDefinition.findUnique({
+              where: { school_id_name: { school_id: schoolId, name: row.className.trim() } },
+            });
+            
+            if (!definition) {
+              definition = await (this.prisma as any).classroomDefinition.create({
+                data: {
+                  school_id: schoolId,
+                  name: row.className.trim(),
+                },
+              });
+            }
+            
+            // Get the active academic year (or most recent if none active)
+            const activeYear = await (this.prisma as any).academicYear.findFirst({
+              where: {
+                school_id: schoolId,
+                status: 'active',
+              },
+              orderBy: { start_date: 'desc' },
+            });
+            
+            // If no active year, get the most recent year
+            const academicYear = activeYear || await (this.prisma as any).academicYear.findFirst({
+              where: { school_id: schoolId },
+              orderBy: { start_date: 'desc' },
+            });
+            
+            if (academicYear) {
+              // Find or create ClassroomOffering
+              let offering = await (this.prisma as any).classroomOffering.findUnique({
+                where: {
+                  academic_year_id_classroom_definition_id: {
+                    academic_year_id: academicYear.id,
+                    classroom_definition_id: definition.id,
+                  },
+                },
+              });
+              
+              if (!offering) {
+                offering = await (this.prisma as any).classroomOffering.create({
+                  data: {
+                    academic_year_id: academicYear.id,
+                    classroom_definition_id: definition.id,
+                    is_active: true,
+                  },
+                });
+              }
+              
+              // Check for existing active enrollment in this academic year
+              const existingEnrollment = await (this.prisma as any).studentEnrollment.findFirst({
+                where: {
+                  student_id: student.id,
+                  academic_year_id: academicYear.id,
+                  end_date: null, // Active enrollment
+                },
+              });
+              
+              if (!existingEnrollment) {
+                // Create StudentEnrollment only if one doesn't already exist
+                await (this.prisma as any).studentEnrollment.create({
+                  data: {
+                    student_id: student.id,
+                    classroom_offering_id: offering.id,
+                    academic_year_id: academicYear.id,
+                    start_date: new Date(),
+                    status: 'active',
+                  },
+                });
+              } else {
+                // Enrollment already exists - log info but don't fail
+                console.log(`Student ${student.id} already has an active enrollment in academic year ${academicYear.id}`);
+              }
+            } else {
+              // No academic year found - log warning but don't fail import
+              errors.push(`Row ${line}: className "${row.className}" specified but no academic year found for school. Student imported without enrollment.`);
+            }
+          } catch (enrollmentError: any) {
+            // Log enrollment error but don't fail the student import
+            errors.push(`Row ${line}: Failed to create enrollment for className "${row.className}": ${enrollmentError.message}`);
+          }
+        }
+        
+        imported += 1;
+        // Update sets so subsequent rows are checked against new inserts
+        if (row.email) emails.add(row.email.toLowerCase());
+        if (row.phone) phones.add(row.phone);
+      } catch (e: any) {
+        if (e?.code === 'P2002' && Array.isArray(e?.meta?.target)) {
+          const target = e.meta.target as string[];
+          if (target.includes('email')) {
             errors.push(`Row ${line}: duplicate email`);
           } else if (target.includes('phone')) {
             errors.push(`Row ${line}: duplicate phone`);
@@ -658,5 +1101,152 @@ export class StudentsService {
       },
       orderBy: [{ start_date: 'asc' }],
     });
+  }
+
+  async getEnrolledStudentsByClassroom(schoolId: string, academicYearId: string, adminUserId: string) {
+    await this.assertIsAdminOfSchool(schoolId, adminUserId);
+
+    // Verify academic year belongs to school
+    const academicYear = await (this.prisma as any).academicYear.findUnique({
+      where: { id: academicYearId },
+    });
+    if (!academicYear) {
+      throw new NotFoundException('Academic year not found');
+    }
+    if (academicYear.school_id !== schoolId) {
+      throw new ForbiddenException('Academic year does not belong to this school');
+    }
+
+    // Get all enrollments for this academic year
+    const enrollments = await (this.prisma as any).studentEnrollment.findMany({
+      where: {
+        academic_year_id: academicYearId,
+        end_date: null, // Only active enrollments
+        status: 'active',
+      },
+      include: {
+        student: {
+          select: {
+            id: true,
+            student_no: true,
+            reg_no: true,
+            first_name: true,
+            last_name: true,
+            email: true,
+            phone: true,
+            gender: true,
+            date_of_birth: true,
+            status: true,
+          },
+        },
+        classroom_offering: {
+          include: {
+            classroom_definition: {
+              select: {
+                id: true,
+                name: true,
+                level: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [
+        {
+          classroom_offering: {
+            classroom_definition: {
+              name: 'asc',
+            },
+          },
+        },
+        {
+          student: {
+            first_name: 'asc',
+          },
+        },
+      ],
+    });
+
+    // Group by classroom offering
+    const grouped: Record<string, {
+      classroomOffering: {
+        id: string;
+        displayName: string | null;
+        isActive: boolean;
+        classroomDefinition: {
+          id: string;
+          name: string;
+          level: string | null;
+        };
+      };
+      students: Array<{
+        enrollmentId: string;
+        startDate: Date;
+        student: {
+          id: string;
+          studentNo: string | null;
+          regNo: string | null;
+          firstName: string;
+          lastName: string;
+          email: string | null;
+          phone: string | null;
+          gender: string | null;
+          dateOfBirth: Date | null;
+          status: string | null;
+        };
+      }>;
+    }> = {};
+
+    for (const enrollment of enrollments) {
+      const offeringId = enrollment.classroom_offering_id;
+      if (!grouped[offeringId]) {
+        grouped[offeringId] = {
+          classroomOffering: {
+            id: enrollment.classroom_offering.id,
+            displayName: enrollment.classroom_offering.display_name,
+            isActive: enrollment.classroom_offering.is_active,
+            classroomDefinition: {
+              id: enrollment.classroom_offering.classroom_definition.id,
+              name: enrollment.classroom_offering.classroom_definition.name,
+              level: enrollment.classroom_offering.classroom_definition.level,
+            },
+          },
+          students: [],
+        };
+      }
+
+      grouped[offeringId].students.push({
+        enrollmentId: enrollment.id,
+        startDate: enrollment.start_date,
+        student: {
+          id: enrollment.student.id,
+          studentNo: enrollment.student.student_no,
+          regNo: enrollment.student.reg_no,
+          firstName: enrollment.student.first_name,
+          lastName: enrollment.student.last_name,
+          email: enrollment.student.email,
+          phone: enrollment.student.phone,
+          gender: enrollment.student.gender,
+          dateOfBirth: enrollment.student.date_of_birth,
+          status: enrollment.student.status,
+        },
+      });
+    }
+
+    // Convert to array format
+    return {
+      academicYear: {
+        id: academicYear.id,
+        name: academicYear.name,
+        startDate: academicYear.start_date,
+        endDate: academicYear.end_date,
+      },
+      classrooms: Object.values(grouped).map((group) => ({
+        classroomOffering: group.classroomOffering,
+        studentCount: group.students.length,
+        students: group.students,
+      })),
+      totalStudents: enrollments.length,
+    };
   }
 }

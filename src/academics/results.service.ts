@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSubjectDto } from './dto/create-subject.dto';
 import { UpdateSubjectDto } from './dto/update-subject.dto';
@@ -12,6 +12,8 @@ import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.in
 
 @Injectable()
 export class ResultsService {
+  private readonly logger = new Logger(ResultsService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   private async assertIsAdminOfSchool(schoolId: string, userId: string) {
@@ -114,6 +116,46 @@ export class ResultsService {
     }
   }
 
+  async createSubjects(schoolId: string, adminUserId: string, dataArray: CreateSubjectDto[]) {
+    await this.assertIsAdminOfSchool(schoolId, adminUserId);
+
+    if (!Array.isArray(dataArray) || dataArray.length === 0) {
+      throw new BadRequestException('Array of subjects is required');
+    }
+
+    const results: any[] = [];
+    const errors: string[] = [];
+
+    for (let i = 0; i < dataArray.length; i++) {
+      const data = dataArray[i];
+      try {
+        const subject = await (this.prisma as any).subject.create({
+          data: {
+            school_id: schoolId,
+            name: data.name.trim(),
+            code: data.code?.trim() || null,
+            description: data.description?.trim() || null,
+            is_active: data.isActive !== undefined ? data.isActive : true,
+          },
+        });
+        results.push(subject);
+      } catch (e: any) {
+        if (e?.code === 'P2002') {
+          errors.push(`Subject ${i + 1} (${data.name}): A subject with this name already exists for this school`);
+        } else {
+          errors.push(`Subject ${i + 1} (${data.name}): ${e?.message || 'Failed to create'}`);
+        }
+      }
+    }
+
+    return {
+      created: results.length,
+      failed: errors.length,
+      subjects: results,
+      errors: errors.length > 0 ? errors : undefined,
+    };
+  }
+
   async getSubject(subjectId: string, adminUserId: string) {
     const subject = await (this.prisma as any).subject.findUnique({
       where: { id: subjectId },
@@ -203,6 +245,19 @@ export class ResultsService {
       throw new ForbiddenException('Subject does not belong to this school');
     }
 
+    // Check for duplicate assessment (same term, subject, name, and type)
+    const existing = await (this.prisma as any).assessment.findFirst({
+      where: {
+        term_id: data.termId,
+        subject_id: data.subjectId,
+        name: data.name.trim(),
+        type: data.type,
+      },
+    });
+    if (existing) {
+      throw new BadRequestException('An assessment with this name and type already exists for this subject and term');
+    }
+
     return (this.prisma as any).assessment.create({
       data: {
         school_id: schoolId,
@@ -249,6 +304,24 @@ export class ResultsService {
 
     if (Object.keys(updateData).length === 0) {
       throw new BadRequestException('No fields to update');
+    }
+
+    // Check for duplicate assessment if name or type is being updated
+    if (data.name !== undefined || data.type !== undefined) {
+      const checkName = data.name !== undefined ? data.name.trim() : assessment.name;
+      const checkType = data.type !== undefined ? data.type : assessment.type;
+      const existing = await (this.prisma as any).assessment.findFirst({
+        where: {
+          term_id: assessment.term_id,
+          subject_id: assessment.subject_id,
+          name: checkName,
+          type: checkType,
+          id: { not: assessmentId }, // Exclude current assessment
+        },
+      });
+      if (existing) {
+        throw new BadRequestException('An assessment with this name and type already exists for this subject and term');
+      }
     }
 
     return (this.prisma as any).assessment.update({
@@ -360,49 +433,135 @@ export class ResultsService {
       throw new BadRequestException('One or more students not found or do not belong to this school');
     }
 
-    // Create grades in transaction
     const results: any[] = [];
-    const errors: string[] = [];
+    const errorDetails: Array<{ studentId: string; message: string; statusCode: number }> = [];
     const maxScore = Number(assessment.max_score);
+    const startTime = Date.now();
 
-    for (const gradeData of data.grades) {
-      try {
+    this.logger.log(
+      `Starting bulk grade creation for assessment ${data.assessmentId} with ${data.grades.length} grades`,
+    );
+
+    // Create grades with transaction support
+    try {
+      const gradesToCreate = data.grades.map((gradeData) => {
         if (gradeData.score > maxScore) {
-          errors.push(`Student ${gradeData.studentId}: Score exceeds maximum`);
-          continue;
+          throw new BadRequestException(
+            `Student ${gradeData.studentId}: Score ${gradeData.score} exceeds maximum score of ${maxScore}`,
+          );
         }
 
         const percentage = this.calculatePercentage(gradeData.score, maxScore);
         const letterGrade = gradeData.letterGrade || this.calculateLetterGrade(percentage);
 
-        const grade = await (this.prisma as any).grade.create({
-          data: {
-            school_id: schoolId,
-            student_id: gradeData.studentId,
-            assessment_id: data.assessmentId,
-            subject_id: assessment.subject_id,
-            score: gradeData.score,
-            percentage: percentage,
-            letter_grade: letterGrade,
-            remarks: gradeData.remarks?.trim() || null,
-            created_by: adminUserId,
-          },
-        });
-        results.push(grade);
-      } catch (e: any) {
-        if (e?.code === 'P2002') {
-          errors.push(`Student ${gradeData.studentId}: Grade already exists`);
-        } else {
-          errors.push(`Student ${gradeData.studentId}: ${e.message}`);
+        return {
+          school_id: schoolId,
+          student_id: gradeData.studentId,
+          assessment_id: data.assessmentId,
+          subject_id: assessment.subject_id,
+          score: gradeData.score,
+          percentage: percentage,
+          letter_grade: letterGrade,
+          remarks: gradeData.remarks?.trim() || null,
+          created_by: adminUserId,
+        };
+      });
+
+      // Use transaction for atomic operations
+      const createdGrades = await (this.prisma as any).$transaction(
+        gradesToCreate.map((gradeData) =>
+          (this.prisma as any).grade.create({ data: gradeData }),
+        ),
+      );
+
+      results.push(...createdGrades);
+      const duration = Date.now() - startTime;
+      this.logger.log(
+        `Bulk grade creation completed successfully. Created ${results.length} grades in ${duration}ms`,
+      );
+    } catch (e: any) {
+      // If transaction fails, attempt individual creation to identify specific failures
+      this.logger.warn(
+        `Bulk transaction failed (${e?.message}), attempting individual grade creation for error tracking`,
+      );
+
+      for (const gradeData of data.grades) {
+        try {
+          if (gradeData.score > maxScore) {
+            errorDetails.push({
+              studentId: gradeData.studentId,
+              message: `Score ${gradeData.score} exceeds maximum score of ${maxScore}`,
+              statusCode: 400,
+            });
+            continue;
+          }
+
+          const percentage = this.calculatePercentage(gradeData.score, maxScore);
+          const letterGrade = gradeData.letterGrade || this.calculateLetterGrade(percentage);
+
+          const grade = await (this.prisma as any).grade.create({
+            data: {
+              school_id: schoolId,
+              student_id: gradeData.studentId,
+              assessment_id: data.assessmentId,
+              subject_id: assessment.subject_id,
+              score: gradeData.score,
+              percentage: percentage,
+              letter_grade: letterGrade,
+              remarks: gradeData.remarks?.trim() || null,
+              created_by: adminUserId,
+            },
+          });
+          results.push(grade);
+        } catch (innerE: any) {
+          const errorInfo = this.formatGradeErrorMessage(gradeData.studentId, innerE);
+          errorDetails.push(errorInfo);
+          this.logger.warn(
+            `Failed to create grade for student ${gradeData.studentId}: ${errorInfo.message} (${errorInfo.statusCode})`,
+          );
         }
       }
     }
 
     return {
       created: results.length,
-      failed: errors.length,
+      failed: errorDetails.length,
       grades: results,
-      errors: errors,
+      errors: errorDetails.length > 0 ? errorDetails : undefined,
+    };
+  }
+
+  private formatGradeErrorMessage(
+    studentId: string,
+    error: any,
+  ): { studentId: string; message: string; statusCode: number } {
+    let message: string;
+    let statusCode: number;
+
+    if (error?.code === 'P2002') {
+      message = 'Grade already exists for this student and assessment';
+      statusCode = 409; // Conflict
+    } else if (error?.status === 400 || error?.code === 'INVALID_SCORE') {
+      message = error?.message || 'Invalid score';
+      statusCode = 400; // Bad Request
+    } else if (error?.status === 404) {
+      message = error?.message || 'Student not found';
+      statusCode = 404; // Not Found
+    } else if (error?.status === 403) {
+      message = error?.message || 'Access forbidden';
+      statusCode = 403; // Forbidden
+    } else if (error?.message) {
+      message = error.message;
+      statusCode = 500; // Internal Server Error (generic database error)
+    } else {
+      message = 'Unknown error occurred';
+      statusCode = 500;
+    }
+
+    return {
+      studentId,
+      message,
+      statusCode,
     };
   }
 
