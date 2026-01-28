@@ -23,7 +23,42 @@
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+School Management System - A comprehensive platform for managing school operations including students, classrooms, assessments, and academic records. Built with [Nest](https://github.com/nestjs/nest) framework TypeScript.
+
+## Frontend
+
+This project includes a modern **React frontend** with authentication (Login & Register). The frontend is located in the `frontend/` directory and built with:
+- React 18
+- Vite (fast build tool)
+- React Router (routing)
+- Axios (API calls)
+- Context API (state management)
+
+### Quick Start (Frontend)
+
+```bash
+# Navigate to frontend
+cd frontend
+
+# Install dependencies (first time only)
+npm install
+
+# Start development server
+npm run dev
+
+# Visit: http://localhost:5173
+```
+
+For detailed frontend documentation, see [frontend/README.md](frontend/README.md).
+
+### Multi-Tenancy Support
+
+The frontend supports **multiple schools (multi-tenancy)** with:
+- Subdomain-based access (`atom-high.yourapp.com`)
+- School selection for multi-school users
+- Automatic tenant identification in API requests
+
+See [frontend/MULTI-TENANCY.md](frontend/MULTI-TENANCY.md) for complete documentation.
 
 ## Project setup
 

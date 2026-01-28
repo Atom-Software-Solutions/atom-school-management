@@ -1,0 +1,1538 @@
+{
+  "info": {
+    "_postman_id": "cfbc81da-d43a-4208-89f2-6e95e6c3422c",
+    "name": "ResultsMgt E2E",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "47092177"
+  },
+  "item": [
+    {
+      "name": "1.0 Get Profile",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"2026\",\n  \"startDate\": \"2025-02-01T00:00:00.000Z\",\n  \"endDate\": \"2025-11-30T23:59:59.999Z\",\n  \"termTemplateId\": \"b300278e-4d3c-49d5-99fa-5076db4c020a\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/auth/profile",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "auth",
+            "profile"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "1.1 Register User",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"email\": \"joelethan2@gmail.com\",\n    \"firstName\": \"Joel\",\n    \"lastName\": \"Ethan\",\n    \"password\": \"12345@Password\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/auth/register",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "auth",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "1.3 School Admin Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"email\": \"joelethan2@gmail.com\",\n    \"password\": \"12345@Password\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/auth/login",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "2.1 Create New School",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"code\": \"SCH002\",\n  \"name\": \"Atom High School\",\n  \"domain\": \"atom-high-school\",\n  \"email\": \"contact1@atom-high.test\",\n  \"phone\": \"0700000001\",\n  \"address\": \"123 Main Street\",\n  \"logoUrl\": \"https://example.com/logo.png\",\n  \"currency\": \"UGX\",\n  \"timeZone\": \"Africa/Kampala\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/schools",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "schools"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "3.1 Create a Term Template",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Standard 3-Term Template\",\n  \"structure\": [\n    { \"ordinal\": 1, \"name\": \"Term 1\" },\n    { \"ordinal\": 2, \"name\": \"Term 2\" },\n    { \"ordinal\": 3, \"name\": \"Term 3\" }\n  ]\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/schools/{{schoolId_1}}/term-templates",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "schools",
+            "{{schoolId_1}}",
+            "term-templates"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "3.2 Create an Academic Year",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"2026\",\n  \"startDate\": \"2026-02-01T00:00:00.000Z\",\n  \"endDate\": \"2026-11-30T23:59:59.999Z\",\n  \"termTemplateId\": \"b63b65e4-d1b4-4a74-93de-df7a23920d96\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/schools/{{schoolId_1}}/years",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "schools",
+            "{{schoolId_1}}",
+            "years"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "3.3 List terms for the academic year",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"2026\",\n  \"startDate\": \"2025-02-01T00:00:00.000Z\",\n  \"endDate\": \"2025-11-30T23:59:59.999Z\",\n  \"termTemplateId\": \"b300278e-4d3c-49d5-99fa-5076db4c020a\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/years/{{yearId}}/terms",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "years",
+            "{{yearId}}",
+            "terms"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "3.4 Activate the academic year",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PATCH",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"status\": \"active\" }\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/years/{{yearId}}/status",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "years",
+            "{{yearId}}",
+            "status"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4.1x Downloads a CSV template file",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/students/import/csv/template",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "students",
+            "import",
+            "csv",
+            "template"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4.1 Create a classroom definition",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Primary 7\",\n  \"level\": \"Primary\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/schools/{{schoolId_1}}/classroom-definitions",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "schools",
+            "{{schoolId_1}}",
+            "classroom-definitions"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4.2 Create a classroom offering for the academic year",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"classroomDefinitionId\": \"75bd53ce-56b8-4e50-992d-142644211fa0\",\n  \"displayName\": \"Primary 7\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/years/{{year_id}}/classroom-offerings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "years",
+            "{{year_id}}",
+            "classroom-offerings"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4.3 Create students per School",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe1@student.test\",\n  \"phone\": \"0700000004\",\n  \"gender\": \"Male\",\n  \"status\": \"Active\",\n  \"dateOfBirth\": \"2010-01-20\",\n  \"religion\": \"Christianity\",\n  \"address\": \"Kampala, Uganda\",\n  \"avatarUrl\": \"https://.../avatar.png\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/students?schoolId={{schoolId_1}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "students"
+          ],
+          "query": [
+            {
+              "key": "schoolId",
+              "value": "{{schoolId_1}}"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4.3.1 Download CSV Template",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe1@student.test\",\n  \"phone\": \"0700000004\",\n  \"gender\": \"Male\",\n  \"status\": \"Active\",\n  \"dateOfBirth\": \"2010-01-20\",\n  \"religion\": \"Christianity\",\n  \"address\": \"Kampala, Uganda\",\n  \"avatarUrl\": \"https://.../avatar.png\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/students?schoolId={{schoolId_1}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "students"
+          ],
+          "query": [
+            {
+              "key": "schoolId",
+              "value": "{{schoolId_1}}"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4.3.2 Validate CSV file",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe1@student.test\",\n  \"phone\": \"0700000004\",\n  \"gender\": \"Male\",\n  \"status\": \"Active\",\n  \"dateOfBirth\": \"2010-01-20\",\n  \"religion\": \"Christianity\",\n  \"address\": \"Kampala, Uganda\",\n  \"avatarUrl\": \"https://.../avatar.png\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/students?schoolId={{schoolId_1}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "students"
+          ],
+          "query": [
+            {
+              "key": "schoolId",
+              "value": "{{schoolId_1}}"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4.3.3 Upload CSV file",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe1@student.test\",\n  \"phone\": \"0700000004\",\n  \"gender\": \"Male\",\n  \"status\": \"Active\",\n  \"dateOfBirth\": \"2010-01-20\",\n  \"religion\": \"Christianity\",\n  \"address\": \"Kampala, Uganda\",\n  \"avatarUrl\": \"https://.../avatar.png\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/students?schoolId={{schoolId_1}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "students"
+          ],
+          "query": [
+            {
+              "key": "schoolId",
+              "value": "{{schoolId_1}}"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4.4 Enroll students into the classroom offering",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"studentId\": \"740f394a-f65c-43f5-b563-53c4e8757a11\",\n  \"startDate\": \"2026-02-01T00:00:00.000Z\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/classroom-offerings/{{offeringId}}/enrollments?schoolId={{schoolId_1}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "classroom-offerings",
+            "{{offeringId}}",
+            "enrollments"
+          ],
+          "query": [
+            {
+              "key": "schoolId",
+              "value": "{{schoolId_1}}"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4.4.1 Get Enrolled Students into the Classroom",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"studentId\": \"a4b248de-bb8b-4a60-aaed-5ebc22541522\",\n  \"startDate\": \"2026-02-01T00:00:00.000Z\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/students/enrolled/by-classroom?schoolId={{schoolId_1}}&academicYearId={{yearId}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "students",
+            "enrolled",
+            "by-classroom"
+          ],
+          "query": [
+            {
+              "key": "schoolId",
+              "value": "{{schoolId_1}}"
+            },
+            {
+              "key": "academicYearId",
+              "value": "{{yearId}}"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4.5 Bulk enroll students into the classroom offering",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"enrollments\": [\n    {\n      \"studentId\": \"a4b248de-bb8b-4a60-aaed-5ebc22541522\",\n      \"startDate\": \"2026-02-01T00:00:00.000Z\"\n    },\n    {\n      \"studentId\": \"740f394a-f65c-43f5-b563-53c4e8757a11\",\n      \"startDate\": \"2026-02-01T00:00:00.000Z\"\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/classroom-offerings/{{offeringId}}/enrollments/bulk?schoolId={{schoolId_1}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "classroom-offerings",
+            "{{offeringId}}",
+            "enrollments",
+            "bulk"
+          ],
+          "query": [
+            {
+              "key": "schoolId",
+              "value": "{{schoolId_1}}"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "5.1 Create subjects for the school",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"English\",\n  \"code\": \"ENG\",\n  \"description\": \"English\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/schools/{{schoolId_1}}/subjects",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "schools",
+            "{{schoolId_1}}",
+            "subjects"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "6.1 Create an assessment",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"termId\": \"d9945da2-e1d8-4c40-ad06-b90dbf8eb2d8\",\n  \"subjectId\": \"9a794195-1b95-417e-a146-f846e21d35b0\",\n  \"name\": \"Mid-Term Exam\",\n  \"type\": \"exam\",\n  \"maxScore\": 100,\n  \"weight\": 0.4,\n  \"assessmentDate\": \"2025-05-01T09:00:00Z\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/schools/{{schoolId_1}}/assessments",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "schools",
+            "{{schoolId_1}}",
+            "assessments"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "6.1.1 Bulk create assessment: x",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n    {\n        \"termId\": \"d9945da2-e1d8-4c40-ad06-b90dbf8eb2d8\",\n        \"subjectId\": \"9a794195-1b95-417e-a146-f846e21d35b0\",\n        \"name\": \"Mid-Term Exam\",\n        \"type\": \"exam\",\n        \"maxScore\": 100,\n        \"weight\": 0.4,\n        \"assessmentDate\": \"2025-05-01T09:00:00Z\"\n    }\n]\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/schools/{{schoolId_1}}/assessments",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "schools",
+            "{{schoolId_1}}",
+            "assessments"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "6.2 List assessments",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableBodyPruning": true
+      },
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/schools/{{schoolId_1}}/assessments?termId={{termId}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "schools",
+            "{{schoolId_1}}",
+            "assessments"
+          ],
+          "query": [
+            {
+              "key": "termId",
+              "value": "{{termId}}"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "7.1 Bulk create grades for an assessment",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"assessmentId\": \"2bbfdf69-fe9e-439a-a927-f1461238cbec\",\n  \"grades\": [\n    {\n      \"studentId\": \"a4b248de-bb8b-4a60-aaed-5ebc22541522\",\n      \"score\": 85.5,\n      \"remarks\": \"Good performance\"\n    },\n    {\n      \"studentId\": \"740f394a-f65c-43f5-b563-53c4e8757a11\",\n      \"score\": 92,\n      \"remarks\": \"Excellent\"\n    }\n  ]\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/schools/{{schoolId_1}}/grades/bulk",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "schools",
+            "{{schoolId_1}}",
+            "grades",
+            "bulk"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "8.2 Create a single grade",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"assessmentId\": \"2bbfdf69-fe9e-439a-a927-f1461238cbec\",\n    \"studentId\": \"a4b248de-bb8b-4a60-aaed-5ebc22541522\",\n    \"score\": 85.5,\n    \"remarks\": \"Good performance\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/schools/{{schoolId_1}}/grades",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "schools",
+            "{{schoolId_1}}",
+            "grades"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "8.3 Update a single grade",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PATCH",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"score\": 85.2,\n    \"remarks\": \"Good performance\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/schools/{{schoolId_1}}/grades/{{grade_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "schools",
+            "{{schoolId_1}}",
+            "grades",
+            "{{grade_id}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "9.1 Detailed grades per student",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"assessmentId\": \"2bbfdf69-fe9e-439a-a927-f1461238cbec\",\n    \"studentId\": \"a4b248de-bb8b-4a60-aaed-5ebc22541522\",\n    \"score\": 85.5,\n    \"remarks\": \"Good performance\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/schools/{{schoolId_1}}/grades",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "schools",
+            "{{schoolId_1}}",
+            "grades"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "9.2 Academic summary for a term",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"assessmentId\": \"2bbfdf69-fe9e-439a-a927-f1461238cbec\",\n    \"studentId\": \"a4b248de-bb8b-4a60-aaed-5ebc22541522\",\n    \"score\": 85.5,\n    \"remarks\": \"Good performance\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/schools/{{schoolId_1}}/grades",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "schools",
+            "{{schoolId_1}}",
+            "grades"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "10.1 Generate report card for a student and term",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"assessmentId\": \"2bbfdf69-fe9e-439a-a927-f1461238cbec\",\n    \"studentId\": \"a4b248de-bb8b-4a60-aaed-5ebc22541522\",\n    \"score\": 85.5,\n    \"remarks\": \"Good performance\"\n}\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/schools/{{schoolId_1}}/grades",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "schools",
+            "{{schoolId_1}}",
+            "grades"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
