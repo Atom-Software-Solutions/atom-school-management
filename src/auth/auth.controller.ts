@@ -105,11 +105,12 @@ export class AuthController {
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  getProfile(@Request() req: AuthenticatedRequest) {
+  async getProfile(@Request() req: AuthenticatedRequest) {
     const user = req.user;
     if (!user) {
       throw new Error('User not authenticated');
     }
+    const memberships = await this.authService.getUserMemberships(user.id);
     return {
       id: user.id,
       email: user.email,
@@ -121,6 +122,7 @@ export class AuthController {
       lastLogin: user.last_login,
       createdAt: user.created_at,
       updatedAt: user.updated_at,
+      memberships,
     };
   }
 

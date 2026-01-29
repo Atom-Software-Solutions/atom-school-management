@@ -54,10 +54,13 @@ export class AuthService {
 
     const accessToken = await this.generateAccessToken(user);
     const refreshToken = await this.generateRefreshToken(user);
+    // Fetch memberships (schools the user is related to)
+    const memberships = await this.getUserMemberships(user.id);
 
     return {
       access_token: accessToken,
       refresh_token: refreshToken,
+      memberships,
       user: {
         id: user.id,
         email: user.email,
@@ -126,10 +129,13 @@ export class AuthService {
 
     const accessToken = await this.generateAccessToken(user);
     const refreshToken = await this.generateRefreshToken(user);
+    // Fetch memberships (schools the user is related to)
+    const memberships = await this.getUserMemberships(user.id);
 
     return {
       access_token: accessToken,
       refresh_token: refreshToken,
+      memberships,
       user: {
         id: user.id,
         email: user.email,
@@ -155,6 +161,20 @@ export class AuthService {
     });
     
     return schoolAdmin?.school_id || null;
+  }
+
+  // Return all schools the user has an admin relationship with.
+  async getUserMemberships(userId: string): Promise<Array<{ schoolId: string; schoolName: string; role: string }>> {
+    const rels = await this.prisma.schoolAdmin.findMany({
+      where: { user_id: userId },
+      include: { school: { select: { id: true, name: true } } },
+    });
+
+    return rels.map(r => ({
+      schoolId: r.school.id,
+      schoolName: r.school.name,
+      role: r.is_super_admin ? 'super_admin' : 'admin',
+    }));
   }
 
   private async generateAccessToken(user: { id: string; email: string; role: string }) {
