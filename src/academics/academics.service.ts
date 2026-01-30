@@ -294,13 +294,23 @@ export class AcademicsService {
             status: 'active',
             NOT: { id: yearId },
           },
-          select: { id: true, name: true },
+          select: { id: true, name: true, start_date: true, end_date: true },
         });
 
         if (existingActive) {
-          throw new BadRequestException(
-            `Cannot activate this academic year because another year is already active (${existingActive.name}). Close the active year first.`,
-          );
+          const now = new Date();
+          const start: Date | null = existingActive.start_date as any;
+          const end: Date | null = existingActive.end_date as any;
+
+          // If the currently active year still covers today, prevent activation.
+          if (start && end && now >= start && now <= end) {
+            throw new BadRequestException(
+              `Cannot activate this academic year because another year is currently active (${existingActive.name}) and its date range still includes today. Close the active year first.`,
+            );
+          }
+
+          // Otherwise, the existing active year is out of its date range -> deactivate it
+          await tx.academicYear.update({ where: { id: existingActive.id }, data: { status: 'closed' } });
         }
 
         return tx.academicYear.update({ where: { id: yearId }, data: { status } });
