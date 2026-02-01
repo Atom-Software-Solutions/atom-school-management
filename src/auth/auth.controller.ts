@@ -8,7 +8,9 @@ import {
   Get,
   Request,
   Query,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import {
   ApiTags,
   ApiOperation,
@@ -28,7 +30,7 @@ import type { AuthenticatedRequest } from '../common/middleware/tenant.middlewar
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   @Post('register')
   @ApiOperation({ summary: 'Register a new user' })
@@ -152,7 +154,6 @@ export class AuthController {
   }
 
   @Get('verify-email')
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify email address using verification token' })
   @ApiQuery({
     name: 'token',
@@ -160,28 +161,24 @@ export class AuthController {
     description: 'Email verification token',
     example: 'verification-token-here',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Email verification result',
-    schema: {
-      oneOf: [
-        {
-          example: { message: 'Email verified successfully', success: true, redirectUrl: '/schools/create' },
-        },
-        {
-          example: { message: 'Email already verified', success: false, redirectUrl: '/schools/create' },
-        },
-        {
-          example: {
-            message: 'Email already verified or verification link is invalid/expired',
-            success: false,
-          },
-        },
-      ],
-    },
-  })
-  async verifyEmail(@Query('token') token: string) {
-    return this.authService.verifyEmail(token);
+  async verifyEmail(
+    @Query('token') token: string,
+    @Res() res: Response,
+  ) {
+    const result = await this.authService.verifyEmail(token);
+
+    const baseUrl = process.env.FRONTEND_URL;
+
+    switch (result.status) {
+      case 'success':
+        return res.redirect(`${baseUrl}/schools/create`);
+
+      case 'already_verified':
+        return res.redirect(`${baseUrl}/verify-email?status=already_verified`);
+
+      default:
+        return res.redirect(`${baseUrl}/verify-email?status=invalid`);
+    }
   }
 
   @Post('refresh')
