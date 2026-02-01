@@ -166,14 +166,15 @@ export class AuthController {
     schema: {
       oneOf: [
         {
-          example: { message: 'Email verified successfully' },
+          example: { message: 'Email verified successfully', success: true, redirectUrl: '/schools/create' },
         },
         {
-          example: { message: 'Email already verified' },
+          example: { message: 'Email already verified', success: false, redirectUrl: '/schools/create' },
         },
         {
           example: {
             message: 'Email already verified or verification link is invalid/expired',
+            success: false,
           },
         },
       ],

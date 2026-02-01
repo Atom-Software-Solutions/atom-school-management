@@ -84,11 +84,12 @@ export class AuthService {
     if (!user) {
       return {
         message: 'Email already verified or verification link is invalid/expired',
+        success: false,
       };
     }
 
     if (user.email_verified) {
-      return { message: 'Email already verified' };
+      return { message: 'Email already verified', success: false, redirectUrl: '/schools/create' };
     }
 
     // Update user as verified
@@ -101,7 +102,11 @@ export class AuthService {
       },
     });
 
-    return { message: 'Email verified successfully' };
+    return { 
+      message: 'Email verified successfully', 
+      success: true,
+      redirectUrl: '/schools/create'
+    };
   }
 
   async login(loginDto: LoginDto) {
