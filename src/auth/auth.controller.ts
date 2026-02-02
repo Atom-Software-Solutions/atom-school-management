@@ -26,6 +26,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
+import { ProfileResponseDto } from './dto/profile-response.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -107,7 +108,7 @@ export class AuthController {
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getProfile(@Request() req: AuthenticatedRequest) {
+  async getProfile(@Request() req: AuthenticatedRequest): Promise<ProfileResponseDto> {
     const user = req.user;
     if (!user) {
       throw new Error('User not authenticated');
@@ -116,6 +117,7 @@ export class AuthController {
     return {
       id: user.id,
       email: user.email,
+      emailVerified: user.email_verified,
       firstName: user.first_name,
       lastName: user.last_name,
       role: user.role,
@@ -125,7 +127,7 @@ export class AuthController {
       createdAt: user.created_at,
       updatedAt: user.updated_at,
       memberships,
-    };
+    } as ProfileResponseDto;
   }
 
   @UseGuards(JwtAuthGuard)
