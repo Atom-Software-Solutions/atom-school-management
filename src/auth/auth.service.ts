@@ -370,4 +370,41 @@ export class AuthService {
       })
       .catch(() => undefined);
   }
+
+  async resendVerificationEmail(userId: string) {
+    const user = await this.usersService.findById(userId);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.email_verified) {
+      throw new BadRequestException('Email is already verified');
+    }
+
+    // Generate a new verification token
+    const verificationToken = randomUUID();
+
+    // Update user with new verification token
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { verification_token: verificationToken },
+    });
+
+    // Send verification email
+    try {
+      await this.emailService.sendVerificationEmail(
+        user.email,
+        user.first_name,
+        verificationToken,
+      );
+    } catch (error) {
+      console.error('Failed to send verification email:', (error as any)?.message ?? error);
+      throw new Error('Failed to send verification email');
+    }
+
+    return {
+      message: 'Verification email has been sent',
+    };
+  }
 }

@@ -217,6 +217,7 @@ export class AuthController {
     return this.authService.forgotPassword(forgotPasswordDto);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reset password with token' })
@@ -232,5 +233,30 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Invalid or expired reset token' })
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(resetPasswordDto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Resend email verification link to current user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification email sent successfully',
+    schema: {
+      example: {
+        message: 'Verification email has been sent',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Email is already verified' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async resendVerification(@Request() req: AuthenticatedRequest) {
+    const user = req.user;
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+    return this.authService.resendVerificationEmail(user.id);
   }
 }
