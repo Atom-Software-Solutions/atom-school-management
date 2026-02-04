@@ -77,23 +77,23 @@ Legend:
 
 ## Classroom Management
 
-- [x] `GET /schools/:schoolId/classroom-definitions` - List classroom definitions (school-defined names)
-- [x] `POST /schools/:schoolId/classroom-definitions` - Create classroom definition (name, level)
+- [x] `GET /schools/:schoolId/classroom-definitions` - List classroom definitions (school-defined names). Definitions include an `ordinal` integer used for promotion ordering.
+- [x] `POST /schools/:schoolId/classroom-definitions` - Create classroom definition (name, level, ordinal)
 - [x] `GET /classroom-definitions/:id` - Get single classroom definition by ID
-- [x] `PATCH /classroom-definitions/:id` - Update classroom definition (rename, archive)
-- [x] `GET /years/:yearId/classroom-offerings` - List classroom offerings for an academic year
-- [x] `POST /years/:yearId/classroom-offerings` - Create classroom offering from a definition
-- [x] `GET /classroom-offerings/:id` - Get single classroom offering by ID
-- [x] `PATCH /classroom-offerings/:id` - Update offering (displayName, isActive)
+- [x] `PATCH /classroom-definitions/:id` - Update classroom definition (rename, archive, ordinal)
+- [x] `GET /years/:yearId/classroom-definitions` - List classroom definitions available for an academic year (definitions are used directly for enrollments)
 
 ---
 
 ## Enrollments & Student Progression
 
-- [x] `POST /classroom-offerings/:offeringId/enrollments` - Enroll student in offering
+- [x] `POST /years/:yearId/classroom-definitions/:definitionId/enrollments` - Enroll student in a classroom definition for an academic year (creates an enrollment; specify `status` optionally).
+  - Validation: a student **cannot** have more than one active enrollment in different classroom definitions for the same academic year. Attempts to create conflicting enrollments should return 409 Conflict.
+- [x] `PATCH /enrollments/:id/status` - Update enrollment status (`pending` | `active` | `completed` | `withdrawn`). Only `active` enrollments are eligible to take classes/exams.
 - [x] `PATCH /enrollments/:id/complete` - Complete/withdraw enrollment with endDate
+- [x] `DELETE /enrollments/:id` - De-enroll student from a classroom definition (soft delete; reason recorded)
 - [x] `GET /students/:studentId/enrollments/history` - Enrollment history for student
-- [x] `POST /students/:studentId/promote` - Promote to next-year offering (no same classroom definition)
+- [x] `POST /students/:studentId/promote` - Promote to next-year classroom definition (creates a pending placement; student must be actively enrolled to be eligible to take the class; cannot promote to the same classroom definition)
 - [x] `POST /students/:studentId/retain` - Retain student (enroll into an allowed alternative; narration later)
 
 ---

@@ -145,168 +145,30 @@ export class ClassroomsService {
     }
   }
 
-  // Offerings
-  async listOfferings(yearId: string, adminUserId: string) {
-    const year = await (this.prisma as any).academicYear.findUnique({ where: { id: yearId } });
-    if (!year) throw new NotFoundException('Academic year not found');
-    
-    await this.assertIsAdminOfSchool(year.school_id, adminUserId);
-    
-    return (this.prisma as any).classroomOffering.findMany({
-      where: { academic_year_id: yearId },
-      include: {
-        classroom_definition: {
-          select: {
-            id: true,
-            name: true,
-            level: true,
-            is_archived: true,
-          },
-        },
-      },
-      orderBy: { classroom_definition: { name: 'asc' } },
-    });
-  }
-
-  async createOffering(yearId: string, adminUserId: string, data: { classroomDefinitionId: string; displayName?: string | null }) {
-    const year = await (this.prisma as any).academicYear.findUnique({ where: { id: yearId } });
-    if (!year) throw new NotFoundException('Academic year not found');
-    
-    await this.assertIsAdminOfSchool(year.school_id, adminUserId);
-
-    // Verify classroom definition belongs to the same school
-    const definition = await (this.prisma as any).classroomDefinition.findUnique({
-      where: { id: data.classroomDefinitionId },
-    });
-    if (!definition) throw new NotFoundException('Classroom definition not found');
-    if (definition.school_id !== year.school_id) {
-      throw new ForbiddenException('Classroom definition not accessible for this school');
-    }
-
-    // Check for duplicate offering (same definition in same year)
-    const existing = await (this.prisma as any).classroomOffering.findUnique({
-      where: {
-        academic_year_id_classroom_definition_id: {
-          academic_year_id: yearId,
-          classroom_definition_id: data.classroomDefinitionId,
-        },
-      },
-    });
-    if (existing) {
-      throw new BadRequestException('A classroom offering for this definition already exists in this academic year');
-    }
-
-    try {
-      return await (this.prisma as any).classroomOffering.create({
-        data: {
-          academic_year_id: yearId,
-          classroom_definition_id: data.classroomDefinitionId,
-          display_name: data.displayName?.trim() || null,
-        },
-        include: {
-          classroom_definition: {
-            select: {
-              id: true,
-              name: true,
-              level: true,
-            },
-          },
-        },
-      });
-    } catch (e: any) {
-      if (e?.code === 'P2002') {
-        throw new BadRequestException('A classroom offering for this definition already exists in this academic year');
-      }
-      throw e;
-    }
-  }
-
-  async getOfferingById(id: string, adminUserId: string) {
-    const offering = await (this.prisma as any).classroomOffering.findUnique({
-      where: { id },
-      include: {
-        academic_year: {
-          select: {
-            id: true,
-            name: true,
-            school_id: true,
-          },
-        },
-        classroom_definition: {
-          select: {
-            id: true,
-            name: true,
-            level: true,
-          },
-        },
-      },
-    });
-    if (!offering) throw new NotFoundException('Classroom offering not found');
-    
-    await this.assertIsAdminOfSchool(offering.academic_year.school_id, adminUserId);
-    
-    return offering;
-  }
-
-  async updateOffering(id: string, adminUserId: string, data: { displayName?: string | null; isActive?: boolean }) {
-    const offering = await (this.prisma as any).classroomOffering.findUnique({
-      where: { id },
-      include: { academic_year: true },
-    });
-    if (!offering) throw new NotFoundException('Classroom offering not found');
-    
-    await this.assertIsAdminOfSchool(offering.academic_year.school_id, adminUserId);
-
-    const updateData: any = {};
-    if (data.displayName !== undefined) {
-      updateData.display_name = data.displayName?.trim() || null;
-    }
-    if (data.isActive !== undefined) {
-      updateData.is_active = data.isActive;
-    }
-
-    if (Object.keys(updateData).length === 0) {
-      throw new BadRequestException('No fields to update');
-    }
-
-    return (this.prisma as any).classroomOffering.update({
-      where: { id },
-      data: updateData,
-      include: {
-        classroom_definition: {
-          select: {
-            id: true,
-            name: true,
-            level: true,
-          },
-        },
-      },
-    });
-  }
+  // Offerings have been removed; enrollments operate directly on classroom definitions.
 
   // Enrollments
-  async enrollStudent(offeringId: string, studentId: string, adminUserId: string, schoolId: string, startDate?: Date) {
+  async enrollStudent(yearId: string, definitionId: string, studentId: string, adminUserId: string, schoolId: string, startDate?: Date) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
     const student = await this.prisma.student.findUnique({ where: { id: studentId } });
     if (!student || student.school_id !== schoolId) {
       throw new ForbiddenException('Student not accessible for this school');
     }
-    const offering = await (this.prisma as any).classroomOffering.findUnique({
-      where: { id: offeringId },
-      include: { academic_year: true, classroom_definition: true },
-    });
-    if (!offering || offering.academic_year.school_id !== schoolId) throw new ForbiddenException('Offering not accessible');
-    if (offering.is_active === false) {
-      throw new BadRequestException('Classroom offering is not active');
-    }
 
-    const academicYearId = offering.academic_year_id;
+    const year = await (this.prisma as any).academicYear.findUnique({ where: { id: yearId } });
+    if (!year) throw new NotFoundException('Academic year not found');
+    if (year.school_id !== schoolId) throw new ForbiddenException('Academic year not accessible');
+
+    const definition = await (this.prisma as any).classroomDefinition.findUnique({ where: { id: definitionId } });
+    if (!definition || definition.school_id !== year.school_id) throw new ForbiddenException('Classroom definition not accessible');
+    if (definition.is_archived) throw new BadRequestException('Classroom definition is archived');
+
     const effectiveStartDate = startDate ?? new Date();
 
-    if (offering.academic_year.start_date && effectiveStartDate < offering.academic_year.start_date) {
+    if (year.start_date && effectiveStartDate < year.start_date) {
       throw new BadRequestException('startDate must be within the academic year');
     }
-    if (offering.academic_year.end_date && effectiveStartDate > offering.academic_year.end_date) {
+    if (year.end_date && effectiveStartDate > year.end_date) {
       throw new BadRequestException('startDate must be within the academic year');
     }
 
@@ -314,7 +176,8 @@ export class ClassroomsService {
     const existing = await (this.prisma as any).studentEnrollment.findFirst({
       where: {
         student_id: studentId,
-        academic_year_id: academicYearId,
+        academic_year_id: yearId,
+        deleted_at: null,
         OR: [{ end_date: null }, { status: 'active' }],
       },
     });
@@ -325,20 +188,18 @@ export class ClassroomsService {
       where: {
         student_id: studentId,
         status: { in: ['completed'] },
-        classroom_offering: {
-          classroom_definition_id: offering.classroom_definition_id,
-          academic_year: { start_date: { lt: offering.academic_year.start_date } },
-        },
+        classroom_definition_id: definitionId,
+        academic_year: { start_date: { lt: year.start_date } },
       },
-      include: { classroom_offering: { include: { academic_year: true } } },
+      include: { academic_year: true },
     });
     if (priorSameClass) throw new BadRequestException('Student cannot return to the same classroom in a later academic year');
 
     return (this.prisma as any).studentEnrollment.create({
       data: {
         student_id: studentId,
-        classroom_offering_id: offeringId,
-        academic_year_id: academicYearId,
+        classroom_definition_id: definitionId,
+        academic_year_id: yearId,
         start_date: effectiveStartDate,
         status: 'active',
       },
@@ -349,9 +210,9 @@ export class ClassroomsService {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
     const enr = await (this.prisma as any).studentEnrollment.findUnique({
       where: { id: enrollmentId },
-      include: { classroom_offering: { include: { academic_year: true } } },
+      include: { academic_year: true },
     });
-    if (!enr || enr.classroom_offering.academic_year.school_id !== schoolId) throw new ForbiddenException('Enrollment not accessible');
+    if (!enr || enr.academic_year.school_id !== schoolId) throw new ForbiddenException('Enrollment not accessible');
     if (enr.end_date) throw new BadRequestException('Enrollment already closed');
     const effectiveEndDate = endDate ?? new Date();
     if (enr.start_date && effectiveEndDate < enr.start_date) {
@@ -363,24 +224,39 @@ export class ClassroomsService {
     });
   }
 
-  async bulkEnrollStudents(offeringId: string, enrollments: { studentId: string; startDate?: Date }[], adminUserId: string, schoolId: string) {
+  async updateEnrollmentStatus(enrollmentId: string, status: 'pending' | 'active' | 'completed' | 'withdrawn', adminUserId: string, schoolId: string) {
+    await this.assertIsAdminOfSchool(schoolId, adminUserId);
+    const enr = await (this.prisma as any).studentEnrollment.findUnique({ where: { id: enrollmentId }, include: { academic_year: true } });
+    if (!enr || enr.academic_year.school_id !== schoolId) throw new ForbiddenException('Enrollment not accessible');
+    return (this.prisma as any).studentEnrollment.update({ where: { id: enrollmentId }, data: { status } });
+  }
+
+  async deleteEnrollment(enrollmentId: string, adminUserId: string, schoolId: string, reason?: string) {
+    await this.assertIsAdminOfSchool(schoolId, adminUserId);
+    const enr = await (this.prisma as any).studentEnrollment.findUnique({ where: { id: enrollmentId }, include: { academic_year: true } });
+    if (!enr || enr.academic_year.school_id !== schoolId) throw new ForbiddenException('Enrollment not accessible');
+    if (enr.deleted_at) throw new BadRequestException('Enrollment already deleted');
+    const now = new Date();
+    return (this.prisma as any).studentEnrollment.update({ where: { id: enrollmentId }, data: { deleted_at: now, reason: reason ?? null, status: 'withdrawn', end_date: enr.end_date ?? now } });
+  }
+
+  async bulkEnrollStudents(yearId: string, definitionId: string, enrollments: { studentId: string; startDate?: Date }[], adminUserId: string, schoolId: string) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     if (!enrollments || enrollments.length === 0) {
       throw new BadRequestException('No enrollments provided');
     }
 
-    // Get the offering once
-    const offering = await (this.prisma as any).classroomOffering.findUnique({
-      where: { id: offeringId },
-      include: { academic_year: true, classroom_definition: true },
-    });
-    if (!offering || offering.academic_year.school_id !== schoolId) throw new ForbiddenException('Offering not accessible');
-    if (offering.is_active === false) {
-      throw new BadRequestException('Classroom offering is not active');
-    }
+    // Validate year and definition
+    const year = await (this.prisma as any).academicYear.findUnique({ where: { id: yearId } });
+    if (!year) throw new NotFoundException('Academic year not found');
+    if (year.school_id !== schoolId) throw new ForbiddenException('Academic year not accessible');
 
-    const academicYearId = offering.academic_year_id;
+    const definition = await (this.prisma as any).classroomDefinition.findUnique({ where: { id: definitionId } });
+    if (!definition || definition.school_id !== year.school_id) throw new ForbiddenException('Classroom definition not accessible');
+    if (definition.is_archived) throw new BadRequestException('Classroom definition is archived');
+
+    const academicYearId = yearId;
 
     // Validate all students exist and belong to the school
     const studentIds = enrollments.map(e => e.studentId);
@@ -398,6 +274,7 @@ export class ClassroomsService {
       where: {
         student_id: { in: studentIds },
         academic_year_id: academicYearId,
+        deleted_at: null,
         OR: [{ end_date: null }, { status: 'active' }],
       },
       select: { student_id: true },
@@ -412,10 +289,8 @@ export class ClassroomsService {
       where: {
         student_id: { in: studentIds },
         status: { in: ['completed'] },
-        classroom_offering: {
-          classroom_definition_id: offering.classroom_definition_id,
-          academic_year: { start_date: { lt: offering.academic_year.start_date } },
-        },
+        classroom_definition_id: definitionId,
+        academic_year: { start_date: { lt: year.start_date } },
       },
       select: { student_id: true },
     });
@@ -433,17 +308,17 @@ export class ClassroomsService {
         try {
           const effectiveStartDate = enrollment.startDate ?? new Date();
 
-          if (offering.academic_year.start_date && effectiveStartDate < offering.academic_year.start_date) {
+          if (year.start_date && effectiveStartDate < year.start_date) {
             throw new BadRequestException('startDate must be within the academic year');
           }
-          if (offering.academic_year.end_date && effectiveStartDate > offering.academic_year.end_date) {
+          if (year.end_date && effectiveStartDate > year.end_date) {
             throw new BadRequestException('startDate must be within the academic year');
           }
 
           const created = await tx.studentEnrollment.create({
             data: {
               student_id: enrollment.studentId,
-              classroom_offering_id: offeringId,
+              classroom_definition_id: definitionId,
               academic_year_id: academicYearId,
               start_date: effectiveStartDate,
               status: 'active',

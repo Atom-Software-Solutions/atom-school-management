@@ -203,15 +203,18 @@ model ClassroomDefinition {
   school_id   String
   name        String
   level       String?
+  ordinal     Int?
   is_archived Boolean  @default(false)
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
-  offerings ClassroomOffering[]
+  offerings   ClassroomOffering[]
+  enrollments StudentEnrollment[]
 
   @@unique([school_id, name])
   @@index([school_id])
   @@index([is_archived])
+  @@index([ordinal])
   @@schema("results_mgt")
 }
 
@@ -236,23 +239,26 @@ model ClassroomOffering {
 }
 
 model StudentEnrollment {
-  id                    String   @id @default(uuid())
-  student_id            String
-  classroom_offering_id String
-  academic_year_id      String
-  start_date            DateTime @default(now())
-  end_date              DateTime?
-  status                String   @default("active")
-  created_at            DateTime @default(now())
-  updated_at            DateTime @updatedAt
+  id                       String   @id @default(uuid())
+  student_id               String
+  classroom_definition_id  String
+  academic_year_id         String
+  start_date               DateTime @default(now())
+  end_date                 DateTime?
+  status                   String   @default("active")
+  type                     String?  // promotion|retention|direct
+  reason                   String?
+  deleted_at               DateTime?
+  created_at               DateTime @default(now())
+  updated_at               DateTime @updatedAt
 
-  classroom_offering ClassroomOffering @relation(fields: [classroom_offering_id], references: [id], onDelete: Restrict)
-  academic_year      AcademicYear      @relation(fields: [academic_year_id], references: [id], onDelete: Cascade)
-  student     Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  classroom_definition ClassroomDefinition @relation(fields: [classroom_definition_id], references: [id], onDelete: Restrict)
+  academic_year        AcademicYear        @relation(fields: [academic_year_id], references: [id], onDelete: Cascade)
+  student              Student             @relation(fields: [student_id], references: [id], onDelete: Cascade)
 
   @@index([student_id])
   @@index([academic_year_id])
-  @@index([classroom_offering_id])
+  @@index([classroom_definition_id])
   @@index([status])
   @@schema("results_mgt")
 }

@@ -833,7 +833,7 @@ export class ResultsService {
     let totalStudents = 0;
 
     if (data.includeRank) {
-      // Get all students in the same classroom offering for this term
+      // Get all students in the same classroom definition for this term
       const enrollment = await (this.prisma as any).studentEnrollment.findFirst({
         where: {
           student_id: data.studentId,
@@ -841,15 +841,15 @@ export class ResultsService {
           status: 'active',
         },
         include: {
-          classroom_offering: true,
+          classroom_definition: true,
         },
       });
 
       if (enrollment) {
-        // Get all active enrollments in the same classroom offering
+        // Get all active enrollments in the same classroom definition
         const classmates = await (this.prisma as any).studentEnrollment.findMany({
           where: {
-            classroom_offering_id: enrollment.classroom_offering_id,
+            classroom_definition_id: enrollment.classroom_definition_id,
             academic_year_id: data.academicYearId,
             status: 'active',
           },
