@@ -21,8 +21,13 @@ ALTER TABLE "results_mgt"."StudentEnrollment"
 
 CREATE INDEX IF NOT EXISTS idx_student_enrollment_classroom_definition_id ON "results_mgt"."StudentEnrollment" ("classroom_definition_id");
 
--- 6) Optional: drop the old column (keep commented until validated)
--- ALTER TABLE results_mgt.student_enrollment DROP COLUMN classroom_offering_id;
+-- 6) Add unique index: ensure a student cannot have more than one pending/active enrollment per academic year
+CREATE UNIQUE INDEX IF NOT EXISTS unique_active_enrollment_per_student_year
+ON "results_mgt"."StudentEnrollment" ("student_id", "academic_year_id")
+WHERE "deleted_at" IS NULL AND "status" IN ('pending','active');
+
+-- 7) Optional: drop the old column (keep commented until validated)
+-- ALTER TABLE "results_mgt"."StudentEnrollment" DROP COLUMN "classroom_offering_id";
 
 COMMIT;
 
