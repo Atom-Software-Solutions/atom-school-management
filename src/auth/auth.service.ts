@@ -372,7 +372,7 @@ export class AuthService {
   }
 
   async resendVerificationEmail(userId: string) {
-    const user = await this.usersService.findById(userId);
+    const user = await this.usersService.findOne(userId);
 
     if (!user) {
       throw new NotFoundException('User not found');
