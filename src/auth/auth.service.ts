@@ -19,7 +19,7 @@ export class AuthService {
     private jwtService: JwtService,
     private prisma: PrismaService,
     private emailService: EmailService,
-  ) {}
+  ) { }
 
   async register(registerDto: RegisterDto) {
     // Generate verification token
@@ -82,13 +82,11 @@ export class AuthService {
     // instead of throwing a 404. This covers cases where the user clicks the link
     // multiple times or the token has expired/been cleared.
     if (!user) {
-      return {
-        message: 'Email already verified or verification link is invalid/expired',
-      };
+      return { status: 'invalid' };
     }
 
     if (user.email_verified) {
-      return { message: 'Email already verified' };
+      return { status: 'already_verified' };
     }
 
     // Update user as verified
@@ -101,7 +99,7 @@ export class AuthService {
       },
     });
 
-    return { message: 'Email verified successfully' };
+    return { success: 'success' };
   }
 
   async login(loginDto: LoginDto) {
@@ -153,13 +151,13 @@ export class AuthService {
     if (role === 'SUPER_ADMIN') {
       return null;
     }
-    
+
     // For other roles, get their school_id from SchoolAdmin relationship
     const schoolAdmin = await this.prisma.schoolAdmin.findFirst({
       where: { user_id: userId },
       select: { school_id: true },
     });
-    
+
     return schoolAdmin?.school_id || null;
   }
 
@@ -180,14 +178,14 @@ export class AuthService {
   private async generateAccessToken(user: { id: string; email: string; role: string }) {
     const jti = randomUUID();
     const schoolId = await this.getUserSchoolId(user.id, user.role);
-    
+
     // sign to get exp
-    const token = this.jwtService.sign({ 
-      sub: user.id, 
-      email: user.email, 
-      role: user.role, 
+    const token = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+      role: user.role,
       school_id: schoolId || undefined,
-      jti 
+      jti
     } as JwtPayload);
     const decoded: any = this.jwtService.decode(token);
     const expSeconds: number | undefined = decoded?.exp;
@@ -209,9 +207,9 @@ export class AuthService {
     const jti = randomUUID();
     // Refresh token expires in 30 days
     const expiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000);
-    
+
     const schoolId = await this.getUserSchoolId(user.id, user.role);
-    
+
     // Create a refresh token payload (different from access token)
     const refreshPayload = {
       sub: user.id,
@@ -371,5 +369,42 @@ export class AuthService {
         data: { is_active: false, revoked_at: new Date() },
       })
       .catch(() => undefined);
+  }
+
+  async resendVerificationEmail(userId: string) {
+    const user = await this.usersService.findOne(userId);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.email_verified) {
+      throw new BadRequestException('Email is already verified');
+    }
+
+    // Generate a new verification token
+    const verificationToken = randomUUID();
+
+    // Update user with new verification token
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { verification_token: verificationToken },
+    });
+
+    // Send verification email
+    try {
+      await this.emailService.sendVerificationEmail(
+        user.email,
+        user.first_name,
+        verificationToken,
+      );
+    } catch (error) {
+      console.error('Failed to send verification email:', (error as any)?.message ?? error);
+      throw new Error('Failed to send verification email');
+    }
+
+    return {
+      message: 'Verification email has been sent',
+    };
   }
 }

@@ -8,7 +8,9 @@ import {
   Get,
   Request,
   Query,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import {
   ApiTags,
   ApiOperation,
@@ -24,11 +26,12 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
+import { ProfileResponseDto } from './dto/profile-response.dto';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   @Post('register')
   @ApiOperation({ summary: 'Register a new user' })
@@ -105,7 +108,7 @@ export class AuthController {
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getProfile(@Request() req: AuthenticatedRequest) {
+  async getProfile(@Request() req: AuthenticatedRequest): Promise<ProfileResponseDto> {
     const user = req.user;
     if (!user) {
       throw new Error('User not authenticated');
@@ -114,6 +117,7 @@ export class AuthController {
     return {
       id: user.id,
       email: user.email,
+      emailVerified: user.email_verified,
       firstName: user.first_name,
       lastName: user.last_name,
       role: user.role,
@@ -123,7 +127,7 @@ export class AuthController {
       createdAt: user.created_at,
       updatedAt: user.updated_at,
       memberships,
-    };
+    } as ProfileResponseDto;
   }
 
   @UseGuards(JwtAuthGuard)
@@ -152,7 +156,6 @@ export class AuthController {
   }
 
   @Get('verify-email')
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify email address using verification token' })
   @ApiQuery({
     name: 'token',
@@ -160,27 +163,24 @@ export class AuthController {
     description: 'Email verification token',
     example: 'verification-token-here',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Email verification result',
-    schema: {
-      oneOf: [
-        {
-          example: { message: 'Email verified successfully' },
-        },
-        {
-          example: { message: 'Email already verified' },
-        },
-        {
-          example: {
-            message: 'Email already verified or verification link is invalid/expired',
-          },
-        },
-      ],
-    },
-  })
-  async verifyEmail(@Query('token') token: string) {
-    return this.authService.verifyEmail(token);
+  async verifyEmail(
+    @Query('token') token: string,
+    @Res() res: Response,
+  ) {
+    const result = await this.authService.verifyEmail(token);
+
+    const baseUrl = process.env.FRONTEND_URL;
+
+    switch (result.status) {
+      case 'success':
+        return res.redirect(`${baseUrl}/schools/create`);
+
+      case 'already_verified':
+        return res.redirect(`${baseUrl}/verify-email?status=already_verified`);
+
+      default:
+        return res.redirect(`${baseUrl}/verify-email?status=invalid`);
+    }
   }
 
   @Post('refresh')
@@ -217,6 +217,7 @@ export class AuthController {
     return this.authService.forgotPassword(forgotPasswordDto);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reset password with token' })
@@ -232,5 +233,30 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Invalid or expired reset token' })
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(resetPasswordDto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Resend email verification link to current user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification email sent successfully',
+    schema: {
+      example: {
+        message: 'Verification email has been sent',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Email is already verified' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async resendVerification(@Request() req: AuthenticatedRequest) {
+    const user = req.user;
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+    return this.authService.resendVerificationEmail(user.id);
   }
 }

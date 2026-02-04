@@ -20,8 +20,8 @@ export class CreateSchoolDto {
   name: string;
 
   @ApiProperty({
-    description: 'School domain (lowercase, no special characters except hyphens)',
-    example: 'example-high-school',
+    description: 'School domain (lowercase, alphanumeric with hyphens allowed)',
+    example: 'atom-256-school',
   })
   @IsString()
   @IsNotEmpty()
@@ -37,8 +37,8 @@ export class CreateSchoolDto {
           .replace(/-+/g, '-')
       : value,
   )
-  @Matches(/^(?!.*--)[a-z-]+$/, {
-    message: "domain can not contain special characters or numbers",
+  @Matches(/^(?!.*--)[a-z0-9-]+$/, {
+    message: "domain can only contain lowercase letters, numbers and hyphens",
   })
   domain: string;
 

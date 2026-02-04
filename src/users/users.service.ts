@@ -187,6 +187,8 @@ export class UsersService {
         role: true,
         phone: true,
         is_active: true,
+        email_verified: true,
+        verification_token: true,
         created_at: true,
         updated_at: true,
       },
@@ -197,6 +199,13 @@ export class UsersService {
     }
 
     return user;
+  }
+
+  // Return full user record (including verification fields) by id
+  async findById(id: string): Promise<UserWithPassword | null> {
+    return this.prisma.user.findUnique({
+      where: { id },
+    });
   }
 
   async findByEmail(email: string): Promise<UserWithPassword | null> {
