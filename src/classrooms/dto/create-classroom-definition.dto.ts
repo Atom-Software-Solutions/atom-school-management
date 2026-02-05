@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsInt, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateClassroomDefinitionDto {
@@ -17,5 +17,13 @@ export class CreateClassroomDefinitionDto {
   @IsString()
   @IsOptional()
   level?: string;
+
+  @ApiProperty({
+    description: 'Ordinal used for ordering classrooms (lower = earlier year)',
+    example: 1,
+  })
+  @IsInt()
+  @Min(0)
+  ordinal: number;
 }
 

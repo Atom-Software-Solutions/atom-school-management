@@ -34,6 +34,7 @@ export class ClassroomDefinitionsUpdateController {
       name: dto.name,
       level: dto.level || null,
       isArchived: dto.isArchived,
+      ordinal: dto.ordinal,
     });
   }
 }
