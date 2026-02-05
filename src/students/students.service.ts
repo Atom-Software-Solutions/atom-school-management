@@ -40,7 +40,7 @@ function validateFileType(mimeType: string | undefined, originalName: string | u
 
 @Injectable()
 export class StudentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
   async verifyAdminOfSchool(schoolId: string, userId: string) {
     await this.assertIsAdminOfSchool(schoolId, userId);
   }
@@ -282,7 +282,7 @@ export class StudentsService {
     // Freeze header row
     (worksheet as any)['!freeze'] = { xSplit: 0, ySplit: 1 };
     // Make header read-only by protecting sheet and unlocking data rows
-    const cols = ['A','B','C','D','E','F','G','H','I','J'];
+    const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
     const maxRows = 1000; // editable rows to guide users
     for (let r = 2; r <= maxRows + 1; r += 1) {
       for (let c = 0; c < cols.length; c += 1) {
@@ -307,14 +307,14 @@ export class StudentsService {
     const text = buffer.toString('utf-8');
     const lines = text.split('\n').filter(line => line.trim() !== '');
     if (lines.length === 0) return [];
-    
+
     // Parse header
     const header = lines[0].split(',').map(h => h.trim());
     const headerMap: Record<string, number> = {};
     header.forEach((h, idx) => {
       headerMap[h.toLowerCase()] = idx;
     });
-    
+
     // Parse data rows
     const rows: Array<{ firstName: string; lastName: string; email?: string; phone?: string; gender?: string; status?: string; dateOfBirth?: string; religion?: string; address?: string; className?: string }> = [];
     for (let i = 1; i < lines.length; i++) {
@@ -339,7 +339,7 @@ export class StudentsService {
     const result: string[] = [];
     let current = '';
     let inQuotes = false;
-    
+
     for (let i = 0; i < line.length; i++) {
       const char = line[i];
       if (char === '"') {
@@ -360,7 +360,7 @@ export class StudentsService {
     return result;
   }
 
-  private parseWorkbook(buffer: Buffer): Array<{ firstName: string; lastName: string; email?: string; phone?: string; gender?: string; status?: string; dateOfBirth?: string; religion?: string; address?: string; className?: string }>{
+  private parseWorkbook(buffer: Buffer): Array<{ firstName: string; lastName: string; email?: string; phone?: string; gender?: string; status?: string; dateOfBirth?: string; religion?: string; address?: string; className?: string }> {
     const wb = XLSX.read(buffer, { type: 'buffer' });
     const sheetName = wb.SheetNames[0];
     const ws = wb.Sheets[sheetName];
@@ -562,7 +562,7 @@ export class StudentsService {
         // Auto-generate studentNo and regNo
         let studentNo = await this.generateNextStudentNo(schoolId);
         let regNo = await this.generateNextRegNo(schoolId);
-        
+
         // Retry on unique constraint violations for studentNo/regNo
         let attempt = 0;
         const maxAttempts = 5;
@@ -613,12 +613,12 @@ export class StudentsService {
             throw e;
           }
         }
-        
+
         if (!student) {
           errors.push(`Row ${line}: Failed to generate unique student identifiers. Please retry.`);
           continue;
         }
-        
+
         // If className is provided, create enrollment in new system
         if (row.className) {
           try {
@@ -626,7 +626,7 @@ export class StudentsService {
             let definition = await (this.prisma as any).classroomDefinition.findUnique({
               where: { school_id_name: { school_id: schoolId, name: row.className.trim() } },
             });
-            
+
             if (!definition) {
               definition = await (this.prisma as any).classroomDefinition.create({
                 data: {
@@ -635,7 +635,7 @@ export class StudentsService {
                 },
               });
             }
-            
+
             // Get the active academic year (or most recent if none active)
             const activeYear = await (this.prisma as any).academicYear.findFirst({
               where: {
@@ -644,13 +644,13 @@ export class StudentsService {
               },
               orderBy: { start_date: 'desc' },
             });
-            
+
             // If no active year, get the most recent year
             const academicYear = activeYear || await (this.prisma as any).academicYear.findFirst({
               where: { school_id: schoolId },
               orderBy: { start_date: 'desc' },
             });
-            
+
             if (academicYear) {
               // Check for existing active enrollment in this academic year
               const existingEnrollment = await (this.prisma as any).studentEnrollment.findFirst({
@@ -685,7 +685,7 @@ export class StudentsService {
             errors.push(`Row ${line}: Failed to create enrollment for className "${row.className}": ${enrollmentError.message}`);
           }
         }
-        
+
         imported += 1;
         // Update sets so subsequent rows are checked against new inserts
         if (row.email) emails.add(row.email.toLowerCase());
@@ -773,7 +773,7 @@ export class StudentsService {
         // Auto-generate studentNo and regNo
         let studentNo = await this.generateNextStudentNo(schoolId);
         let regNo = await this.generateNextRegNo(schoolId);
-        
+
         // Retry on unique constraint violations for studentNo/regNo
         let attempt = 0;
         const maxAttempts = 5;
@@ -824,12 +824,12 @@ export class StudentsService {
             throw e;
           }
         }
-        
+
         if (!student) {
           errors.push(`Row ${line}: Failed to generate unique student identifiers. Please retry.`);
           continue;
         }
-        
+
         // If className is provided, create enrollment in new system
         if (row.className) {
           try {
@@ -837,7 +837,7 @@ export class StudentsService {
             let definition = await (this.prisma as any).classroomDefinition.findUnique({
               where: { school_id_name: { school_id: schoolId, name: row.className.trim() } },
             });
-            
+
             if (!definition) {
               definition = await (this.prisma as any).classroomDefinition.create({
                 data: {
@@ -846,7 +846,7 @@ export class StudentsService {
                 },
               });
             }
-            
+
             // Get the active academic year (or most recent if none active)
             const activeYear = await (this.prisma as any).academicYear.findFirst({
               where: {
@@ -855,13 +855,13 @@ export class StudentsService {
               },
               orderBy: { start_date: 'desc' },
             });
-            
+
             // If no active year, get the most recent year
             const academicYear = activeYear || await (this.prisma as any).academicYear.findFirst({
               where: { school_id: schoolId },
               orderBy: { start_date: 'desc' },
             });
-            
+
             if (academicYear) {
               // Check for existing active enrollment in this academic year
               const existingEnrollment = await (this.prisma as any).studentEnrollment.findFirst({
@@ -896,7 +896,7 @@ export class StudentsService {
             errors.push(`Row ${line}: Failed to create enrollment for className "${row.className}": ${enrollmentError.message}`);
           }
         }
-        
+
         imported += 1;
         // Update sets so subsequent rows are checked against new inserts
         if (row.email) emails.add(row.email.toLowerCase());
@@ -1109,7 +1109,6 @@ export class StudentsService {
         {
           classroom_definition: {
             name: 'asc',
-          },
           },
         },
         {
