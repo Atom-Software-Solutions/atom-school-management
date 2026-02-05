@@ -22,37 +22,41 @@ export class EnrollmentsController {
     return tenantSchoolId;
   }
 
-  @Post('classroom-offerings/:offeringId/enrollments')
+  @Post('years/:yearId/classroom-definitions/:definitionId/enrollments')
   enroll(
-    @Param('offeringId') offeringId: string,
+    @Param('yearId') yearId: string,
+    @Param('definitionId') definitionId: string,
     @Query('schoolId') schoolId: string,
     @Body() body: { studentId?: string; startDate?: string },
     @Request() req: AuthenticatedRequest,
   ) {
     const adminUserId = (req as any).user?.id as string;
-    if (!offeringId) throw new BadRequestException('Missing offeringId');
+    if (!yearId) throw new BadRequestException('Missing yearId');
+    if (!definitionId) throw new BadRequestException('Missing definitionId');
     if (!body?.studentId) throw new BadRequestException('Missing body.studentId');
     const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
     const startDate = body.startDate ? new Date(body.startDate) : undefined;
-    return this.classroomsService.enrollStudent(offeringId, body.studentId, adminUserId, tenantSchoolId, startDate);
+    return this.classroomsService.enrollStudent(yearId, definitionId, body.studentId, adminUserId, tenantSchoolId, startDate);
   }
 
-  @Post('classroom-offerings/:offeringId/enrollments/bulk')
+  @Post('years/:yearId/classroom-definitions/:definitionId/enrollments/bulk')
   bulkEnroll(
-    @Param('offeringId') offeringId: string,
+    @Param('yearId') yearId: string,
+    @Param('definitionId') definitionId: string,
     @Query('schoolId') schoolId: string,
     @Body() body: BulkEnrollStudentsDto,
     @Request() req: AuthenticatedRequest,
   ) {
     const adminUserId = (req as any).user?.id as string;
-    if (!offeringId) throw new BadRequestException('Missing offeringId');
+    if (!yearId) throw new BadRequestException('Missing yearId');
+    if (!definitionId) throw new BadRequestException('Missing definitionId');
     if (!body?.enrollments || body.enrollments.length === 0) throw new BadRequestException('Missing or empty enrollments array');
     const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
     const enrollments = body.enrollments.map(e => ({
       studentId: e.studentId,
       startDate: e.startDate ? new Date(e.startDate) : undefined,
     }));
-    return this.classroomsService.bulkEnrollStudents(offeringId, enrollments, adminUserId, tenantSchoolId);
+    return this.classroomsService.bulkEnrollStudents(yearId, definitionId, enrollments, adminUserId, tenantSchoolId);
   }
 
   @Patch('enrollments/:id/complete')
@@ -68,5 +72,32 @@ export class EnrollmentsController {
     const endDate = body?.endDate ? new Date(body.endDate) : undefined;
     const status = (body?.status ?? 'completed') as 'completed' | 'withdrawn';
     return this.classroomsService.completeEnrollment(id, adminUserId, tenantSchoolId, endDate, status);
+  }
+
+  @Patch('enrollments/:id/status')
+  updateStatus(
+    @Param('id') id: string,
+    @Query('schoolId') schoolId: string,
+    @Body() body: { status: 'pending' | 'active' | 'completed' | 'withdrawn' },
+    @Request() req: AuthenticatedRequest,
+  ) {
+    const adminUserId = (req as any).user?.id as string;
+    if (!id) throw new BadRequestException('Missing id');
+    if (!body?.status) throw new BadRequestException('Missing status');
+    const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
+    return this.classroomsService.updateEnrollmentStatus(id, body.status, adminUserId, tenantSchoolId);
+  }
+
+  @Delete('enrollments/:id')
+  async delete(
+    @Param('id') id: string,
+    @Query('schoolId') schoolId: string,
+    @Query('reason') reason: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    const adminUserId = (req as any).user?.id as string;
+    if (!id) throw new BadRequestException('Missing id');
+    const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
+    return this.classroomsService.deleteEnrollment(id, adminUserId, tenantSchoolId, reason);
   }
 }

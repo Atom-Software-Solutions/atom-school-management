@@ -353,19 +353,20 @@ export class StudentsController {
   promote(
     @Param('id') id: string,
     @Query('schoolId') schoolId: string,
-    @Body() body: { fromEnrollmentId?: string; toOfferingId?: string; actionDate?: string; narration?: string },
+    @Body() body: { fromEnrollmentId?: string; toYearId?: string; toDefinitionId?: string; actionDate?: string; narration?: string },
     @Request() req: AuthenticatedRequest,
   ) {
     const adminUserId = (req as any).user?.id as string;
     const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
-    if (!body?.fromEnrollmentId || !body?.toOfferingId) throw new BadRequestException('Missing fromEnrollmentId/toOfferingId');
+    if (!body?.fromEnrollmentId || !body?.toYearId || !body?.toDefinitionId) throw new BadRequestException('Missing fromEnrollmentId/toYearId/toDefinitionId');
     return this.studentsService.promoteStudent(
       id,
       adminUserId,
       tenantSchoolId,
       {
         fromEnrollmentId: body.fromEnrollmentId,
-        toOfferingId: body.toOfferingId,
+        toYearId: body.toYearId,
+        toDefinitionId: body.toDefinitionId,
         actionDate: body.actionDate ? new Date(body.actionDate) : undefined,
         narration: body.narration,
       },
@@ -376,19 +377,20 @@ export class StudentsController {
   retain(
     @Param('id') id: string,
     @Query('schoolId') schoolId: string,
-    @Body() body: { fromEnrollmentId?: string; toOfferingId?: string; actionDate?: string; narration?: string; reason?: string },
+    @Body() body: { fromEnrollmentId?: string; toYearId?: string; toDefinitionId?: string; actionDate?: string; narration?: string; reason?: string },
     @Request() req: AuthenticatedRequest,
   ) {
     const adminUserId = (req as any).user?.id as string;
     const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
-    if (!body?.fromEnrollmentId || !body?.toOfferingId) throw new BadRequestException('Missing fromEnrollmentId/toOfferingId');
+    if (!body?.fromEnrollmentId || !body?.toYearId || !body?.toDefinitionId) throw new BadRequestException('Missing fromEnrollmentId/toYearId/toDefinitionId');
     return this.studentsService.retainStudent(
       id,
       adminUserId,
       tenantSchoolId,
       {
         fromEnrollmentId: body.fromEnrollmentId,
-        toOfferingId: body.toOfferingId,
+        toYearId: body.toYearId,
+        toDefinitionId: body.toDefinitionId,
         actionDate: body.actionDate ? new Date(body.actionDate) : undefined,
         narration: body.narration,
         reason: body.reason,

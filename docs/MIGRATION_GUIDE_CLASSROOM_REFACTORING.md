@@ -99,10 +99,11 @@ Use the new endpoints instead:
 - Student import now requires an active academic year for the school
 - If `className` is provided, the import will:
   1. Create/find `ClassroomDefinition`
-  2. Create/find `ClassroomOffering` for active academic year
-  3. Create `StudentEnrollment` record
+  2. Use the active academic year (if present) and create a `StudentEnrollment` record that references the `ClassroomDefinition` and the academic year (no `ClassroomOffering` required)
 
 If no academic year exists, the student will be imported but without enrollment (warning logged).
+
+**Note on migrations:** This refactor includes manual SQL steps which have been added under `prisma/migrations/20260204_migrate_enrollments` and `prisma/migrations/20260204_add_unique_active_enrollment`. Run those SQLs (or apply equivalent Prisma migrations) to backfill `classroom_definition_id`, add `deleted_at`, `type`, `reason` columns, and to create a unique index preventing more than one pending/active enrollment per student per academic year.
 
 ## Rollback Plan
 
