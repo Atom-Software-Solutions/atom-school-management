@@ -73,26 +73,26 @@ model SchoolAdmin {
 }
 
 model Student {
-  id         String            @id @default(uuid())
-  school_id  String
-  first_name String
-  last_name  String
-  email      String?           @unique
-  phone      String?           @unique
-  gender     String?
-  status     String?
+  id            String              @id @default(uuid())
+  school_id     String
+  first_name    String
+  last_name     String
+  email         String?             @unique
+  phone         String?             @unique
+  gender        String?
+  status        String?
   date_of_birth DateTime?
-  religion   String?
-  address    String?
-  avatar_url String?
-  is_active  Boolean           @default(true)
-  deleted_at DateTime?
-  created_at DateTime          @default(now())
-  updated_at DateTime          @updatedAt
-  reg_no     String?
-  student_no String
-  guardians  StudentGuardian[]
-  enrollments          StudentEnrollment[]
+  religion      String?
+  address       String?
+  avatar_url    String?
+  is_active     Boolean             @default(true)
+  deleted_at    DateTime?
+  created_at    DateTime            @default(now())
+  updated_at    DateTime            @updatedAt
+  reg_no        String?
+  student_no    String
+  guardians     StudentGuardian[]
+  enrollments   StudentEnrollment[]
 
   @@unique([school_id, student_no])
   @@index([school_id])
@@ -162,7 +162,7 @@ model AcademicYear {
   created_at       DateTime @default(now())
   updated_at       DateTime @updatedAt
 
-  term_template TermTemplate @relation(fields: [term_template_id], references: [id], onDelete: Restrict)
+  term_template TermTemplate        @relation(fields: [term_template_id], references: [id], onDelete: Restrict)
   terms         Term[]
   enrollments   StudentEnrollment[]
 
@@ -217,18 +217,18 @@ model ClassroomDefinition {
 }
 
 model StudentEnrollment {
-  id                       String   @id @default(uuid())
-  student_id               String
-  classroom_definition_id  String
-  academic_year_id         String
-  start_date               DateTime @default(now())
-  end_date                 DateTime?
-  status                   String   @default("active")
-  type                     String?  // promotion|retention|direct
-  reason                   String?
-  deleted_at               DateTime?
-  created_at               DateTime @default(now())
-  updated_at               DateTime @updatedAt
+  id                      String    @id @default(uuid())
+  student_id              String
+  classroom_definition_id String
+  academic_year_id        String
+  start_date              DateTime  @default(now())
+  end_date                DateTime?
+  status                  String    @default("active")
+  type                    String? // promotion|retention|direct
+  reason                  String?
+  deleted_at              DateTime?
+  created_at              DateTime  @default(now())
+  updated_at              DateTime  @updatedAt
 
   classroom_definition ClassroomDefinition @relation(fields: [classroom_definition_id], references: [id], onDelete: Restrict)
   academic_year        AcademicYear        @relation(fields: [academic_year_id], references: [id], onDelete: Cascade)
@@ -245,7 +245,7 @@ model Subject {
   id          String       @id @default(uuid())
   school_id   String
   name        String
-  code        String?      // Subject code (e.g., "MATH", "ENG")
+  code        String? // Subject code (e.g., "MATH", "ENG")
   description String?
   is_active   Boolean      @default(true)
   created_at  DateTime     @default(now())
@@ -260,21 +260,21 @@ model Subject {
 }
 
 model Assessment {
-  id                String   @id @default(uuid())
-  school_id         String
-  term_id           String   // Reference to Term (academic term)
-  subject_id        String
-  name              String   // e.g., "Mid-Term Exam", "Assignment 1"
-  type              String   // "exam", "test", "assignment", "project", "quiz"
-  max_score         Decimal  @db.Decimal(5, 2) // Maximum possible score
-  weight             Decimal  @db.Decimal(5, 2) // Weight for grade calculation (e.g., 0.3 for 30%)
-  assessment_date   DateTime?
-  due_date          DateTime?
-  is_published      Boolean  @default(false) // Whether results are published to students/parents
-  created_at        DateTime @default(now())
-  updated_at        DateTime @updatedAt
-  subject           Subject  @relation(fields: [subject_id], references: [id], onDelete: Restrict)
-  grades            Grade[]
+  id              String    @id @default(uuid())
+  school_id       String
+  term_id         String // Reference to Term (academic term)
+  subject_id      String
+  name            String // e.g., "Mid-Term Exam", "Assignment 1"
+  type            String // "exam", "test", "assignment", "project", "quiz"
+  max_score       Decimal   @db.Decimal(5, 2) // Maximum possible score
+  weight          Decimal   @db.Decimal(5, 2) // Weight for grade calculation (e.g., 0.3 for 30%)
+  assessment_date DateTime?
+  due_date        DateTime?
+  is_published    Boolean   @default(false) // Whether results are published to students/parents
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  subject         Subject   @relation(fields: [subject_id], references: [id], onDelete: Restrict)
+  grades          Grade[]
 
   @@index([school_id])
   @@index([term_id])
@@ -286,16 +286,16 @@ model Assessment {
 model Grade {
   id            String     @id @default(uuid())
   school_id     String
-  student_id    String     // Reference to Student
+  student_id    String // Reference to Student
   assessment_id String
   subject_id    String
   score         Decimal    @db.Decimal(5, 2) // Actual score obtained
   percentage    Decimal?   @db.Decimal(5, 2) // Calculated percentage
-  letter_grade  String?    // A, B, C, D, F (optional, can be calculated)
+  letter_grade  String? // A, B, C, D, F (optional, can be calculated)
   remarks       String?
   created_at    DateTime   @default(now())
   updated_at    DateTime   @updatedAt
-  created_by    String?    // User ID who entered the grade
+  created_by    String? // User ID who entered the grade
   assessment    Assessment @relation(fields: [assessment_id], references: [id], onDelete: Cascade)
   subject       Subject    @relation(fields: [subject_id], references: [id], onDelete: Restrict)
 
@@ -308,21 +308,21 @@ model Grade {
 }
 
 model ReportCard {
-  id              String   @id @default(uuid())
-  school_id       String
-  student_id      String
+  id               String    @id @default(uuid())
+  school_id        String
+  student_id       String
   academic_year_id String // Reference to AcademicYear
-  term_id         String   // Reference to Term
-  overall_average Decimal? @db.Decimal(5, 2)
-  total_subjects  Int?
-  rank            Int?     // Class rank (optional)
-  total_students  Int?     // Total students in class (for rank context)
-  remarks         String?  // Teacher/Principal remarks
-  status          String   @default("draft") // "draft", "published", "archived"
-  generated_at    DateTime @default(now())
-  published_at    DateTime?
-  generated_by    String?  // User ID who generated the report
-  pdf_url         String?  // URL to generated PDF file
+  term_id          String // Reference to Term
+  overall_average  Decimal?  @db.Decimal(5, 2)
+  total_subjects   Int?
+  rank             Int? // Class rank (optional)
+  total_students   Int? // Total students in class (for rank context)
+  remarks          String? // Teacher/Principal remarks
+  status           String    @default("draft") // "draft", "published", "archived"
+  generated_at     DateTime  @default(now())
+  published_at     DateTime?
+  generated_by     String? // User ID who generated the report
+  pdf_url          String? // URL to generated PDF file
 
   @@index([school_id])
   @@index([student_id])

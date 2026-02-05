@@ -92,6 +92,19 @@ $ yarn run test:e2e
 $ yarn run test:cov
 ```
 
+## After changes to Schema Models
+
+```bash
+# 1st run
+$ npx prisma format
+
+# 2nd run
+$ npx prisma generate
+
+# 3rd run
+$ npx prisma migrate dev --name xxxxxxxxx
+```
+
 ## Deployment
 
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
