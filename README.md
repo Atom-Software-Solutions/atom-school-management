@@ -98,11 +98,11 @@ $ yarn run test:cov
 # 1st run
 $ npx prisma format
 
-# 2nd run
-$ npx prisma generate
+# 2nd run (Only this is needed)
+$ npx prisma migrate dev --name xxxxxxxxx
 
 # 3rd run
-$ npx prisma migrate dev --name xxxxxxxxx
+$ npx prisma generate
 ```
 
 ## Deployment

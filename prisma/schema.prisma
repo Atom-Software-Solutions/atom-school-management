@@ -202,7 +202,7 @@ model ClassroomDefinition {
   school_id   String
   name        String
   level       String?
-  ordinal     Int @default(0)
+  ordinal     Int      @default(0)
   is_archived Boolean  @default(false)
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
