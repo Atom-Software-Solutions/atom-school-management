@@ -164,7 +164,6 @@ model AcademicYear {
 
   term_template TermTemplate @relation(fields: [term_template_id], references: [id], onDelete: Restrict)
   terms         Term[]
-  offerings     ClassroomOffering[]
   enrollments   StudentEnrollment[]
 
   @@unique([school_id, name])
@@ -208,33 +207,12 @@ model ClassroomDefinition {
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
-  offerings   ClassroomOffering[]
   enrollments StudentEnrollment[]
 
   @@unique([school_id, name])
   @@index([school_id])
   @@index([is_archived])
   @@index([ordinal])
-  @@schema("results_mgt")
-}
-
-model ClassroomOffering {
-  id                      String   @id @default(uuid())
-  academic_year_id        String
-  classroom_definition_id String
-  display_name            String?
-  is_active               Boolean  @default(true)
-  created_at              DateTime @default(now())
-  updated_at              DateTime @updatedAt
-
-  academic_year        AcademicYear        @relation(fields: [academic_year_id], references: [id], onDelete: Cascade)
-  classroom_definition ClassroomDefinition @relation(fields: [classroom_definition_id], references: [id], onDelete: Restrict)
-  enrollments          StudentEnrollment[]
-
-  @@unique([academic_year_id, classroom_definition_id])
-  @@index([academic_year_id])
-  @@index([classroom_definition_id])
-  @@index([is_active])
   @@schema("results_mgt")
 }
 
