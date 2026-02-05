@@ -1,4 +1,4 @@
-import { Body, Controller, ForbiddenException, Get, Param, Patch, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { ClassroomsService } from './classrooms.service';
@@ -36,6 +36,15 @@ export class ClassroomDefinitionsUpdateController {
       isArchived: dto.isArchived,
       ordinal: dto.ordinal,
     });
+  }
+
+  @Delete(':id')
+  delete(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
+    if (!req.user) {
+      throw new ForbiddenException('Authentication required');
+    }
+    const adminUserId = req.user.id;
+    return this.classroomsService.deleteDefinitionById(id, adminUserId);
   }
 }
 
