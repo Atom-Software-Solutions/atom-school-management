@@ -81,7 +81,7 @@ model Student {
   phone         String?             @unique
   gender        String?
   status        String?
-  date_of_birth DateTime?
+  date_of_birth DateTime
   religion      String?
   address       String?
   avatar_url    String?
@@ -94,6 +94,7 @@ model Student {
   guardians     StudentGuardian[]
   enrollments   StudentEnrollment[]
 
+  @@unique([school_id, first_name, last_name, date_of_birth])
   @@unique([school_id, student_no])
   @@index([school_id])
   @@index([deleted_at])

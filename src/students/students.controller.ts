@@ -9,8 +9,8 @@ import type { AuthenticatedRequest } from '../common/middleware/tenant.middlewar
 
 // File validation constants
 const MAX_FILE_SIZE = parseInt(process.env.MAX_IMPORT_FILE_SIZE || '5242880'); // 5MB default
-const ALLOWED_MIME_TYPES = ['text/csv', 'application/csv', 'text/plain'];
-const ALLOWED_EXTENSIONS = ['.csv'];
+const ALLOWED_MIME_TYPES = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'];
+const ALLOWED_EXTENSIONS = ['.xlsx'];
 
 // File validation helper
 interface FileValidationError {
@@ -35,12 +35,26 @@ function validateFileType(mimeType: string | undefined, originalName: string | u
   }
   const extension = originalName.toLowerCase().substring(originalName.lastIndexOf('.'));
   if (!ALLOWED_EXTENSIONS.includes(extension)) {
-    return { valid: false, error: `Invalid file extension. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}` };
+    return { valid: false, error: `Invalid file extension. Only .xlsx files are allowed` };
   }
   if (mimeType && !ALLOWED_MIME_TYPES.includes(mimeType)) {
-    return { valid: false, error: `Invalid file type. Must be CSV` };
+    return { valid: false, error: `Invalid file type. Must be Excel (.xlsx)` };
   }
   return { valid: true };
+}
+
+// Parse DD-MM-YYYY date format
+function parseDateDDMMYYYY(dateStr: string): Date | null {
+  const match = dateStr.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (!match) return null;
+  const [, day, month, year] = match;
+  const d = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  if (isNaN(d.getTime())) return null;
+  // Validate that input matches parsed date (prevent invalid dates like 31-02-2020)
+  if (d.getDate() !== parseInt(day) || d.getMonth() !== parseInt(month) - 1 || d.getFullYear() !== parseInt(year)) {
+    return null;
+  }
+  return d;
 }
 
 @Controller('students')
@@ -107,8 +121,8 @@ export class StudentsController {
       }
     }
     if (phone !== undefined && phone !== '') {
-      if (!/^\d{10}$/.test(phone)) {
-        throw new BadRequestException('phone must be a 10-digit number string');
+      if (!/^\+?\d{10,}$/.test(phone)) {
+        throw new BadRequestException('phone must be at least 10 digits, optionally prefixed with +');
       }
     }
 
@@ -119,9 +133,9 @@ export class StudentsController {
     const avatarUrl = body?.avatarUrl?.toString().trim() || undefined;
 
     const dateOfBirthRaw = body?.dateOfBirth?.toString().trim() || undefined;
-    const dateOfBirth = dateOfBirthRaw ? new Date(dateOfBirthRaw) : undefined;
-    if (dateOfBirthRaw && (!dateOfBirth || Number.isNaN(dateOfBirth.getTime()))) {
-      throw new BadRequestException('dateOfBirth must be a valid ISO date string');
+    const dateOfBirth = dateOfBirthRaw ? parseDateDDMMYYYY(dateOfBirthRaw) : undefined;
+    if (dateOfBirthRaw && !dateOfBirth) {
+      throw new BadRequestException('dateOfBirth must be in DD-MM-YYYY format');
     }
 
     return this.studentsService.create(schoolId, adminUserId, {
@@ -165,8 +179,8 @@ export class StudentsController {
     const adminUserId = (req as any).user?.id as string;
     if (body?.phone !== undefined && body.phone !== null) {
       const phone = body.phone.toString().trim();
-      if (phone !== '' && !/^\d{10}$/.test(phone)) {
-        throw new BadRequestException('phone must be a 10-digit number string');
+      if (phone !== '' && !/^\+?\d{10,}$/.test(phone)) {
+        throw new BadRequestException('phone must be at least 10 digits, optionally prefixed with +');
       }
     }
     if (body?.email !== undefined && body.email !== null) {
@@ -178,9 +192,9 @@ export class StudentsController {
     if (body?.dateOfBirth !== undefined && body.dateOfBirth !== null) {
       const raw = body.dateOfBirth.toString().trim();
       if (raw !== '') {
-        const d = new Date(raw);
-        if (Number.isNaN(d.getTime())) {
-          throw new BadRequestException('dateOfBirth must be a valid ISO date string');
+        const d = parseDateDDMMYYYY(raw);
+        if (!d) {
+          throw new BadRequestException('dateOfBirth must be in DD-MM-YYYY format');
         }
       }
     }
@@ -238,13 +252,6 @@ export class StudentsController {
     return res.send(buffer);
   }
 
-  @Get('import/csv/template')
-  downloadCsvTemplate(@Res() res: ExpressResponse) {
-    const buffer = this.studentsService.generateImportTemplate();
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename="students_template.xlsx"');
-    return res.send(buffer);
-  }
 
   @Post('import/validate')
   @UseInterceptors(FileInterceptor('file'))
@@ -257,97 +264,33 @@ export class StudentsController {
     if (!schoolId || schoolId.trim() === '') {
       throw new BadRequestException('Missing required query parameter: schoolId');
     }
-    const buffer = file?.buffer || Buffer.alloc(0);
-    return this.studentsService
-      .validateImportFile(schoolId, adminUserId, buffer)
-      .then(async (result) => {
-        if (result.valid) {
-          // Auto-import on successful validation
-          const importResult = await this.studentsService.importStudents(
-            schoolId,
-            adminUserId,
-            buffer,
-          );
-          return { ...result, ...importResult };
-        }
-        return result;
-      });
-  }
-
-  @Post('import')
-  @UseInterceptors(FileInterceptor('file'))
-  importStudents(
-    @Query('schoolId') schoolId: string,
-    @UploadedFile() file: any,
-    @Request() req: AuthenticatedRequest,
-  ) {
-    const adminUserId = (req as any).user?.id as string;
-    if (!schoolId || schoolId.trim() === '') {
-      throw new BadRequestException('Missing required query parameter: schoolId');
-    }
-    return this.studentsService.importStudents(schoolId, adminUserId, file?.buffer || Buffer.alloc(0));
-  }
-
-  @Post('import/csv/validate')
-  @UseInterceptors(FileInterceptor('file'))
-  @HttpCode(200)
-  validateCsvImport(
-    @Query('schoolId') schoolId: string,
-    @UploadedFile() file: any,
-    @Request() req: AuthenticatedRequest,
-  ) {
-    const adminUserId = (req as any).user?.id as string;
-    if (!schoolId || schoolId.trim() === '') {
-      throw new BadRequestException('Missing required query parameter: schoolId');
-    }
-    
     // Validate file size
     const sizeValidation = validateFileSize(file?.buffer);
     if (!sizeValidation.valid) {
-      throw new BadRequestException(sizeValidation.error);
+      throw new UnprocessableEntityException({ valid: false, errors: [sizeValidation.error], total: 0 });
     }
-    
-    // Validate file type
+
+    // Validate file type (expecting spreadsheet upload)
     const typeValidation = validateFileType(file?.mimetype, file?.originalname);
     if (!typeValidation.valid) {
-      throw new BadRequestException(typeValidation.error);
+      throw new UnprocessableEntityException({ valid: false, errors: [typeValidation.error], total: 0 });
     }
-    
-    return this.studentsService.validateCsvFile(schoolId, adminUserId, file.buffer).then((result) => {
-      // Return 422 if validation failed
+
+    const buffer = file?.buffer || Buffer.alloc(0);
+    return this.studentsService.validateImportFile(schoolId, adminUserId, buffer).then(async (result) => {
+      // If validation failed, return 422
       if (!result.valid) {
         throw new UnprocessableEntityException(result);
       }
-      return result;
+      // Only import when validation fully passed
+      const importResult = await this.studentsService.importStudents(schoolId, adminUserId, buffer);
+      return { ...result, ...importResult };
     });
   }
 
-  @Post('import/csv')
-  @UseInterceptors(FileInterceptor('file'))
-  importCsvStudents(
-    @Query('schoolId') schoolId: string,
-    @UploadedFile() file: any,
-    @Request() req: AuthenticatedRequest,
-  ) {
-    const adminUserId = (req as any).user?.id as string;
-    if (!schoolId || schoolId.trim() === '') {
-      throw new BadRequestException('Missing required query parameter: schoolId');
-    }
-    
-    // Validate file size
-    const sizeValidation = validateFileSize(file?.buffer);
-    if (!sizeValidation.valid) {
-      throw new BadRequestException(sizeValidation.error);
-    }
-    
-    // Validate file type
-    const typeValidation = validateFileType(file?.mimetype, file?.originalname);
-    if (!typeValidation.valid) {
-      throw new BadRequestException(typeValidation.error);
-    }
-    
-    return this.studentsService.importCsvStudents(schoolId, adminUserId, file.buffer);
-  }
+
+
+ 
 
   @Post(':id/promote')
   promote(
