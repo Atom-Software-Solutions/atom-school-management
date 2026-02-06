@@ -94,7 +94,7 @@ export class StudentsController {
       phone?: string;
       gender?: string;
       status?: string;
-      dateOfBirth?: string;
+      dateOfBirth: string;
       religion?: string;
       address?: string;
       avatarUrl?: string;
@@ -132,9 +132,12 @@ export class StudentsController {
     const address = body?.address?.toString().trim() || undefined;
     const avatarUrl = body?.avatarUrl?.toString().trim() || undefined;
 
-    const dateOfBirthRaw = body?.dateOfBirth?.toString().trim() || undefined;
-    const dateOfBirth = dateOfBirthRaw ? parseDateDDMMYYYY(dateOfBirthRaw) : undefined;
-    if (dateOfBirthRaw && !dateOfBirth) {
+    const dateOfBirthRaw = body?.dateOfBirth?.toString().trim();
+    if (!dateOfBirthRaw) {
+      throw new BadRequestException('Missing required field: dateOfBirth');
+    }
+    const dateOfBirth = parseDateDDMMYYYY(dateOfBirthRaw);
+    if (!dateOfBirth) {
       throw new BadRequestException('dateOfBirth must be in DD-MM-YYYY format');
     }
 
