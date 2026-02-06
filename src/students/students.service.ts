@@ -575,7 +575,7 @@ export class StudentsService {
                 errors.push(`Row ${line}: phone already exists`);
                 break;
               }
-              if (target.includes('first_name', 'last_name', 'date_of_birth')) {
+              if (['first_name', 'last_name', 'date_of_birth'].every(k => target.includes(k))) {
                 errors.push(`Row ${line}: firstName+lastName+dateOfBirth already exists`);
                 break;
               }
