@@ -117,7 +117,7 @@ export class StudentsService {
       phone?: string;
       gender?: string;
       status?: string;
-      dateOfBirth?: Date;
+      dateOfBirth: Date;
       religion?: string;
       address?: string;
       avatarUrl?: string;
