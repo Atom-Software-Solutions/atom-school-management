@@ -1,5 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, UseGuards, Res, BadRequestException, UnprocessableEntityException, HttpCode } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, UseGuards, Res, BadRequestException, UnprocessableEntityException, HttpCode, UsePipes, ValidationPipe } from '@nestjs/common';
 import { StudentsService } from './students.service';
+import { CreateStudentDto } from './dto/create-student.dto';
+import { UpdateStudentDto } from './dto/update-student.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard, Roles } from '../auth/guards/roles.guard';
 import type { Response as ExpressResponse } from 'express';
@@ -84,21 +86,10 @@ export class StudentsController {
   }
 
   @Post()
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   create(
     @Query('schoolId') schoolId: string,
-    @Body()
-    body: {
-      firstName: string;
-      lastName: string;
-      email?: string;
-      phone?: string;
-      gender?: string;
-      status?: string;
-      dateOfBirth: string;
-      religion?: string;
-      address?: string;
-      avatarUrl?: string;
-    },
+    @Body() body: CreateStudentDto,
     @Request() req: AuthenticatedRequest,
   ) {
     const adminUserId = (req as any).user?.id as string;
@@ -127,7 +118,7 @@ export class StudentsController {
     }
 
     const gender = body?.gender?.toString().trim() || undefined;
-    const status = body?.status?.toString().trim() || undefined;
+    const status = undefined; // imported/created students default to active via service
     const religion = body?.religion?.toString().trim() || undefined;
     const address = body?.address?.toString().trim() || undefined;
     const avatarUrl = body?.avatarUrl?.toString().trim() || undefined;
@@ -162,21 +153,10 @@ export class StudentsController {
   }
 
   @Patch(':id')
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   update(
     @Param('id') id: string,
-    @Body()
-    body: {
-      firstName?: string;
-      lastName?: string;
-      email?: string;
-      phone?: string;
-      gender?: string;
-      status?: string;
-      dateOfBirth?: string;
-      religion?: string;
-      address?: string;
-      avatarUrl?: string;
-    },
+    @Body() body: UpdateStudentDto,
     @Request() req: AuthenticatedRequest,
   ) {
     const adminUserId = (req as any).user?.id as string;
@@ -193,8 +173,8 @@ export class StudentsController {
       }
     }
     if (body?.dateOfBirth !== undefined && body.dateOfBirth !== null) {
-      const raw = body.dateOfBirth.toString().trim();
-      if (raw !== '') {
+      const raw = body.dateOfBirth?.toString().trim();
+      if (raw && raw !== '') {
         const d = parseDateDDMMYYYY(raw);
         if (!d) {
           throw new BadRequestException('dateOfBirth must be in DD-MM-YYYY format');

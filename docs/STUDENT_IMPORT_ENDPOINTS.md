@@ -24,8 +24,7 @@ This document describes the endpoints for downloading the student import templat
 - Last Name (string, required)
 - Email (string, optional, must be valid format)
 - Phone (string, optional, at least 10 digits, may start with +)
-- Gender (string, optional)
-- Status (string, optional)
+ - Gender (M/F) (string, optional; must be `M` or `F` in the template — stored as `Male` or `Female`)
 - Date Of Birth (DD-MM-YYYY) (string, required)
 - Religion (string, optional)
 - Address (string, optional)
@@ -111,6 +110,8 @@ file: <.xlsx file>
 - **Identity Uniqueness Constraint:** The combination of `First Name + Last Name + Date Of Birth` must be unique within the school
 - No duplicate emails within the file or school
 - No duplicate phones within the file or school
+ - **Gender Constraint:** Template values for `Gender (M/F)` must be either `M` or `F`. During import these map to `Male` and `Female` in the database.
+ - Imported students are created with `status` set to `active` by default.
 
 **Behavior:**
 - If file validation fails (size/type), returns 422 immediately
@@ -125,9 +126,9 @@ file: <.xlsx file>
 
 ### Valid Example
 ```
-First Name,Last Name,Email,Phone,Gender,Status,Date Of Birth (DD-MM-YYYY),Religion,Address
-John,Doe,john@example.com,+256701234567,Male,Active,25-12-1995,Christian,123 Main St
-Jane,Smith,jane@example.com,0701234568,Female,Active,15-03-1996,Islam,456 Oak Ave
+First Name,Last Name,Email,Phone,Gender (M/F),Date Of Birth (DD-MM-YYYY),Religion,Address
+John,Doe,john@example.com,+256701234567,M,25-12-1995,Christian,123 Main St
+Jane,Smith,jane@example.com,0701234568,F,15-03-1996,Islam,456 Oak Ave
 ```
 
 **Note:** Date Of Birth must be in DD-MM-YYYY format. Phone can be 10+ digits with optional leading +. Headers are read-only and frozen at the top.
@@ -182,6 +183,8 @@ If you were previously using:
 - Phone validation changed: now allows + prefix, minimum 10 digits
 - className field removed completely
 - Unique constraint added: firstName + lastName + dateOfBirth must be unique
+ - Gender values in template are now single-letter `M`/`F` and map to `Male`/`Female` in DB
+ - Imported students will have `status` set to `active` by default
 
 ---
 

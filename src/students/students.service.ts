@@ -90,6 +90,16 @@ export class StudentsService {
     return this.nextCode('REG', max + 1, 3);
   }
 
+  private normalizeGender(g?: string | null): string | undefined {
+    if (g === undefined || g === null) return undefined;
+    const raw = String(g).trim();
+    if (raw === '') return undefined;
+    const t = raw.toUpperCase();
+    if (t === 'M' || t === 'MALE') return 'Male';
+    if (t === 'F' || t === 'FEMALE') return 'Female';
+    throw new BadRequestException("gender must be 'M' or 'F'");
+  }
+
   private async assertIsAdminOfSchool(schoolId: string, userId: string) {
     const rel = await this.prisma.schoolAdmin.findUnique({
       where: { school_id_user_id: { school_id: schoolId, user_id: userId } },
@@ -142,7 +152,7 @@ export class StudentsService {
             last_name: data.lastName,
             email: data.email,
             phone: data.phone,
-            gender: data.gender,
+            gender: this.normalizeGender(data.gender),
             status: data.status,
             date_of_birth: data.dateOfBirth,
             religion: data.religion,
@@ -205,7 +215,11 @@ export class StudentsService {
     if (data.lastName !== undefined) updateData.last_name = data.lastName;
     if (data.email !== undefined) updateData.email = data.email;
     if (data.phone !== undefined) updateData.phone = data.phone;
-    if (data.gender !== undefined) updateData.gender = data.gender;
+    if (data.gender !== undefined) {
+      const raw = (data.gender ?? '').toString();
+      if (raw.trim() === '') updateData.gender = null;
+      else updateData.gender = this.normalizeGender(raw);
+    }
     if (data.status !== undefined) updateData.status = data.status;
     if (data.religion !== undefined) updateData.religion = data.religion;
     if (data.address !== undefined) updateData.address = data.address;
@@ -291,12 +305,12 @@ export class StudentsService {
 
   generateImportTemplate(): Buffer {
     const worksheet = XLSX.utils.aoa_to_sheet([
-      ['First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Status', 'Date Of Birth (DD-MM-YYYY)', 'Religion', 'Address'],
+      ['First Name', 'Last Name', 'Email', 'Phone', 'Gender (M/F)', 'Date Of Birth (DD-MM-YYYY)', 'Religion', 'Address'],
     ]);
     // Freeze header row
     (worksheet as any)['!freeze'] = { xSplit: 0, ySplit: 1 };
     // Make header row read-only and data rows editable
-    const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+    const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
     // Mark header row cells as locked (read-only)
     for (let c = 0; c < cols.length; c += 1) {
@@ -315,7 +329,7 @@ export class StudentsService {
         (worksheet as any)[ref].s = { protection: { locked: false } } as any;
       }
     }
-    (worksheet as any)['!ref'] = `A1:I${maxRows + 1}`;
+    (worksheet as any)['!ref'] = `A1:H${maxRows + 1}`;
     (worksheet as any)['!protect'] = { password: 'upload', selectLockedCells: true, selectUnlockedCells: true } as any;
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Students');
@@ -323,7 +337,7 @@ export class StudentsService {
   }
 
   generateCsvTemplate(): string {
-    return 'firstName,lastName,email,phone,gender,status,dateOfBirth,religion,address,className\n';
+    return 'firstName,lastName,email,phone,gender (M/F),dateOfBirth,religion,address,className\n';
   }
 
   private parseCsv(buffer: Buffer): Array<{ firstName: string; lastName: string; email?: string; phone?: string; gender?: string; status?: string; dateOfBirth?: string; religion?: string; address?: string }> {
@@ -343,11 +357,12 @@ export class StudentsService {
     for (let i = 1; i < lines.length; i++) {
       const values = this.parseCsvLine(lines[i]);
       const row: any = {};
+      const genderIdx = headerMap['gender'] !== undefined ? headerMap['gender'] : headerMap['gender (m/f)'];
       if (headerMap['firstname'] !== undefined) row.firstName = (values[headerMap['firstname']] || '').trim();
       if (headerMap['lastname'] !== undefined) row.lastName = (values[headerMap['lastname']] || '').trim();
       if (headerMap['email'] !== undefined) row.email = (values[headerMap['email']] || '').trim() || undefined;
       if (headerMap['phone'] !== undefined) row.phone = (values[headerMap['phone']] || '').trim() || undefined;
-      if (headerMap['gender'] !== undefined) row.gender = (values[headerMap['gender']] || '').trim() || undefined;
+      if (genderIdx !== undefined) row.gender = (values[genderIdx] || '').trim() || undefined;
       if (headerMap['status'] !== undefined) row.status = (values[headerMap['status']] || '').trim() || undefined;
       if (headerMap['dateofbirth'] !== undefined) row.dateOfBirth = (values[headerMap['dateofbirth']] || '').trim() || undefined;
       if (headerMap['religion'] !== undefined) row.religion = (values[headerMap['religion']] || '').trim() || undefined;
@@ -392,7 +407,12 @@ export class StudentsService {
       lastName: String(r['Last Name'] || r.lastName || r['lastName'] || '').trim(),
       email: String(r['Email'] || r.email || r['email'] || '').trim() || undefined,
       phone: String(r['Phone'] || r.phone || r['phone'] || '').trim() || undefined,
-      gender: String(r['Gender'] || r.gender || r['gender'] || '').trim() || undefined,
+      gender: (() => {
+        const raw = String(r['Gender (M/F)'] || r['Gender'] || r.gender || r['gender'] || '').trim();
+        if (!raw) return undefined;
+        const t = raw.charAt(0).toUpperCase();
+        return t === 'M' || t === 'F' ? t : raw;
+      })(),
       status: String(r['Status'] || r.status || r['status'] || '').trim() || undefined,
       dateOfBirth: String(r['Date Of Birth (DD-MM-YYYY)'] || r.dateOfBirth || r['dateOfBirth'] || '').trim() || undefined,
       religion: String(r['Religion'] || r.religion || r['religion'] || '').trim() || undefined,
@@ -440,6 +460,7 @@ export class StudentsService {
       }
       if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) errors.push(`Row ${line}: email is invalid`);
       if (row.phone && !/^\+?\d{10,}$/.test(row.phone)) errors.push(`Row ${line}: phone must be at least 10 digits, optionally prefixed with +`);
+      if (row.gender && !/^[MF]$/i.test(row.gender)) errors.push(`Row ${line}: gender must be 'M' or 'F'`);
 
       // Check firstName+lastName+dateOfBirth uniqueness
       const dob = row.dateOfBirth ? parseDateDDMMYYYY(row.dateOfBirth) : null;
@@ -555,8 +576,8 @@ export class StudentsService {
                 last_name: row.lastName,
                 email: row.email,
                 phone: row.phone,
-                gender: row.gender,
-                status: row.status,
+                gender: row.gender ? (row.gender.toUpperCase() === 'M' ? 'Male' : 'Female') : undefined,
+                status: 'active',
                 date_of_birth: dateOfBirth,
                 religion: row.religion,
                 address: row.address,
