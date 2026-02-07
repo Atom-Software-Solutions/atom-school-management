@@ -19,22 +19,22 @@ This document describes the endpoints for downloading the student import templat
 - Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
 - Body: Binary Excel file with frozen headers and 1000 pre-formatted rows
 
-**Template Columns:**
-- firstName (string, required)
-- lastName (string, required)
-- dateOfBirth (string, required, DD-MM-YYYY format)
-- email (string, optional, must be valid format)
-- phone (string, optional, at least 10 digits, may start with +)
-- gender (string, optional)
-- status (string, optional)
-- religion (string, optional)
-- address (string, optional)
+**Template Columns (Read-Only Headers):**
+- First Name (string, required)
+- Last Name (string, required)
+- Email (string, optional, must be valid format)
+- Phone (string, optional, at least 10 digits, may start with +)
+- Gender (string, optional)
+- Status (string, optional)
+- Date Of Birth (DD-MM-YYYY) (string, required)
+- Religion (string, optional)
+- Address (string, optional)
 
 **File Features:**
-- Frozen header row
-- Header row protected; data rows unlocked
+- Frozen header row (first row)
+- Header row locked/read-only; data rows editable
 - Protected sheet (password: 'upload')
-- 1000 editable rows to guide users
+- 1000 editable data rows to guide users
 
 ---
 
@@ -104,11 +104,11 @@ file: <.xlsx file>
 ```
 
 **Validation Rules:**
-- `firstName` and `lastName`: Required, non-empty
-- `dateOfBirth`: Required, must be in DD-MM-YYYY format (e.g., 25-12-1995)
-- `email`: Optional, must be valid email format if provided, unique within school
-- `phone`: Optional, must be at least 10 digits (with optional leading +), e.g., `+256701234567` or `0701234567`, unique within school
-- **Uniqueness Constraint:** The combination of `firstName + lastName + dateOfBirth` must be unique within the school
+- `First Name` and `Last Name`: Required, non-empty
+- `Date Of Birth (DD-MM-YYYY)`: Required, must be in DD-MM-YYYY format (e.g., 25-12-1995)
+- `Email`: Optional, must be valid email format if provided, unique within school
+- `Phone`: Optional, must be at least 10 digits (with optional leading +), e.g., `+256701234567` or `0701234567`, unique within school
+- **Identity Uniqueness Constraint:** The combination of `First Name + Last Name + Date Of Birth` must be unique within the school
 - No duplicate emails within the file or school
 - No duplicate phones within the file or school
 
@@ -125,12 +125,12 @@ file: <.xlsx file>
 
 ### Valid Example
 ```
-firstName,lastName,email,phone,gender,status,dateOfBirth,religion,address
+First Name,Last Name,Email,Phone,Gender,Status,Date Of Birth (DD-MM-YYYY),Religion,Address
 John,Doe,john@example.com,+256701234567,Male,Active,25-12-1995,Christian,123 Main St
 Jane,Smith,jane@example.com,0701234568,Female,Active,15-03-1996,Islam,456 Oak Ave
 ```
 
-**Note:** dateOfBirth must be in DD-MM-YYYY format. Phone can be 10+ digits with optional leading +.
+**Note:** Date Of Birth must be in DD-MM-YYYY format. Phone can be 10+ digits with optional leading +. Headers are read-only and frozen at the top.
 
 ---
 
@@ -147,7 +147,7 @@ Jane,Smith,jane@example.com,0701234568,Female,Active,15-03-1996,Islam,456 Oak Av
 - Validates date correctness (e.g., rejects `31-02-2020`)
 - Parsed as UTC midnight
 
-### Unique Constraint on firstName + lastName + dateOfBirth
+### Unique Constraint on First Name + Last Name + Date Of Birth
 - Enforced at both application and database levels
 - Prevents duplicate student records based on identity
 - School-scoped (different schools can have students with same name/DOB)

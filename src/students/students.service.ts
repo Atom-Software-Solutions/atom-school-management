@@ -291,18 +291,27 @@ export class StudentsService {
 
   generateImportTemplate(): Buffer {
     const worksheet = XLSX.utils.aoa_to_sheet([
-      ['firstName', 'lastName', 'email', 'phone', 'gender', 'status', 'dateOfBirth', 'religion', 'address'],
+      ['First Name', 'Last Name', 'Email', 'Phone', 'Gender', 'Status', 'Date Of Birth (DD-MM-YYYY)', 'Religion', 'Address'],
     ]);
     // Freeze header row
     (worksheet as any)['!freeze'] = { xSplit: 0, ySplit: 1 };
-    // Make header read-only by protecting sheet and unlocking data rows
+    // Make header row read-only and data rows editable
     const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+
+    // Mark header row cells as locked (read-only)
+    for (let c = 0; c < cols.length; c += 1) {
+      const ref = `${cols[c]}1`;
+      if ((worksheet as any)[ref]) {
+        (worksheet as any)[ref].s = { protection: { locked: true } } as any;
+      }
+    }
+
+    // Mark data rows as unlocked (editable)
     const maxRows = 1000; // editable rows to guide users
     for (let r = 2; r <= maxRows + 1; r += 1) {
       for (let c = 0; c < cols.length; c += 1) {
         const ref = `${cols[c]}${r}`;
         (worksheet as any)[ref] = (worksheet as any)[ref] || { v: '', t: 's' };
-        // Attempt to mark data cells as unlocked so only header stays locked
         (worksheet as any)[ref].s = { protection: { locked: false } } as any;
       }
     }
@@ -431,7 +440,7 @@ export class StudentsService {
       }
       if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) errors.push(`Row ${line}: email is invalid`);
       if (row.phone && !/^\+?\d{10,}$/.test(row.phone)) errors.push(`Row ${line}: phone must be at least 10 digits, optionally prefixed with +`);
-      
+
       // Check firstName+lastName+dateOfBirth uniqueness
       const dob = row.dateOfBirth ? parseDateDDMMYYYY(row.dateOfBirth) : null;
       if (row.firstName && row.lastName && dob) {
@@ -440,7 +449,7 @@ export class StudentsService {
         else fileNames.add(nameKey);
         if (existingNames.has(nameKey)) errors.push(`Row ${line}: firstName+lastName+dateOfBirth already exists`);
       }
-      
+
       if (row.email) {
         const ekey = row.email.toLowerCase();
         if (fileEmails.has(ekey)) errors.push(`Row ${line}: duplicate email in file`);
@@ -483,7 +492,7 @@ export class StudentsService {
     const emails = new Set<string>(existing.map(e => (e.email || '').toLowerCase()).filter(v => v));
     const phones = new Set<string>(existing.map(e => e.phone!).filter(Boolean) as string[]);
     const names = new Set<string>(existing.map(e => `${e.first_name}|${e.last_name}|${e.date_of_birth?.toISOString().split('T')[0]}`).filter(v => v !== '||'));
-    
+
     for (let i = 0; i < rows.length; i += 1) {
       const row = rows[i];
       const line = i + 2;
@@ -508,7 +517,7 @@ export class StudentsService {
         errors.push(`Row ${line}: phone must be at least 10 digits, optionally prefixed with +`);
         continue;
       }
-      
+
       // Check firstName+lastName+dateOfBirth uniqueness
       const nameKey = `${row.firstName}|${row.lastName}|${dateOfBirth.toISOString().split('T')[0]}`;
       if (names.has(nameKey)) {
