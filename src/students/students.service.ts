@@ -402,22 +402,57 @@ export class StudentsService {
     const sheetName = wb.SheetNames[0];
     const ws = wb.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(ws, { defval: '', raw: true }) as any[];
-    return rows.map((r) => ({
-      firstName: String(r['First Name'] || r.firstName || r['firstName'] || '').trim(),
-      lastName: String(r['Last Name'] || r.lastName || r['lastName'] || '').trim(),
-      email: String(r['Email'] || r.email || r['email'] || '').trim() || undefined,
-      phone: String(r['Phone'] || r.phone || r['phone'] || '').trim() || undefined,
-      gender: (() => {
-        const raw = String(r['Gender (M/F)'] || r['Gender'] || r.gender || r['gender'] || '').trim();
-        if (!raw) return undefined;
-        const t = raw.charAt(0).toUpperCase();
-        return t === 'M' || t === 'F' ? t : raw;
-      })(),
-      status: String(r['Status'] || r.status || r['status'] || '').trim() || undefined,
-      dateOfBirth: String(r['Date Of Birth (DD-MM-YYYY)'] || r.dateOfBirth || r['dateOfBirth'] || '').trim() || undefined,
-      religion: String(r['Religion'] || r.religion || r['religion'] || '').trim() || undefined,
-      address: String(r['Address'] || r.address || r['address'] || '').trim() || undefined,
-    }));
+    return rows.map((r) => {
+      const firstName = String(r['First Name'] || r.firstName || r['firstName'] || '').trim();
+      const lastName = String(r['Last Name'] || r.lastName || r['lastName'] || '').trim();
+      const email = String(r['Email'] || r.email || r['email'] || '').trim() || undefined;
+      const phone = String(r['Phone'] || r.phone || r['phone'] || '').trim() || undefined;
+      const rawGender = String(r['Gender (M/F)'] || r['Gender'] || r.gender || r['gender'] || '').trim();
+      const gender = rawGender ? (rawGender.charAt(0).toUpperCase()) : undefined;
+      const status = String(r['Status'] || r.status || r['status'] || '').trim() || undefined;
+      const religion = String(r['Religion'] || r.religion || r['religion'] || '').trim() || undefined;
+      const address = String(r['Address'] || r.address || r['address'] || '').trim() || undefined;
+
+      // Normalize Excel date serials, Date objects, or strings into DD-MM-YYYY
+      const dateCell = r['Date Of Birth (DD-MM-YYYY)'] || r.dateOfBirth || r['dateOfBirth'];
+      let dateOfBirth: string | undefined = undefined;
+      if (dateCell !== undefined && dateCell !== null && dateCell !== '') {
+        if (typeof dateCell === 'number') {
+          try {
+            const parsed = (XLSX as any).SSF.parse_date_code(dateCell);
+            if (parsed && parsed.y) {
+              const dd = String(parsed.d).padStart(2, '0');
+              const mm = String(parsed.m).padStart(2, '0');
+              const yyyy = parsed.y;
+              dateOfBirth = `${dd}-${mm}-${yyyy}`;
+            } else {
+              dateOfBirth = String(dateCell).trim();
+            }
+          } catch (e) {
+            dateOfBirth = String(dateCell).trim();
+          }
+        } else if (dateCell instanceof Date) {
+          const dd = String(dateCell.getDate()).padStart(2, '0');
+          const mm = String(dateCell.getMonth() + 1).padStart(2, '0');
+          const yyyy = dateCell.getFullYear();
+          dateOfBirth = `${dd}-${mm}-${yyyy}`;
+        } else {
+          dateOfBirth = String(dateCell).trim();
+        }
+      }
+
+      return {
+        firstName,
+        lastName,
+        email,
+        phone,
+        gender,
+        status,
+        dateOfBirth: dateOfBirth || undefined,
+        religion,
+        address,
+      };
+    });
   }
 
   async validateImportFile(schoolId: string, adminUserId: string, buffer: Buffer) {
