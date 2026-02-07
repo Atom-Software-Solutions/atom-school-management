@@ -201,12 +201,12 @@ export class StudentsService {
       lastName?: string;
       email?: string;
       phone?: string;
-      gender?: string;
-      status?: string;
-      dateOfBirth?: string;
+      gender?: string | null;
+      status?: string | null;
+      dateOfBirth?: string | null;
       religion?: string;
       address?: string;
-      avatarUrl?: string;
+      avatarUrl?: string | null;
     },
   ) {
     const student = await this.findOwned(studentId, adminUserId);
