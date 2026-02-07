@@ -388,15 +388,15 @@ export class StudentsService {
     const ws = wb.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(ws, { defval: '', raw: true }) as any[];
     return rows.map((r) => ({
-      firstName: String(r.firstName || r['firstName'] || '').trim(),
-      lastName: String(r.lastName || r['lastName'] || '').trim(),
-      email: String(r.email || r['email'] || '').trim() || undefined,
-      phone: String(r.phone || r['phone'] || '').trim() || undefined,
-      gender: String(r.gender || r['gender'] || '').trim() || undefined,
-      status: String(r.status || r['status'] || '').trim() || undefined,
-      dateOfBirth: String(r.dateOfBirth || r['dateOfBirth'] || '').trim() || undefined,
-      religion: String(r.religion || r['religion'] || '').trim() || undefined,
-      address: String(r.address || r['address'] || '').trim() || undefined,
+      firstName: String(r['First Name'] || r.firstName || r['firstName'] || '').trim(),
+      lastName: String(r['Last Name'] || r.lastName || r['lastName'] || '').trim(),
+      email: String(r['Email'] || r.email || r['email'] || '').trim() || undefined,
+      phone: String(r['Phone'] || r.phone || r['phone'] || '').trim() || undefined,
+      gender: String(r['Gender'] || r.gender || r['gender'] || '').trim() || undefined,
+      status: String(r['Status'] || r.status || r['status'] || '').trim() || undefined,
+      dateOfBirth: String(r['Date Of Birth (DD-MM-YYYY)'] || r.dateOfBirth || r['dateOfBirth'] || '').trim() || undefined,
+      religion: String(r['Religion'] || r.religion || r['religion'] || '').trim() || undefined,
+      address: String(r['Address'] || r.address || r['address'] || '').trim() || undefined,
     }));
   }
 
