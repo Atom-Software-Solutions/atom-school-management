@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, ForbiddenException, Param, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, ForbiddenException, Param, Patch, Delete, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { ClassroomsService } from './classrooms.service';
@@ -9,7 +9,7 @@ import type { AuthenticatedRequest } from '../common/middleware/tenant.middlewar
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('SCHOOL_ADMIN')
 export class EnrollmentsController {
-  constructor(private readonly classroomsService: ClassroomsService) {}
+  constructor(private readonly classroomsService: ClassroomsService) { }
 
   private resolveTenantSchoolId(req: AuthenticatedRequest, providedSchoolId?: string): string {
     const tenantSchoolId = req.user?.school_id as string | undefined;

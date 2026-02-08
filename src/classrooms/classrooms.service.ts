@@ -77,18 +77,30 @@ export class ClassroomsService {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
     return (this.prisma as any).classroomDefinition.findMany({
       where: { school_id: schoolId, is_archived: false },
-      orderBy: { name: 'asc' },
+      orderBy: [{ ordinal: 'asc' }, { name: 'asc' }],
     });
   }
 
-  async createDefinition(schoolId: string, adminUserId: string, data: { name: string; level?: string | null }) {
+  async createDefinition(
+    schoolId: string,
+    adminUserId: string,
+    data: { name: string; level?: string | null; ordinal: number },
+  ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
+    // Ensure ordinal is unique within the school (ignore archived definitions)
+    const existingOrdinal = await (this.prisma as any).classroomDefinition.findFirst({
+      where: { school_id: schoolId, ordinal: data.ordinal, is_archived: false },
+    });
+    if (existingOrdinal) {
+      throw new BadRequestException('A classroom definition with this ordinal already exists for this school');
+    }
     try {
       return await (this.prisma as any).classroomDefinition.create({
         data: {
           school_id: schoolId,
           name: data.name.trim(),
           level: data.level?.trim() || null,
+          ordinal: data.ordinal,
         },
       });
     } catch (e: any) {
@@ -105,7 +117,11 @@ export class ClassroomsService {
     return definition;
   }
 
-  async updateDefinitionById(id: string, adminUserId: string, data: { name?: string; level?: string | null; isArchived?: boolean }) {
+  async updateDefinitionById(
+    id: string,
+    adminUserId: string,
+    data: { name?: string; level?: string | null; isArchived?: boolean; ordinal?: number },
+  ) {
     const definition = await (this.prisma as any).classroomDefinition.findUnique({ where: { id } });
     if (!definition) throw new NotFoundException('Classroom definition not found');
     
@@ -127,6 +143,18 @@ export class ClassroomsService {
     if (data.level !== undefined) {
       updateData.level = data.level?.trim() || null;
     }
+    if (data.ordinal !== undefined) {
+      // If ordinal is changing, ensure no other (non-archived) definition in the same school uses it
+      if (data.ordinal !== definition.ordinal) {
+        const conflict = await (this.prisma as any).classroomDefinition.findFirst({
+          where: { school_id: definition.school_id, ordinal: data.ordinal, is_archived: false, NOT: { id } },
+        });
+        if (conflict) {
+          throw new BadRequestException('A classroom definition with this ordinal already exists for this school');
+        }
+      }
+      updateData.ordinal = data.ordinal;
+    }
     if (data.isArchived !== undefined) {
       updateData.is_archived = data.isArchived;
     }
@@ -143,6 +171,17 @@ export class ClassroomsService {
     } catch (e: any) {
       this.handlePrismaUniqueError(e, 'name');
     }
+  }
+
+  async deleteDefinitionById(id: string, adminUserId: string) {
+    const definition = await (this.prisma as any).classroomDefinition.findUnique({ where: { id } });
+    if (!definition) throw new NotFoundException('Classroom definition not found');
+
+    await this.assertIsAdminOfSchool(definition.school_id, adminUserId);
+
+    if (definition.is_archived) throw new BadRequestException('Classroom definition already deleted');
+
+    return (this.prisma as any).classroomDefinition.update({ where: { id }, data: { is_archived: true } });
   }
 
   // Offerings have been removed; enrollments operate directly on classroom definitions.

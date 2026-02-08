@@ -36,6 +36,7 @@ export class ClassroomDefinitionsController {
     return this.classroomsService.createDefinition(schoolId, adminUserId, {
       name: dto.name,
       level: dto.level || null,
+      ordinal: dto.ordinal,
     });
   }
 
