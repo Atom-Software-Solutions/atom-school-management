@@ -63,7 +63,7 @@ function parseDateDDMMYYYY(dateStr: string): Date | null {
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('SCHOOL_ADMIN')
 export class StudentsController {
-  constructor(private readonly studentsService: StudentsService) {}
+  constructor(private readonly studentsService: StudentsService) { }
 
   private resolveTenantSchoolId(req: AuthenticatedRequest, providedSchoolId?: string): string {
     const tenantSchoolId = req.user?.school_id as string | undefined;
@@ -250,12 +250,14 @@ export class StudentsController {
     // Validate file size
     const sizeValidation = validateFileSize(file?.buffer);
     if (!sizeValidation.valid) {
+      console.log("xxx sizeValidation", sizeValidation);
       throw new UnprocessableEntityException({ valid: false, errors: [sizeValidation.error], total: 0 });
     }
 
     // Validate file type (expecting spreadsheet upload)
     const typeValidation = validateFileType(file?.mimetype, file?.originalname);
     if (!typeValidation.valid) {
+      console.log("xxx typeValidation", typeValidation);
       throw new UnprocessableEntityException({ valid: false, errors: [typeValidation.error], total: 0 });
     }
 
@@ -263,6 +265,7 @@ export class StudentsController {
     return this.studentsService.validateImportFile(schoolId, adminUserId, buffer).then(async (result) => {
       // If validation failed, return 422
       if (!result.valid) {
+        console.log("xxx importValidation", result);
         throw new UnprocessableEntityException(result);
       }
       // Only import when validation fully passed
@@ -270,10 +273,6 @@ export class StudentsController {
       return { ...result, ...importResult };
     });
   }
-
-
-
- 
 
   @Post(':id/promote')
   promote(

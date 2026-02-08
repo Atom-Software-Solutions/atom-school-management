@@ -463,6 +463,7 @@ export class StudentsService {
     let rows;
     try {
       rows = this.parseWorkbook(buffer);
+      console.log("xxx1 importValidation", rows)
     } catch (e: any) {
       return { valid: false, errors: [`File parsing error: ${e?.message || 'Failed to parse file'}`], total: 0 };
     }
@@ -569,7 +570,7 @@ export class StudentsService {
         errors.push(`Row ${line}: email is invalid`);
         continue;
       }
-      if (row.phone && !/^\\+?\\d{10,}$/.test(row.phone)) {
+      if (row.phone && !/^\+?\d{10,}$/.test(row.phone)) {
         errors.push(`Row ${line}: phone must be at least 10 digits, optionally prefixed with +`);
         continue;
       }
