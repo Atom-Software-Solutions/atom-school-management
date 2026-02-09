@@ -2,17 +2,17 @@
 
 ## Current Status Summary
 
-✅ **Completed (55.1% - 49/89 endpoints)**
+✅ **Completed (65.2% - 58/89 endpoints)**
 - Authentication & Authorization (100%)
 - School Management (100%)
 - User Management (95% - missing password reset)
 - Student Management (100%)
 - Academic Calendar (100%)
 - Classroom Management (100%)
+- Enrollments & Student Progression (100% - including new top-level `/enrollments` endpoints)
 - Docker Setup (Production-ready)
 
 ❌ **Missing Critical Features**
-- Enrollments & Student Progression (0%)
 - Fee & Billing (0%)
 - Payment Processing (0%)
 - Notifications (0%)
@@ -25,23 +25,23 @@
 
 ### 🎯 **Phase 1: Complete Foundation (1-2 weeks)**
 
-#### 1.1 Complete Enrollments Module (HIGH PRIORITY)
-**Why:** Required before students can be assigned to classrooms and before billing can work properly.
+#### 1.1 ✅ Enrollments Module (COMPLETED)
+**Status:** Completed with new top-level endpoints (February 2026)
 
-**Tasks:**
-- [ ] Implement `POST /classroom-offerings/:offeringId/enrollments` - Enroll student
-- [ ] Implement `PATCH /enrollments/:id/complete` - Complete/withdraw enrollment
-- [ ] Implement `GET /students/:studentId/enrollments/history` - Enrollment history
-- [ ] Implement `POST /students/:studentId/promote` - Promote student
-- [ ] Implement `POST /students/:studentId/retain` - Retain student
+**Implemented Endpoints:**
+- ✅ `POST /enrollments?schoolId={schoolId}` - Enroll student (preferred top-level endpoint)
+- ✅ `POST /enrollments/bulk?schoolId={schoolId}` - Bulk JSON enrollment
+- ✅ `POST /enrollments/import/csv?schoolId={schoolId}` - CSV bulk enrollment
+- ✅ `POST /classroom-offerings/:offeringId/enrollments` - Legacy enroll endpoint (still supported)
+- ✅ Enrollment status history with `startDate`/`endDate` tracking
+- ✅ Student resolution by `studentId` or `studentNo`/`regNo`
+- ✅ Offering auto-create/resolution by `displayName` + `academicYearId`
 
-**Files to Create/Update:**
-- `src/classrooms/enrollments.controller.ts` (already exists, needs implementation)
-- `src/classrooms/dto/create-enrollment.dto.ts`
-- `src/classrooms/dto/promote-student.dto.ts`
-- Update `src/classrooms/classrooms.service.ts` with enrollment logic
-
-**Estimated Time:** 3-5 days
+**Features:**
+- Supports multiple student identification methods (ID or number)
+- Enrollment status tracking across time (`active`, `transferred`, `withdrawn`, etc.)
+- CSV and JSON bulk import with per-row error handling
+- See [RESULTS_MGT.md](RESULTS_MGT.md) section 5.4-5.5 for detailed API documentation and examples
 
 ---
 

@@ -848,13 +848,11 @@
           }
         },
         "url": {
-          "raw": "{{base_url}}/classroom-offerings/{{offeringId}}/enrollments?schoolId={{schoolId_1}}",
+          "raw": "{{base_url}}/enrollments?schoolId={{schoolId_1}}",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "classroom-offerings",
-            "{{offeringId}}",
             "enrollments"
           ],
           "query": [
@@ -864,6 +862,7 @@
             }
           ]
         }
+        
       },
       "response": []
     },
@@ -973,13 +972,11 @@
           }
         },
         "url": {
-          "raw": "{{base_url}}/classroom-offerings/{{offeringId}}/enrollments/bulk?schoolId={{schoolId_1}}",
+          "raw": "{{base_url}}/enrollments/bulk?schoolId={{schoolId_1}}",
           "host": [
             "{{base_url}}"
           ],
           "path": [
-            "classroom-offerings",
-            "{{offeringId}}",
             "enrollments",
             "bulk"
           ],
