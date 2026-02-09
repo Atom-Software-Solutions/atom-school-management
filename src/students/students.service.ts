@@ -117,6 +117,23 @@ export class StudentsService {
     });
   }
 
+  async listUnenrolledStudents(schoolId: string, adminUserId: string) {
+    await this.assertIsAdminOfSchool(schoolId, adminUserId);
+    // Get students who have no enrollment records (or only deleted enrollments)
+    return this.prisma.student.findMany({
+      where: {
+        school_id: schoolId,
+        deleted_at: null,
+        studentEnrollments: {
+          none: {
+            deleted_at: null,
+          },
+        },
+      },
+      orderBy: { created_at: 'desc' },
+    });
+  }
+
   async create(
     schoolId: string,
     adminUserId: string,

@@ -85,6 +85,15 @@ export class StudentsController {
     return this.studentsService.listBySchool(schoolId, adminUserId);
   }
 
+  @Get('new')
+  listNew(@Query('schoolId') schoolId: string, @Request() req: AuthenticatedRequest) {
+    const adminUserId = (req as any).user?.id as string;
+    if (!schoolId || typeof schoolId !== 'string' || schoolId.trim() === '') {
+      throw new BadRequestException('Missing required query parameter: schoolId');
+    }
+    return this.studentsService.listUnenrolledStudents(schoolId, adminUserId);
+  }
+
   @Post()
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   create(
