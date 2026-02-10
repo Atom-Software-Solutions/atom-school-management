@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { AcademicsService } from './academics.service';
@@ -37,5 +37,25 @@ export class TermTemplatesController {
   ) {
     const adminUserId = req.user?.id as string;
     return this.academics.updateTermTemplate(id, adminUserId, dto);
+  }
+
+  @Get(':id')
+  get(
+    @Param('schoolId') schoolId: string,
+    @Param('id') id: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    const adminUserId = req.user?.id as string;
+    return this.academics.getTermTemplate(id, adminUserId);
+  }
+
+  @Delete(':id')
+  remove(
+    @Param('schoolId') schoolId: string,
+    @Param('id') id: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    const adminUserId = req.user?.id as string;
+    return this.academics.deleteTermTemplate(id, adminUserId);
   }
 }

@@ -161,6 +161,32 @@ export class AcademicsService {
     return (this.prisma as any).termTemplate.update({ where: { id }, data: { is_locked: true } });
   }
 
+  async getTermTemplate(id: string, adminUserId: string) {
+    const tpl = await (this.prisma as any).termTemplate.findUnique({ where: { id } });
+    if (!tpl) throw new NotFoundException('Term template not found');
+
+    await this.assertIsAdminOfSchool(tpl.school_id, adminUserId);
+    return tpl;
+  }
+
+  async deleteTermTemplate(id: string, adminUserId: string) {
+    const tpl = await (this.prisma as any).termTemplate.findUnique({ where: { id } });
+    if (!tpl) throw new NotFoundException('Term template not found');
+
+    await this.assertIsAdminOfSchool(tpl.school_id, adminUserId);
+
+    if (tpl.is_locked) {
+      throw new BadRequestException('Cannot delete a locked template');
+    }
+
+    const inUse = await (this.prisma as any).academicYear.findFirst({ where: { term_template_id: id }, select: { id: true } });
+    if (inUse) {
+      throw new BadRequestException('Cannot delete template in use by academic years');
+    }
+
+    return (this.prisma as any).termTemplate.delete({ where: { id } });
+  }
+
   // Years
   async listYears(schoolId: string, adminUserId: string) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
