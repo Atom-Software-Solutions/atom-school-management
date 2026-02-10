@@ -3,12 +3,20 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateAssessmentDto {
   @ApiProperty({
-    description: 'Term ID',
-    example: 'uuid-of-term',
+    description: 'Academic year ID',
+    example: 'uuid-of-academic-year',
   })
   @IsUUID()
   @IsNotEmpty()
-  termId: string;
+  yearId: string;
+
+  @ApiProperty({
+    description: 'Term name (as defined in the school term template)',
+    example: 'Term 1',
+  })
+  @IsString()
+  @IsNotEmpty()
+  termName: string;
 
   @ApiProperty({
     description: 'Subject ID',

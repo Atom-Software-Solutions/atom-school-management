@@ -223,11 +223,12 @@ export class ResultsService {
   // ASSESSMENT MANAGEMENT
   // ==========================================
 
-  async listAssessments(schoolId: string, adminUserId: string, termId?: string, subjectId?: string) {
+  async listAssessments(schoolId: string, adminUserId: string, yearId?: string, termName?: string, subjectId?: string) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     const where: any = { school_id: schoolId };
-    if (termId) where.term_id = termId;
+    if (yearId) where.academic_year_id = yearId;
+    if (termName) where.term_name = termName;
     if (subjectId) where.subject_id = subjectId;
 
     return (this.prisma as any).assessment.findMany({
@@ -248,15 +249,20 @@ export class ResultsService {
   async createAssessment(schoolId: string, adminUserId: string, data: CreateAssessmentDto) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
-    // Verify term exists and belongs to school
-    const term = await (this.prisma as any).term.findUnique({
-      where: { id: data.termId },
-      include: { academic_year: true },
+    // Verify academic year exists and belongs to school
+    const year = await (this.prisma as any).academicYear.findUnique({
+      where: { id: data.yearId },
     });
-    if (!term) throw new NotFoundException('Term not found');
-    if (term.academic_year.school_id !== schoolId) {
-      throw new ForbiddenException('Term does not belong to this school');
+    if (!year) throw new NotFoundException('Academic year not found');
+    if (year.school_id !== schoolId) {
+      throw new ForbiddenException('Academic year does not belong to this school');
     }
+
+    // Verify term exists for the academic year
+    const term = await (this.prisma as any).term.findFirst({
+      where: { academic_year_id: data.yearId, name: data.termName },
+    });
+    if (!term) throw new NotFoundException('Term not found for given year and name');
 
     // Verify subject exists and belongs to school
     const subject = await (this.prisma as any).subject.findUnique({
@@ -267,10 +273,11 @@ export class ResultsService {
       throw new ForbiddenException('Subject does not belong to this school');
     }
 
-    // Check for duplicate assessment (same term, subject, name, and type)
+    // Check for duplicate assessment (same year, term, subject, name, and type)
     const existing = await (this.prisma as any).assessment.findFirst({
       where: {
-        term_id: data.termId,
+        academic_year_id: data.yearId,
+        term_name: data.termName,
         subject_id: data.subjectId,
         name: data.name.trim(),
         type: data.type,
@@ -279,11 +286,12 @@ export class ResultsService {
     if (existing) {
       throw new BadRequestException('An assessment with this name and type already exists for this subject and term');
     }
-
     return (this.prisma as any).assessment.create({
       data: {
         school_id: schoolId,
-        term_id: data.termId,
+        academic_year_id: data.yearId,
+        term_name: data.termName,
+        term_id: term.id,
         subject_id: data.subjectId,
         name: data.name.trim(),
         type: data.type,
@@ -334,7 +342,8 @@ export class ResultsService {
       const checkType = data.type !== undefined ? data.type : assessment.type;
       const existing = await (this.prisma as any).assessment.findFirst({
         where: {
-          term_id: assessment.term_id,
+          academic_year_id: assessment.academic_year_id,
+          term_name: assessment.term_name,
           subject_id: assessment.subject_id,
           name: checkName,
           type: checkType,
@@ -664,7 +673,7 @@ export class ResultsService {
   // STUDENT ACADEMIC HISTORY
   // ==========================================
 
-  async getStudentGrades(studentId: string, adminUserId: string, termId?: string, subjectId?: string) {
+  async getStudentGrades(studentId: string, adminUserId: string, yearId?: string, termName?: string, subjectId?: string) {
     const student = await this.prisma.student.findUnique({
       where: { id: studentId },
     });
@@ -672,21 +681,21 @@ export class ResultsService {
 
     await this.assertIsAdminOfSchool(student.school_id, adminUserId);
 
-    return this.getStudentGradesInternal(student, termId, subjectId);
+    return this.getStudentGradesInternal(student, yearId, termName, subjectId);
   }
 
-  async getStudentGradesForViewer(studentId: string, user: AuthenticatedUser, termId?: string, subjectId?: string) {
+  async getStudentGradesForViewer(studentId: string, user: AuthenticatedUser, yearId?: string, termName?: string, subjectId?: string) {
     const student = await this.assertCanViewStudent(studentId, user);
-    return this.getStudentGradesInternal(student, termId, subjectId);
+    return this.getStudentGradesInternal(student, yearId, termName, subjectId);
   }
 
-  private async getStudentGradesInternal(student: any, termId?: string, subjectId?: string) {
+  private async getStudentGradesInternal(student: any, yearId?: string, termName?: string, subjectId?: string) {
     const where: any = {
       student_id: student.id,
       school_id: student.school_id,
     };
-    if (termId) {
-      where.assessment = { term_id: termId };
+    if (yearId && termName) {
+      where.assessment = { academic_year_id: yearId, term_name: termName };
     }
     if (subjectId) {
       where.subject_id = subjectId;
@@ -711,7 +720,7 @@ export class ResultsService {
     });
   }
 
-  async getStudentAcademicSummary(studentId: string, adminUserId: string, termId: string) {
+  async getStudentAcademicSummary(studentId: string, adminUserId: string, yearId: string, termName: string) {
     const student = await this.prisma.student.findUnique({
       where: { id: studentId },
     });
@@ -719,31 +728,37 @@ export class ResultsService {
 
     await this.assertIsAdminOfSchool(student.school_id, adminUserId);
 
-    return this.getStudentAcademicSummaryInternal(student, termId);
+    return this.getStudentAcademicSummaryInternal(student, yearId, termName);
   }
 
-  async getStudentAcademicSummaryForViewer(studentId: string, user: AuthenticatedUser, termId: string) {
+  async getStudentAcademicSummaryForViewer(studentId: string, user: AuthenticatedUser, yearId: string, termName: string) {
     const student = await this.assertCanViewStudent(studentId, user);
-    return this.getStudentAcademicSummaryInternal(student, termId);
+    return this.getStudentAcademicSummaryInternal(student, yearId, termName);
   }
 
-  private async getStudentAcademicSummaryInternal(student: any, termId: string) {
-    // Verify term exists
-    const term = await (this.prisma as any).term.findUnique({
-      where: { id: termId },
-      include: { academic_year: true },
+  private async getStudentAcademicSummaryInternal(student: any, yearId: string, termName: string) {
+    // Verify academic year exists
+    const year = await (this.prisma as any).academicYear.findUnique({
+      where: { id: yearId },
     });
-    if (!term) throw new NotFoundException('Term not found');
-    if (term.academic_year.school_id !== student.school_id) {
-      throw new ForbiddenException('Term does not belong to this school');
+    if (!year) throw new NotFoundException('Academic year not found');
+    if (year.school_id !== student.school_id) {
+      throw new ForbiddenException('Academic year does not belong to this school');
     }
 
-    // Get all grades for this student in this term
+    // Verify term exists for the academic year
+    const term = await (this.prisma as any).term.findFirst({
+      where: { academic_year_id: yearId, name: termName },
+    });
+    if (!term) throw new NotFoundException('Term not found for given year and name');
+
+    // Get all grades for this student in this term (using assessment academic_year_id + term_name)
     const grades = await (this.prisma as any).grade.findMany({
       where: {
         student_id: student.id,
         assessment: {
-          term_id: termId,
+          academic_year_id: yearId,
+          term_name: termName,
         },
       },
       include: {
@@ -834,21 +849,22 @@ export class ResultsService {
       throw new ForbiddenException('Student does not belong to this school');
     }
 
-    // Verify academic year and term
-    const term = await (this.prisma as any).term.findUnique({
-      where: { id: data.termId },
-      include: { academic_year: true },
+    // Verify academic year and resolve term by name
+    const year = await (this.prisma as any).academicYear.findUnique({
+      where: { id: data.academicYearId },
     });
-    if (!term) throw new NotFoundException('Term not found');
-    if (term.academic_year.id !== data.academicYearId) {
-      throw new BadRequestException('Term does not belong to the specified academic year');
-    }
-    if (term.academic_year.school_id !== schoolId) {
+    if (!year) throw new NotFoundException('Academic year not found');
+    if (year.school_id !== schoolId) {
       throw new ForbiddenException('Academic year does not belong to this school');
     }
 
+    const term = await (this.prisma as any).term.findFirst({
+      where: { academic_year_id: data.academicYearId, name: data.termName },
+    });
+    if (!term) throw new NotFoundException('Term not found for given year and name');
+
     // Get academic summary
-    const summary = await this.getStudentAcademicSummary(data.studentId, adminUserId, data.termId);
+    const summary = await this.getStudentAcademicSummary(data.studentId, adminUserId, data.academicYearId, data.termName);
 
     // Calculate rank if requested
     let rank: number | null = null;
@@ -885,7 +901,7 @@ export class ResultsService {
         // Calculate averages for all classmates
         const classAverages = await Promise.all(
           classmates.map(async (enr: any) => {
-            const classSummary = await this.getStudentAcademicSummary(enr.student_id, adminUserId, data.termId);
+            const classSummary = await this.getStudentAcademicSummary(enr.student_id, adminUserId, data.academicYearId, data.termName);
             return {
               studentId: enr.student_id,
               average: classSummary.overallAverage,
@@ -908,7 +924,7 @@ export class ResultsService {
         school_id: schoolId,
         student_id: data.studentId,
         academic_year_id: data.academicYearId,
-        term_id: data.termId,
+        term_id: term.id,
         overall_average: summary.overallAverage,
         total_subjects: summary.totalSubjects,
         rank: rank,
@@ -944,8 +960,14 @@ export class ResultsService {
 
     await this.assertIsAdminOfSchool(reportCard.school_id, adminUserId);
 
+    // Resolve term name from term_id for backwards compatibility
+    const term = await (this.prisma as any).term.findUnique({
+      where: { id: reportCard.term_id },
+    });
+    const termName = term?.name || 'Unknown';
+
     // Get the academic summary
-    const summary = await this.getStudentAcademicSummary(reportCard.student_id, adminUserId, reportCard.term_id);
+    const summary = await this.getStudentAcademicSummary(reportCard.student_id, adminUserId, reportCard.academic_year_id, termName);
 
     return {
       ...reportCard,

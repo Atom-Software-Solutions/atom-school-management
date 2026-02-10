@@ -859,7 +859,8 @@ Create at least one assessment per subject in the chosen term.
 
 ```json
 {
-  "termId": "<termId>",
+  "yearId": "<yearId>",
+  "termName": "Term 1",
   "subjectId": "<subjectIdMath>",
   "name": "Mid-Term Exam",
   "type": "exam",
@@ -1033,13 +1034,13 @@ Once grades are entered, you can fetch detailed results and summaries.
 
 You can also filter by `subjectId`:
 
-- `GET /students/{studentId}/results?termId={termId}&subjectId={subjectIdMath}`
+- `GET /students/{studentId}/results?yearId={yearId}&termName={termName}&subjectId={subjectIdMath}`
 
 ### 9.2 Academic summary for a term
 
 **Endpoint**
 
-- `GET /students/{studentId}/results/summary?termId={termId}`
+- `GET /students/{studentId}/results/summary?yearId={yearId}&termName={termName}`
 
 **Headers**
 
@@ -1106,7 +1107,7 @@ Use this to confirm averages before generating report cards.
 {
   "studentId": "<studentId1>",
   "academicYearId": "<yearId>",
-  "termId": "<termId>",
+  "termName": "Term 1",
   "includeRank": true,
   "autoPublish": false
 }

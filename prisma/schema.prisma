@@ -261,24 +261,27 @@ model Subject {
 }
 
 model Assessment {
-  id              String    @id @default(uuid())
-  school_id       String
-  term_id         String // Reference to Term (academic term)
-  subject_id      String
-  name            String // e.g., "Mid-Term Exam", "Assignment 1"
-  type            String // "exam", "test", "assignment", "project", "quiz"
-  max_score       Decimal   @db.Decimal(5, 2) // Maximum possible score
-  weight          Decimal   @db.Decimal(5, 2) // Weight for grade calculation (e.g., 0.3 for 30%)
-  assessment_date DateTime?
-  due_date        DateTime?
-  is_published    Boolean   @default(false) // Whether results are published to students/parents
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
-  subject         Subject   @relation(fields: [subject_id], references: [id], onDelete: Restrict)
-  grades          Grade[]
+  id               String    @id @default(uuid())
+  school_id        String
+  academic_year_id String    // Reference to AcademicYear
+  term_name        String    // Term name (e.g., "Term 1", "Term 2")
+  term_id          String?   // Deprecated: Reference to Term (kept for backwards compatibility)
+  subject_id       String
+  name             String    // e.g., "Mid-Term Exam", "Assignment 1"
+  type             String    // "exam", "test", "assignment", "project", "quiz"
+  max_score        Decimal   @db.Decimal(5, 2) // Maximum possible score
+  weight           Decimal   @db.Decimal(5, 2) // Weight for grade calculation (e.g., 0.3 for 30%)
+  assessment_date  DateTime?
+  due_date         DateTime?
+  is_published     Boolean   @default(false) // Whether results are published to students/parents
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+  subject          Subject   @relation(fields: [subject_id], references: [id], onDelete: Restrict)
+  grades           Grade[]
 
   @@index([school_id])
-  @@index([term_id])
+  @@index([academic_year_id])
+  @@index([term_name])
   @@index([subject_id])
   @@index([is_published])
   @@schema("results_mgt")
