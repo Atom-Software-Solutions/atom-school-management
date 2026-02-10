@@ -569,41 +569,22 @@ For report card ranking to work, students must be enrolled in a classroom offeri
 }
 ```
 
-### 5.2 Create a classroom offering for the academic year
 
-**Endpoint**
+### 5.2 Classroom Offerings (Deprecated)
 
-- `POST /years/{yearId}/classroom-offerings`
+**Note:** As of February 2026, classroom offerings have been removed from the active API. Enrollments now operate **directly on classroom definitions** paired with academic years.
 
-**Headers**
+The concept of a "section" or "stream" (e.g. "Primary 7 A" vs "Primary 7 B") within a definition is now managed at the **definition level** or via custom metadata on the definition, not as a separate offering entity.
 
-- `Authorization: Bearer <ACCESS_TOKEN>`
+**For enrollment purposes:**
+- Use `classroomDefinitionId` and `yearId` together to identify where a student enrolls.
+- Create multiple `ClassroomDefinition` instances if you need distinct classes (e.g. "Primary 7 A" and "Primary 7 B" as separate definitions, both at the "Primary 7" level).
 
-**Request body**
-
-```json
-{
-  "classroomDefinitionId": "<classroomDefinitionId>",
-  "displayName": "Primary 7 A"
-}
-```
-
-**Response (201)** – important field
-
-```json
-{
-  "id": "<offeringId>",
-  "academic_year_id": "<yearId>",
-  "classroom_definition_id": "<classroomDefinitionId>",
-  "display_name": "Primary 7 A"
-}
-```
-
-Record `offeringId`.
+See section 5.4 for the new enrollment endpoint design.
 
 ### 5.3 Create students
 
-Students can be created individually or via bulk CSV import (see section 4.3).
+Students can be created individually or via bulk CSV import (see section 4.3). When creating students you may supply either `studentId` (DB id) or identifiers `studentNo` / `regNo` in later enrollment requests.
 
 **Endpoint**
 
@@ -641,17 +622,19 @@ Students can be created individually or via bulk CSV import (see section 4.3).
 
 Repeat for at least one more student (e.g. `STU002`) to test ranking.
 
-### 5.4 Enroll students into the classroom offering
+### 5.4 Enroll students into a classroom definition
+
+Enrollments now operate **directly on classroom definitions** (offerings layer has been removed). Use the classroom definition ID along with the academic year ID.
 
 **Endpoint**
 
-- `POST /classroom-offerings/{offeringId}/enrollments?schoolId={schoolId}`
+- `POST /years/{yearId}/classroom-definitions/{definitionId}/enrollments?schoolId={schoolId}`
 
 **Headers**
 
 - `Authorization: Bearer <ACCESS_TOKEN>`
 
-**Request body (for each student)**
+**Request body**
 
 ```json
 {
@@ -660,27 +643,90 @@ Repeat for at least one more student (e.g. `STU002`) to test ranking.
 }
 ```
 
+**Behavior and fields:**
+- `startDate` defaults to today if not provided.
+- Enrollments automatically record `status: 'active'`.
+- Each student can have at most one **active** enrollment per academic year.
+- Students cannot return to the same classroom definition in a later academic year if they have already `completed` it.
+
 **Response (201)** – example
 
 ```json
 {
   "id": "<enrollmentId>",
   "student_id": "<studentId1>",
-  "classroom_offering_id": "<offeringId>",
+  "classroom_definition_id": "<classroomDefinitionId>",
   "academic_year_id": "<yearId>",
-  "status": "active"
+  "status": "active",
+  "start_date": "2025-02-01T00:00:00.000Z",
+  "end_date": null
 }
 ```
 
-Repeat for each student you created.
-
-### 5.5 Bulk enroll students into the classroom offering (Optional)
-
-For convenience when enrolling multiple students at once, use the bulk enrollment endpoint.
+### 5.4.1 Update enrollment status
 
 **Endpoint**
 
-- `POST /classroom-offerings/{offeringId}/enrollments/bulk?schoolId={schoolId}`
+- `PATCH /enrollments/{enrollmentId}/status?schoolId={schoolId}`
+
+**Request body**
+
+```json
+{
+  "status": "pending" | "active" | "completed" | "withdrawn"
+}
+```
+
+**Response (200)** – example
+
+```json
+{
+  "id": "<enrollmentId>",
+  "status": "completed"
+}
+```
+
+### 5.4.2 Complete or withdraw an enrollment
+
+**Endpoint**
+
+- `PATCH /enrollments/{enrollmentId}/complete?schoolId={schoolId}`
+
+**Request body**
+
+```json
+{
+  "endDate": "2025-11-30T23:59:59.999Z",
+  "status": "completed" | "withdrawn"
+}
+```
+
+**Response (200)** – example
+
+```json
+{
+  "id": "<enrollmentId>",
+  "status": "completed",
+  "end_date": "2025-11-30T23:59:59.999Z"
+}
+```
+
+### 5.4.3 Delete an enrollment
+
+**Endpoint**
+
+- `DELETE /enrollments/{enrollmentId}?schoolId={schoolId}&reason={reason}`
+
+**Query Parameters:**
+- `reason` (optional): Brief explanation for deletion
+
+**Response (200)** – enrollment marked as deleted and withdrawn
+
+### 5.5 Bulk enroll students (JSON)
+
+**Endpoint**
+
+- `POST /years/{yearId}/classroom-definitions/{definitionId}/enrollments/bulk?schoolId={schoolId}`
 
 **Headers**
 
@@ -691,14 +737,9 @@ For convenience when enrolling multiple students at once, use the bulk enrollmen
 ```json
 {
   "enrollments": [
-    {
-      "studentId": "<studentId1>",
-      "startDate": "2025-02-01T00:00:00.000Z"
-    },
-    {
-      "studentId": "<studentId2>",
-      "startDate": "2025-02-01T00:00:00.000Z"
-    }
+    { "studentId": "<studentId1>", "startDate": "2025-02-01T00:00:00.000Z" },
+    { "studentId": "<studentId2>", "startDate": "2025-02-01T00:00:00.000Z" },
+    { "studentId": "<studentId3>" }
   ]
 }
 ```
@@ -707,29 +748,46 @@ For convenience when enrolling multiple students at once, use the bulk enrollmen
 
 ```json
 {
-  "created": 2,
+  "created": 3,
   "failed": 0,
   "enrollments": [
     {
       "id": "<enrollmentId1>",
       "student_id": "<studentId1>",
-      "classroom_offering_id": "<offeringId>",
+      "classroom_definition_id": "<classroomDefinitionId>",
       "academic_year_id": "<yearId>",
-      "status": "active"
+      "status": "active",
+      "start_date": "2025-02-01T00:00:00.000Z",
+      "end_date": null
     },
     {
       "id": "<enrollmentId2>",
       "student_id": "<studentId2>",
-      "classroom_offering_id": "<offeringId>",
+      "classroom_definition_id": "<classroomDefinitionId>",
       "academic_year_id": "<yearId>",
-      "status": "active"
+      "status": "active",
+      "start_date": "2025-02-01T00:00:00.000Z",
+      "end_date": null
+    },
+    {
+      "id": "<enrollmentId3>",
+      "student_id": "<studentId3>",
+      "classroom_definition_id": "<classroomDefinitionId>",
+      "academic_year_id": "<yearId>",
+      "status": "active",
+      "start_date": "2025-02-09T00:00:00.000Z",
+      "end_date": null
     }
   ],
   "errors": []
 }
 ```
 
-If some enrollments fail (e.g., student already enrolled), the response will include both successful enrollments and error details.
+**Behavior:**
+- Non-blocking: Individual student failures don't stop the bulk import.
+- Each successful creation creates one active enrollment.
+- If a student already has an active enrollment in the same academic year, that row will fail with an error.
+- `startDate` defaults to today if omitted for a particular enrollment.
 
 ---
 
@@ -1245,20 +1303,21 @@ Use this as a high-level checklist:
 4. [ ] Create academic year (`POST /schools/{schoolId}/years`) and record `yearId`
 5. [ ] List terms (`GET /years/{yearId}/terms`) and choose `termId`
 6. [ ] Create classroom definition (`POST /schools/{schoolId}/classroom-definitions`) and record `classroomDefinitionId`
-7. [ ] Create classroom offering (`POST /years/{yearId}/classroom-offerings`) and record `offeringId`
-8. [ ] **[OPTIONAL]** Download CSV template (`GET /students/import/csv/template`)
-9. [ ] **[OPTIONAL]** Validate CSV file (`POST /students/import/csv/validate?schoolId={schoolId}`)
-10. [ ] **[OPTIONAL]** Import students via CSV (`POST /students/import/csv?schoolId={schoolId}`) OR create manually via `POST /students?schoolId={schoolId}` and record their `studentId`s
-11. [ ] Enroll students into offering (`POST /classroom-offerings/{offeringId}/enrollments?schoolId={schoolId}`)
-12. [ ] Create subjects (`POST /schools/{schoolId}/subjects`) and record `subjectId`s
-13. [ ] Create assessments for each subject + term (`POST /schools/{schoolId}/assessments`) and record `assessmentId`s
-14. [ ] Enter grades (`POST /schools/{schoolId}/grades/bulk` or `/grades`)
-15. [ ] Verify raw grades (`GET /students/{studentId}/results?termId={termId}`)
-16. [ ] Verify academic summary (`GET /students/{studentId}/results/summary?termId={termId}`)
-17. [ ] Generate report card (`POST /schools/{schoolId}/report-cards`)
-18. [ ] View report card and summary (`GET /schools/{schoolId}/report-cards/{reportCardId}`)
-19. [ ] Publish report card (`PATCH /schools/{schoolId}/report-cards/{reportCardId}/publish`)
-20. [ ] List student's report cards (`GET /students/{studentId}/report-cards`)
+7. [ ] **[OPTIONAL]** Download CSV template (`GET /students/import/csv/template`)
+8. [ ] **[OPTIONAL]** Validate CSV file (`POST /students/import/csv/validate?schoolId={schoolId}`)
+9. [ ] **[OPTIONAL]** Import students via CSV (`POST /students/import/csv?schoolId={schoolId}`) OR create manually via `POST /students?schoolId={schoolId}` and record their `studentId`s
+10. [ ] Enroll students into the classroom definition:
+    - **SINGLE** `POST /years/{yearId}/classroom-definitions/{definitionId}/enrollments?schoolId={schoolId}` — enroll one student
+    - **BULK** `POST /years/{yearId}/classroom-definitions/{definitionId}/enrollments/bulk?schoolId={schoolId}` — bulk enroll multiple students
+11. [ ] Create subjects (`POST /schools/{schoolId}/subjects`) and record `subjectId`s
+12. [ ] Create assessments for each subject + term (`POST /schools/{schoolId}/assessments`) and record `assessmentId`s
+13. [ ] Enter grades (`POST /schools/{schoolId}/grades/bulk` or `/grades`)
+14. [ ] Verify raw grades (`GET /students/{studentId}/results?termId={termId}`)
+15. [ ] Verify academic summary (`GET /students/{studentId}/results/summary?termId={termId}`)
+16. [ ] Generate report card (`POST /schools/{schoolId}/report-cards`)
+17. [ ] View report card and summary (`GET /schools/{schoolId}/report-cards/{reportCardId}`)
+18. [ ] Publish report card (`PATCH /schools/{schoolId}/report-cards/{reportCardId}/publish`)
+19. [ ] List student's report cards (`GET /students/{studentId}/report-cards`)
 
 If you complete all the above successfully, the results management flow—from SCHOOL_ADMIN and SCHOOL creation all the way to report card generation and publication—has been exercised end-to-end.
 

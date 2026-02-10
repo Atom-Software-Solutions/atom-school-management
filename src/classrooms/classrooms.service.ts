@@ -316,10 +316,10 @@ export class ClassroomsService {
         deleted_at: null,
         OR: [{ end_date: null }, { status: 'active' }],
       },
-      select: { student_id: true },
+      include: { student: { select: { student_no: true } } },
     });
     if (existingEnrollments.length > 0) {
-      const conflictingStudents = existingEnrollments.map(e => e.student_id);
+      const conflictingStudents = existingEnrollments.map(e => e.student.student_no);
       throw new BadRequestException(`Students already have active enrollments in this academic year: ${conflictingStudents.join(', ')}`);
     }
 
@@ -331,10 +331,10 @@ export class ClassroomsService {
         classroom_definition_id: definitionId,
         academic_year: { start_date: { lt: year.start_date } },
       },
-      select: { student_id: true },
+      include: { student: { select: { student_no: true } } },
     });
     if (priorSameClassEnrollments.length > 0) {
-      const conflictingStudents = priorSameClassEnrollments.map(e => e.student_id);
+      const conflictingStudents = priorSameClassEnrollments.map(e => e.student.student_no);
       throw new BadRequestException(`Students cannot return to the same classroom in a later academic year: ${conflictingStudents.join(', ')}`);
     }
 
