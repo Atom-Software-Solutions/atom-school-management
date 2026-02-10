@@ -124,7 +124,7 @@ export class StudentsService {
       where: {
         school_id: schoolId,
         deleted_at: null,
-        studentEnrollments: {
+        enrollments: {
           none: {
             deleted_at: null,
           },
