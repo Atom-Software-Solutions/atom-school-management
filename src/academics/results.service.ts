@@ -197,6 +197,28 @@ export class ResultsService {
     }
   }
 
+  async deleteSubject(subjectId: string, adminUserId: string) {
+    const subject = await (this.prisma as any).subject.findUnique({
+      where: { id: subjectId },
+    });
+    if (!subject) throw new NotFoundException('Subject not found');
+
+    await this.assertIsAdminOfSchool(subject.school_id, adminUserId);
+
+    // Check if there are assessments for this subject
+    const assessmentCount = await (this.prisma as any).assessment.count({
+      where: { subject_id: subjectId },
+    });
+
+    if (assessmentCount > 0) {
+      throw new BadRequestException('Cannot delete subject with existing assessments');
+    }
+
+    return (this.prisma as any).subject.delete({
+      where: { id: subjectId },
+    });
+  }
+
   // ==========================================
   // ASSESSMENT MANAGEMENT
   // ==========================================

@@ -51,5 +51,12 @@ export class SubjectsController {
     }
     return this.resultsService.updateSubject(id, req.user.id, dto);
   }
-}
 
+  @Delete(':id')
+  delete(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
+    if (!req.user) {
+      throw new ForbiddenException('Authentication required');
+    }
+    return this.resultsService.deleteSubject(id, req.user.id);
+  }
+}
