@@ -13,8 +13,9 @@ This document describes the implementation of student results and academic repor
    - Unique constraint: school_id + name
 
 2. **Assessment** - Represents different types of assessments (exams, tests, assignments)
-   - Fields: id, school_id, term_id, subject_id, name, type, max_score, weight, assessment_date, due_date, is_published
+   - Fields: id, school_id, academic_year_id, term_name, subject_id, name, type, max_score, weight, assessment_date, due_date, is_published
    - Types: "exam", "test", "assignment", "project", "quiz"
+   - Note: yearId + termName are immutable after creation
 
 3. **Grade** - Represents student scores for assessments
    - Fields: id, school_id, student_id, assessment_id, subject_id, score, percentage, letter_grade, remarks, created_by
@@ -22,7 +23,7 @@ This document describes the implementation of student results and academic repor
    - Automatically calculates percentage and letter grade
 
 4. **ReportCard** - Generated report cards for students
-   - Fields: id, school_id, student_id, academic_year_id, term_id, overall_average, total_subjects, rank, total_students, remarks, status, generated_at, published_at, pdf_url
+   - Fields: id, school_id, student_id, academic_year_id, term_name, overall_average, total_subjects, rank, total_students, remarks, status, generated_at, published_at, pdf_url
    - Status: "draft", "published", "archived"
 
 ## API Endpoints

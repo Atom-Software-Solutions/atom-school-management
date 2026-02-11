@@ -876,12 +876,15 @@ Create at least one assessment per subject in the chosen term.
 {
   "id": "<assessmentIdMathMid>",
   "school_id": "<schoolId>",
-  "term_id": "<termId>",
+  "academic_year_id": "<yearId>",
+  "term_name": "Term 1",
   "subject_id": "<subjectIdMath>",
   "name": "Mid-Term Exam",
   "type": "exam",
   "max_score": "100.00",
-  "weight": "0.40"
+  "weight": "0.40",
+  "assessment_date": "2025-05-01T09:00:00.000Z",
+  "is_published": false
 }
 ```
 
@@ -891,11 +894,40 @@ Repeat for other combinations you want (e.g. English Mid-Term with `weight: 0.4`
 
 **Endpoint**
 
-- `GET /schools/{schoolId}/assessments?termId={termId}`
+- `GET /schools/{schoolId}/assessments?yearId={yearId}&termName={termName}&subjectId={subjectId}`
 
 **Headers**
 
 - `Authorization: Bearer <ACCESS_TOKEN>`
+
+**Query Parameters (all optional)**
+- `yearId`: Filter by academic year ID
+- `termName`: Filter by term name (should be paired with `yearId` for best results)
+- `subjectId`: Filter by subject ID
+
+**Response (200)** – example
+
+```json
+[
+  {
+    "id": "<assessmentIdMathMid>",
+    "school_id": "<schoolId>",
+    "academic_year_id": "<yearId>",
+    "term_name": "Term 1",
+    "subject_id": "<subjectIdMath>",
+    "name": "Mid-Term Exam",
+    "type": "exam",
+    "max_score": "100.00",
+    "weight": "0.40",
+    "assessment_date": "2025-05-01T09:00:00.000Z",
+    "subject": {
+      "id": "<subjectIdMath>",
+      "name": "Mathematics",
+      "code": "MATH"
+    }
+  }
+]
+```
 
 Use this to confirm `assessmentId` values.
 
@@ -1197,7 +1229,7 @@ If you did **not** set `autoPublish: true` when generating:
   {
     "id": "<reportCardId>",
     "academic_year_id": "<yearId>",
-    "term_id": "<termId>",
+    "term_name": "Term 1",
     "overall_average": "88.75",
     "status": "published"
   }

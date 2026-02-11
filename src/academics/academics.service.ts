@@ -233,7 +233,7 @@ export class AcademicsService {
     // Note: Overlapping academic years are allowed in rare cases (e.g., transition periods, 
     // special programs, or administrative needs). No validation is enforced to prevent overlaps.
 
-    // Create year and instantiate terms from template.structure
+    // Create year. We no longer create per-year Term records; term names come from the template.
     const created = await this.prisma.$transaction(async (tx) => {
       const year = await (tx as any).academicYear.create({
         data: {
@@ -245,21 +245,12 @@ export class AcademicsService {
           term_template_id: data.termTemplateId,
         },
       });
-      const structure: Array<{ ordinal: number; name: string }> = tpl.structure as any;
-      await (tx as any).term.createMany({
-        data: structure.map((t) => ({
-          academic_year_id: year.id,
-          ordinal: t.ordinal,
-          name: t.name,
-          // Start/end dates must be updated later via PATCH; default to year bounds
-          start_date: data.startDate,
-          end_date: data.endDate,
-        })),
-      });
+
       // Lock template if not already locked (auto-lock on first use)
       if (!tpl.is_locked) {
         await (tx as any).termTemplate.update({ where: { id: tpl.id }, data: { is_locked: true } });
       }
+
       return year;
     });
     return created;
@@ -274,28 +265,27 @@ export class AcademicsService {
             id: true,
             name: true,
             is_locked: true,
+            structure: true,
           },
-        },
-        terms: {
-          orderBy: { ordinal: 'asc' },
         },
       },
     });
     if (!year) throw new NotFoundException('Academic year not found');
     
     await this.assertIsAdminOfSchool(year.school_id, adminUserId);
-    return year;
+    // Attach terms derived from the template structure for backward-compatible API shape
+    return {
+      ...year,
+      terms: (year as any).term_template?.structure || [],
+    };
   }
 
   async listTerms(yearId: string, adminUserId: string) {
-    const year = await (this.prisma as any).academicYear.findUnique({ where: { id: yearId } });
+    const year = await (this.prisma as any).academicYear.findUnique({ where: { id: yearId }, include: { term_template: { select: { structure: true } } } });
     if (!year) throw new NotFoundException('Academic year not found');
     
     await this.assertIsAdminOfSchool(year.school_id, adminUserId);
-    return (this.prisma as any).term.findMany({ 
-      where: { academic_year_id: yearId }, 
-      orderBy: { ordinal: 'asc' } 
-    });
+    return (year as any).term_template?.structure || [];
   }
 
   async updateYearStatus(yearId: string, adminUserId: string, status: 'planned' | 'active' | 'closed') {
