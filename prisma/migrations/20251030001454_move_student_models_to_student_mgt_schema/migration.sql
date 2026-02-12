@@ -10,22 +10,22 @@
 CREATE SCHEMA IF NOT EXISTS "student_mgt";
 
 -- DropForeignKey
-ALTER TABLE "user_mgt"."Student" DROP CONSTRAINT "Student_school_id_fkey";
+ALTER TABLE "user_mgt"."Student" DROP CONSTRAINT IF EXISTS "Student_school_id_fkey";
 
 -- DropForeignKey
-ALTER TABLE "user_mgt"."StudentGuardian" DROP CONSTRAINT "StudentGuardian_guardian_id_fkey";
+ALTER TABLE "user_mgt"."StudentGuardian" DROP CONSTRAINT IF EXISTS "StudentGuardian_guardian_id_fkey";
 
 -- DropForeignKey
-ALTER TABLE "user_mgt"."StudentGuardian" DROP CONSTRAINT "StudentGuardian_student_id_fkey";
+ALTER TABLE "user_mgt"."StudentGuardian" DROP CONSTRAINT IF EXISTS "StudentGuardian_student_id_fkey";
 
 -- DropTable
-DROP TABLE "user_mgt"."Guardian";
+DROP TABLE IF EXISTS "user_mgt"."Guardian";
 
 -- DropTable
-DROP TABLE "user_mgt"."Student";
+DROP TABLE IF EXISTS "user_mgt"."Student";
 
 -- DropTable
-DROP TABLE "user_mgt"."StudentGuardian";
+DROP TABLE IF EXISTS "user_mgt"."StudentGuardian";
 
 -- CreateTable
 CREATE TABLE "student_mgt"."Student" (

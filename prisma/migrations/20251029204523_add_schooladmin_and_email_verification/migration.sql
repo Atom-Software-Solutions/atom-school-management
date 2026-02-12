@@ -6,13 +6,13 @@
 
 */
 -- DropForeignKey
-ALTER TABLE "user_mgt"."User" DROP CONSTRAINT "User_school_id_fkey";
+ALTER TABLE "user_mgt"."User" DROP CONSTRAINT IF EXISTS "User_school_id_fkey";
 
 -- DropIndex
-DROP INDEX "user_mgt"."User_school_id_idx";
+DROP INDEX IF EXISTS "user_mgt"."User_school_id_idx";
 
 -- AlterTable
-ALTER TABLE "user_mgt"."User" DROP COLUMN "school_id",
+ALTER TABLE "user_mgt"."User" DROP COLUMN IF EXISTS "school_id",
 ADD COLUMN     "email_verified" BOOLEAN NOT NULL DEFAULT false,
 ADD COLUMN     "email_verified_at" TIMESTAMP(3),
 ADD COLUMN     "verification_token" TEXT;

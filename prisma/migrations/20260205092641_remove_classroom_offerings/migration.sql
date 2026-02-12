@@ -7,29 +7,29 @@
 
 */
 -- DropForeignKey
-ALTER TABLE "results_mgt"."ClassroomOffering" DROP CONSTRAINT "ClassroomOffering_academic_year_id_fkey";
+ALTER TABLE "results_mgt"."ClassroomOffering" DROP CONSTRAINT IF EXISTS "ClassroomOffering_academic_year_id_fkey";
 
 -- DropForeignKey
-ALTER TABLE "results_mgt"."ClassroomOffering" DROP CONSTRAINT "ClassroomOffering_classroom_definition_id_fkey";
+ALTER TABLE "results_mgt"."ClassroomOffering" DROP CONSTRAINT IF EXISTS "ClassroomOffering_classroom_definition_id_fkey";
 
 -- DropForeignKey
-ALTER TABLE "results_mgt"."StudentEnrollment" DROP CONSTRAINT "StudentEnrollment_classroom_offering_id_fkey";
+ALTER TABLE "results_mgt"."StudentEnrollment" DROP CONSTRAINT IF EXISTS "StudentEnrollment_classroom_offering_id_fkey";
 
 -- DropIndex
-DROP INDEX "results_mgt"."StudentEnrollment_classroom_offering_id_idx";
+DROP INDEX IF EXISTS "results_mgt"."StudentEnrollment_classroom_offering_id_idx";
 
 -- AlterTable
 ALTER TABLE "results_mgt"."ClassroomDefinition" ADD COLUMN     "ordinal" INTEGER;
 
 -- AlterTable
-ALTER TABLE "results_mgt"."StudentEnrollment" DROP COLUMN "classroom_offering_id",
+ALTER TABLE "results_mgt"."StudentEnrollment" DROP COLUMN IF EXISTS "classroom_offering_id",
 ADD COLUMN     "classroom_definition_id" TEXT NOT NULL,
 ADD COLUMN     "deleted_at" TIMESTAMP(3),
 ADD COLUMN     "reason" TEXT,
 ADD COLUMN     "type" TEXT;
 
 -- DropTable
-DROP TABLE "results_mgt"."ClassroomOffering";
+DROP TABLE IF EXISTS "results_mgt"."ClassroomOffering";
 
 -- CreateIndex
 CREATE INDEX "ClassroomDefinition_ordinal_idx" ON "results_mgt"."ClassroomDefinition"("ordinal");
