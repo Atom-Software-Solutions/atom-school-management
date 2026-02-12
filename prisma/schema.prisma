@@ -165,6 +165,7 @@ model AcademicYear {
 
   term_template TermTemplate        @relation(fields: [term_template_id], references: [id], onDelete: Restrict)
   enrollments   StudentEnrollment[]
+  assessments   Assessment[]
 
   @@unique([school_id, name])
   @@index([school_id])
@@ -190,6 +191,7 @@ model ClassroomDefinition {
   updated_at  DateTime @updatedAt
 
   enrollments StudentEnrollment[]
+  assessments Assessment[]
 
   @@unique([school_id, name])
   @@index([school_id])
