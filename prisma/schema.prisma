@@ -163,6 +163,8 @@ model TermTemplateItem {
   updated_at       DateTime @updatedAt
 
   term_template TermTemplate @relation(fields: [term_template_id], references: [id], onDelete: Cascade)
+  assessments    Assessment[]
+  report_cards   ReportCard[]
 
   @@unique([term_template_id, ordinal])
   @@index([term_template_id])
