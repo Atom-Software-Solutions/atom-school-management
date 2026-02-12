@@ -22,6 +22,8 @@ CREATE INDEX "Assessment_term_name_idx" ON "results_mgt"."Assessment"("term_name
 -- Update ReportCard: Replace term_id with term_name
 
 -- Backfill term_name from Term table before dropping term_id
+-- Ensure `term_name` column exists on ReportCard, then backfill from Term table before dropping term_id
+ALTER TABLE "results_mgt"."ReportCard" ADD COLUMN IF NOT EXISTS "term_name" TEXT;
 UPDATE "results_mgt"."ReportCard" rc
 SET "term_name" = COALESCE(t."name", '')
 FROM "results_mgt"."Term" t
