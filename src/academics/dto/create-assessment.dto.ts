@@ -27,6 +27,14 @@ export class CreateAssessmentDto {
   subjectId: string;
 
   @ApiProperty({
+    description: 'Classroom definition ID where this assessment applies',
+    example: 'uuid-of-classroom-definition',
+  })
+  @IsUUID()
+  @IsNotEmpty()
+  classroomDefinitionId: string;
+
+  @ApiProperty({
     description: 'Assessment name',
     example: 'Mid-Term Examination',
   })

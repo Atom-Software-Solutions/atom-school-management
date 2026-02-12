@@ -272,12 +272,22 @@ export class ResultsService {
       throw new ForbiddenException('Subject does not belong to this school');
     }
 
-    // Check for duplicate assessment (same year, term, subject, name, and type)
+    // Verify classroom definition exists and belongs to school
+    const classroomDef = await (this.prisma as any).classroomDefinition.findUnique({
+      where: { id: (data as any).classroomDefinitionId },
+    });
+    if (!classroomDef) throw new NotFoundException('Classroom definition not found');
+    if (classroomDef.school_id !== schoolId) {
+      throw new ForbiddenException('Classroom definition does not belong to this school');
+    }
+
+    // Check for duplicate assessment (same year, term, subject, classroom, name, and type)
     const existing = await (this.prisma as any).assessment.findFirst({
       where: {
         academic_year_id: data.yearId,
         term_name: data.termName,
         subject_id: data.subjectId,
+        classroom_definition_id: (data as any).classroomDefinitionId,
         name: data.name.trim(),
         type: data.type,
       },
@@ -291,6 +301,7 @@ export class ResultsService {
         academic_year_id: data.yearId,
         term_name: data.termName,
         subject_id: data.subjectId,
+        classroom_definition_id: (data as any).classroomDefinitionId,
         name: data.name.trim(),
         type: data.type,
         max_score: data.maxScore,
@@ -323,10 +334,13 @@ export class ResultsService {
 
     await this.assertIsAdminOfSchool(assessment.school_id, adminUserId);
 
-    // Prevent updating immutable fields (yearId, termName)
+    // Prevent updating immutable fields (yearId, termName, classroomDefinitionId)
     const dataAsAny = data as any;
     if (dataAsAny.yearId !== undefined || dataAsAny.termName !== undefined) {
       throw new BadRequestException('yearId and termName are immutable after creation. Delete and recreate the assessment if term context must change.');
+    }
+    if (dataAsAny.classroomDefinitionId !== undefined) {
+      throw new BadRequestException('classroomDefinitionId is immutable after creation. Delete and recreate the assessment to change classroom context.');
     }
 
     const updateData: any = {};
