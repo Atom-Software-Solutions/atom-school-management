@@ -11,12 +11,12 @@ export class CreateAssessmentDto {
   yearId: string;
 
   @ApiProperty({
-    description: 'Term name (as defined in the school term template)',
-    example: 'Term 1',
+    description: 'Term template item ID (the specific term instance)',
+    example: 'uuid-of-term-template-item',
   })
-  @IsString()
+  @IsUUID()
   @IsNotEmpty()
-  termName: string;
+  termTemplateItemId: string;
 
   @ApiProperty({
     description: 'Subject ID',

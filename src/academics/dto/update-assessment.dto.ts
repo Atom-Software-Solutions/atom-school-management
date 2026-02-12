@@ -6,7 +6,7 @@ import { IsString, IsOptional, IsNumber, IsDateString, IsBoolean, Min, Max } fro
 /**
  * DTO for updating an assessment.
  * 
- * **Important:** `yearId` and `termName` are immutable after creation and cannot be updated.
+ * **Important:** `yearId` and `termTemplateItemId` are immutable after creation and cannot be updated.
  * If you need to change the term context, delete the assessment and create a new one.
  */
 export class UpdateAssessmentDto {

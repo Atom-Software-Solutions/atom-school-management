@@ -14,25 +14,25 @@ export class StudentResultsController {
   getGrades(
     @Param('studentId') studentId: string,
     @Query('yearId') yearId: string,
-    @Query('termName') termName: string,
+    @Query('termItemId') termItemId: string,
     @Query('subjectId') subjectId: string,
     @Request() req: AuthenticatedRequest,
   ) {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
     }
-    return this.resultsService.getStudentGradesForViewer(studentId, req.user, yearId, termName, subjectId);
+    return this.resultsService.getStudentGradesForViewer(studentId, req.user, yearId, termItemId, subjectId);
   }
 
   @Get('summary')
-  getAcademicSummary(@Param('studentId') studentId: string, @Query('yearId') yearId: string, @Query('termName') termName: string, @Request() req: AuthenticatedRequest) {
+  getAcademicSummary(@Param('studentId') studentId: string, @Query('yearId') yearId: string, @Query('termItemId') termItemId: string, @Request() req: AuthenticatedRequest) {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
     }
-    if (!yearId || !termName) {
-      throw new BadRequestException('yearId and termName query parameters are required');
+    if (!yearId || !termItemId) {
+      throw new BadRequestException('yearId and termItemId query parameters are required');
     }
-    return this.resultsService.getStudentAcademicSummaryForViewer(studentId, req.user, yearId, termName);
+    return this.resultsService.getStudentAcademicSummaryForViewer(studentId, req.user, yearId, termItemId);
   }
 }
 

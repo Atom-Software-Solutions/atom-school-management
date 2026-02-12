@@ -87,13 +87,27 @@ export class AcademicsService {
     this.validateTermStructure(data.structure);
 
     try {
-      return await (this.prisma as any).termTemplate.create({
-        data: {
-          school_id: schoolId,
-          name: data.name.trim(),
-          structure: data.structure,
-        },
+      // Create template and persist term template items relationally
+      const created = await (this.prisma as any).$transaction(async (tx: any) => {
+        const tpl = await tx.termTemplate.create({
+          data: {
+            school_id: schoolId,
+            name: data.name.trim(),
+          },
+        });
+
+        // Insert term items
+        const items = data.structure.map((s) => ({ term_template_id: tpl.id, ordinal: s.ordinal, name: s.name.trim() }));
+        if (items.length > 0) {
+          await tx.termTemplateItem.createMany({ data: items });
+        }
+
+        // return template with items
+        return tx.termTemplate.findUnique({ where: { id: tpl.id }, include: { term_template_items: { orderBy: { ordinal: 'asc' } } } });
       });
+      // Map items into a `structure` shape for compatibility
+      const mapped = (created as any).term_template_items?.map((it: any) => ({ ordinal: it.ordinal, name: it.name })) || [];
+      return { ...created, structure: mapped };
     } catch (e: any) {
       this.handlePrismaUniqueError(e, 'name');
     }
@@ -125,13 +139,20 @@ export class AcademicsService {
     if (data.structure !== undefined) {
       this.validateTermStructure(data.structure);
 
-      // If template is locked, validate that existing terms are preserved
+      // Load existing items to validate against (locked templates must preserve ordinals)
+      const existingItems = await (this.prisma as any).termTemplateItem.findMany({ where: { term_template_id: tpl.id }, orderBy: { ordinal: 'asc' } });
+      const existingStructure: Array<{ ordinal: number; name: string }> = existingItems.map((it: any) => ({ ordinal: it.ordinal, name: it.name }));
       if (tpl.is_locked) {
-        const existingStructure: Array<{ ordinal: number; name: string }> = tpl.structure as any;
         this.validateLockedTemplateStructure(existingStructure, data.structure);
       }
 
-      updateData.structure = data.structure;
+      // We'll replace items in a transaction: delete existing items and create new ones
+      // do not write to `structure` JSON column; term items persisted relationally
+      const newItems = data.structure.map((s) => ({ term_template_id: tpl.id, ordinal: s.ordinal, name: s.name.trim() }));
+      await (this.prisma as any).$transaction(async (tx: any) => {
+        await tx.termTemplateItem.deleteMany({ where: { term_template_id: tpl.id } });
+        if (newItems.length > 0) await tx.termTemplateItem.createMany({ data: newItems });
+      });
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -139,10 +160,11 @@ export class AcademicsService {
     }
 
     try {
-      return await (this.prisma as any).termTemplate.update({
-        where: { id },
-        data: updateData,
-      });
+      await (this.prisma as any).termTemplate.update({ where: { id }, data: updateData });
+
+      const updated = await (this.prisma as any).termTemplate.findUnique({ where: { id }, include: { term_template_items: { orderBy: { ordinal: 'asc' } } } });
+      const mapped = (updated as any)?.term_template_items?.map((it: any) => ({ ordinal: it.ordinal, name: it.name })) || [];
+      return { ...updated, structure: mapped };
     } catch (e: any) {
       this.handlePrismaUniqueError(e, 'name');
     }
@@ -162,11 +184,12 @@ export class AcademicsService {
   }
 
   async getTermTemplate(id: string, adminUserId: string) {
-    const tpl = await (this.prisma as any).termTemplate.findUnique({ where: { id } });
+    const tpl = await (this.prisma as any).termTemplate.findUnique({ where: { id }, include: { term_template_items: { orderBy: { ordinal: 'asc' } } } });
     if (!tpl) throw new NotFoundException('Term template not found');
 
     await this.assertIsAdminOfSchool(tpl.school_id, adminUserId);
-    return tpl;
+    const mapped = (tpl as any).term_template_items?.map((it: any) => ({ ordinal: it.ordinal, name: it.name })) || [];
+    return { ...tpl, structure: mapped };
   }
 
   async deleteTermTemplate(id: string, adminUserId: string) {
@@ -261,11 +284,8 @@ export class AcademicsService {
       where: { id: yearId },
       include: {
         term_template: {
-          select: {
-            id: true,
-            name: true,
-            is_locked: true,
-            structure: true,
+          include: {
+            term_template_items: { orderBy: { ordinal: 'asc' } },
           },
         },
       },
@@ -273,19 +293,22 @@ export class AcademicsService {
     if (!year) throw new NotFoundException('Academic year not found');
     
     await this.assertIsAdminOfSchool(year.school_id, adminUserId);
-    // Attach terms derived from the template structure for backward-compatible API shape
+    // Attach terms derived from the template items for backward-compatible API shape
+    const items = (year as any).term_template?.term_template_items || [];
+    const mapped = items.map((it: any) => ({ ordinal: it.ordinal, name: it.name, startDate: it.start_date, endDate: it.end_date }));
     return {
       ...year,
-      terms: (year as any).term_template?.structure || [],
+      terms: mapped,
     };
   }
 
   async listTerms(yearId: string, adminUserId: string) {
-    const year = await (this.prisma as any).academicYear.findUnique({ where: { id: yearId }, include: { term_template: { select: { structure: true } } } });
+    const year = await (this.prisma as any).academicYear.findUnique({ where: { id: yearId }, include: { term_template: { include: { term_template_items: { orderBy: { ordinal: 'asc' } } } } } });
     if (!year) throw new NotFoundException('Academic year not found');
     
     await this.assertIsAdminOfSchool(year.school_id, adminUserId);
-    return (year as any).term_template?.structure || [];
+    const items = (year as any).term_template?.term_template_items || [];
+    return items.map((it: any) => ({ ordinal: it.ordinal, name: it.name, startDate: it.start_date, endDate: it.end_date }));
   }
 
   async updateYearStatus(yearId: string, adminUserId: string, status: 'planned' | 'active' | 'closed') {

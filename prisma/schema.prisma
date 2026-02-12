@@ -139,16 +139,34 @@ model TermTemplate {
   id         String   @id @default(uuid())
   school_id  String
   name       String
-  structure  Json
   is_locked  Boolean  @default(false)
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
   academic_years AcademicYear[]
+  term_template_items TermTemplateItem[]
 
   @@unique([school_id, name])
   @@index([school_id])
   @@index([is_locked])
+  @@schema("results_mgt")
+}
+
+model TermTemplateItem {
+  id               String   @id @default(uuid())
+  term_template_id String
+  ordinal          Int
+  name             String
+  start_date       DateTime?
+  end_date         DateTime?
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  term_template TermTemplate @relation(fields: [term_template_id], references: [id], onDelete: Cascade)
+
+  @@unique([term_template_id, ordinal])
+  @@index([term_template_id])
+  @@index([name])
   @@schema("results_mgt")
 }
 
@@ -248,7 +266,7 @@ model Assessment {
   id                      String    @id @default(uuid())
   school_id               String
   academic_year_id        String // Reference to AcademicYear
-  term_name               String // Term name (e.g., "Term 1", "Term 2") – immutable after creation
+  term_template_item_id   String // Reference to TermTemplateItem (replaces term_name)
   classroom_definition_id String // Reference to ClassroomDefinition (required)
   subject_id              String
   name                    String // e.g., "Mid-Term Exam", "Assignment 1"
@@ -264,11 +282,12 @@ model Assessment {
   academic_year        AcademicYear        @relation(fields: [academic_year_id], references: [id], onDelete: Restrict)
   subject              Subject             @relation(fields: [subject_id], references: [id], onDelete: Restrict)
   classroom_definition ClassroomDefinition @relation(fields: [classroom_definition_id], references: [id], onDelete: Restrict)
+  term_template_item   TermTemplateItem    @relation(fields: [term_template_item_id], references: [id], onDelete: Restrict)
   grades               Grade[]
 
   @@index([school_id])
   @@index([academic_year_id])
-  @@index([term_name])
+  @@index([term_template_item_id])
   @@index([classroom_definition_id])
   @@index([subject_id])
   @@index([is_published])
@@ -304,7 +323,7 @@ model ReportCard {
   school_id        String
   student_id       String
   academic_year_id String // Reference to AcademicYear
-  term_name        String // Term display name (e.g., "Term 1", "Term 2")
+  term_template_item_id String // Reference to TermTemplateItem (replaces term_name)
   overall_average  Decimal?  @db.Decimal(5, 2)
   total_subjects   Int?
   rank             Int? // Class rank (optional)
@@ -316,10 +335,12 @@ model ReportCard {
   generated_by     String? // User ID who generated the report
   pdf_url          String? // URL to generated PDF file
 
+  term_template_item TermTemplateItem @relation(fields: [term_template_item_id], references: [id], onDelete: Restrict)
+
   @@index([school_id])
   @@index([student_id])
   @@index([academic_year_id])
-  @@index([term_name])
+  @@index([term_template_item_id])
   @@index([status])
   @@schema("results_mgt")
 }

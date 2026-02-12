@@ -223,12 +223,12 @@ export class ResultsService {
   // ASSESSMENT MANAGEMENT
   // ==========================================
 
-  async listAssessments(schoolId: string, adminUserId: string, yearId?: string, termName?: string, subjectId?: string) {
+  async listAssessments(schoolId: string, adminUserId: string, yearId?: string, termItemId?: string, subjectId?: string) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     const where: any = { school_id: schoolId };
     if (yearId) where.academic_year_id = yearId;
-    if (termName) where.term_name = termName;
+    if (termItemId) where.term_template_item_id = termItemId;
     if (subjectId) where.subject_id = subjectId;
 
     return (this.prisma as any).assessment.findMany({
@@ -258,10 +258,12 @@ export class ResultsService {
       throw new ForbiddenException('Academic year does not belong to this school');
     }
 
-    // Verify term name exists in the academic year's term template
-    const yearWithTemplate = await (this.prisma as any).academicYear.findUnique({ where: { id: data.yearId }, include: { term_template: { select: { structure: true } } } });
-    const termEntry = (yearWithTemplate as any)?.term_template?.structure?.find((t: any) => t.name === data.termName);
-    if (!termEntry) throw new NotFoundException('Term not found for given year and name');
+    // Verify term item exists and belongs to the academic year's term template
+    const termItem = await (this.prisma as any).termTemplateItem.findUnique({ where: { id: (data as any).termTemplateItemId } });
+    if (!termItem) throw new NotFoundException('Term template item not found');
+    if (termItem.term_template_id !== year.term_template_id) {
+      throw new BadRequestException('Term item does not belong to the academic year term template');
+    }
 
     // Verify subject exists and belongs to school
     const subject = await (this.prisma as any).subject.findUnique({
@@ -281,11 +283,11 @@ export class ResultsService {
       throw new ForbiddenException('Classroom definition does not belong to this school');
     }
 
-    // Check for duplicate assessment (same year, term, subject, classroom, name, and type)
+    // Check for duplicate assessment (same year, term item, subject, classroom, name, and type)
     const existing = await (this.prisma as any).assessment.findFirst({
       where: {
         academic_year_id: data.yearId,
-        term_name: data.termName,
+        term_template_item_id: (data as any).termTemplateItemId,
         subject_id: data.subjectId,
         classroom_definition_id: (data as any).classroomDefinitionId,
         name: data.name.trim(),
@@ -299,7 +301,7 @@ export class ResultsService {
       data: {
         school_id: schoolId,
         academic_year_id: data.yearId,
-        term_name: data.termName,
+        term_template_item_id: (data as any).termTemplateItemId,
         subject_id: data.subjectId,
         classroom_definition_id: (data as any).classroomDefinitionId,
         name: data.name.trim(),
@@ -334,10 +336,10 @@ export class ResultsService {
 
     await this.assertIsAdminOfSchool(assessment.school_id, adminUserId);
 
-    // Prevent updating immutable fields (yearId, termName, classroomDefinitionId)
+    // Prevent updating immutable fields (yearId, termTemplateItemId, classroomDefinitionId)
     const dataAsAny = data as any;
-    if (dataAsAny.yearId !== undefined || dataAsAny.termName !== undefined) {
-      throw new BadRequestException('yearId and termName are immutable after creation. Delete and recreate the assessment if term context must change.');
+    if (dataAsAny.yearId !== undefined || dataAsAny.termTemplateItemId !== undefined || dataAsAny.termItemId !== undefined) {
+      throw new BadRequestException('yearId and termTemplateItemId are immutable after creation. Delete and recreate the assessment if term context must change.');
     }
     if (dataAsAny.classroomDefinitionId !== undefined) {
       throw new BadRequestException('classroomDefinitionId is immutable after creation. Delete and recreate the assessment to change classroom context.');
@@ -362,13 +364,13 @@ export class ResultsService {
       const checkType = data.type !== undefined ? data.type : assessment.type;
       const existing = await (this.prisma as any).assessment.findFirst({
         where: {
-          academic_year_id: assessment.academic_year_id,
-          term_name: assessment.term_name,
-          subject_id: assessment.subject_id,
-          name: checkName,
-          type: checkType,
-          id: { not: assessmentId }, // Exclude current assessment
-        },
+            academic_year_id: assessment.academic_year_id,
+            term_template_item_id: assessment.term_template_item_id,
+            subject_id: assessment.subject_id,
+            name: checkName,
+            type: checkType,
+            id: { not: assessmentId }, // Exclude current assessment
+          },
       });
       if (existing) {
         throw new BadRequestException('An assessment with this name and type already exists for this subject and term');
@@ -693,7 +695,7 @@ export class ResultsService {
   // STUDENT ACADEMIC HISTORY
   // ==========================================
 
-  async getStudentGrades(studentId: string, adminUserId: string, yearId?: string, termName?: string, subjectId?: string) {
+  async getStudentGrades(studentId: string, adminUserId: string, yearId?: string, termItemId?: string, subjectId?: string) {
     const student = await this.prisma.student.findUnique({
       where: { id: studentId },
     });
@@ -701,21 +703,21 @@ export class ResultsService {
 
     await this.assertIsAdminOfSchool(student.school_id, adminUserId);
 
-    return this.getStudentGradesInternal(student, yearId, termName, subjectId);
+    return this.getStudentGradesInternal(student, yearId, termItemId, subjectId);
   }
 
-  async getStudentGradesForViewer(studentId: string, user: AuthenticatedUser, yearId?: string, termName?: string, subjectId?: string) {
+  async getStudentGradesForViewer(studentId: string, user: AuthenticatedUser, yearId?: string, termItemId?: string, subjectId?: string) {
     const student = await this.assertCanViewStudent(studentId, user);
-    return this.getStudentGradesInternal(student, yearId, termName, subjectId);
+    return this.getStudentGradesInternal(student, yearId, termItemId, subjectId);
   }
 
-  private async getStudentGradesInternal(student: any, yearId?: string, termName?: string, subjectId?: string) {
+  private async getStudentGradesInternal(student: any, yearId?: string, termItemId?: string, subjectId?: string) {
     const where: any = {
       student_id: student.id,
       school_id: student.school_id,
     };
-    if (yearId && termName) {
-      where.assessment = { academic_year_id: yearId, term_name: termName };
+    if (yearId && termItemId) {
+      where.assessment = { academic_year_id: yearId, term_template_item_id: termItemId };
     }
     if (subjectId) {
       where.subject_id = subjectId;
@@ -740,7 +742,7 @@ export class ResultsService {
     });
   }
 
-  async getStudentAcademicSummary(studentId: string, adminUserId: string, yearId: string, termName: string) {
+  async getStudentAcademicSummary(studentId: string, adminUserId: string, yearId: string, termItemId: string) {
     const student = await this.prisma.student.findUnique({
       where: { id: studentId },
     });
@@ -748,15 +750,15 @@ export class ResultsService {
 
     await this.assertIsAdminOfSchool(student.school_id, adminUserId);
 
-    return this.getStudentAcademicSummaryInternal(student, yearId, termName);
+    return this.getStudentAcademicSummaryInternal(student, yearId, termItemId);
   }
 
-  async getStudentAcademicSummaryForViewer(studentId: string, user: AuthenticatedUser, yearId: string, termName: string) {
+  async getStudentAcademicSummaryForViewer(studentId: string, user: AuthenticatedUser, yearId: string, termItemId: string) {
     const student = await this.assertCanViewStudent(studentId, user);
-    return this.getStudentAcademicSummaryInternal(student, yearId, termName);
+    return this.getStudentAcademicSummaryInternal(student, yearId, termItemId);
   }
 
-  private async getStudentAcademicSummaryInternal(student: any, yearId: string, termName: string) {
+  private async getStudentAcademicSummaryInternal(student: any, yearId: string, termItemId: string) {
     // Verify academic year exists
     const year = await (this.prisma as any).academicYear.findUnique({
       where: { id: yearId },
@@ -766,18 +768,20 @@ export class ResultsService {
       throw new ForbiddenException('Academic year does not belong to this school');
     }
 
-    // Verify term exists in the academic year's template
-    const yearWithTemplate = await (this.prisma as any).academicYear.findUnique({ where: { id: yearId }, include: { term_template: { select: { structure: true } } } });
-    const termEntry = (yearWithTemplate as any)?.term_template?.structure?.find((t: any) => t.name === termName);
-    if (!termEntry) throw new NotFoundException('Term not found for given year and name');
+    // Verify term item exists and belongs to the academic year's term template
+    const termItem = await (this.prisma as any).termTemplateItem.findUnique({ where: { id: termItemId } });
+    if (!termItem) throw new NotFoundException('Term not found for given year and id');
+    if (termItem.term_template_id !== year.term_template_id) {
+      throw new NotFoundException('Term item does not belong to the academic year template');
+    }
 
-    // Get all grades for this student in this term (using assessment academic_year_id + term_name)
+    // Get all grades for this student in this term (using assessment academic_year_id + term_template_item_id)
     const grades = await (this.prisma as any).grade.findMany({
       where: {
         student_id: student.id,
         assessment: {
           academic_year_id: yearId,
-          term_name: termName,
+          term_template_item_id: termItemId,
         },
       },
       include: {
@@ -877,12 +881,15 @@ export class ResultsService {
       throw new ForbiddenException('Academic year does not belong to this school');
     }
 
-    const yearWithTemplate2 = await (this.prisma as any).academicYear.findUnique({ where: { id: data.academicYearId }, include: { term_template: { select: { structure: true } } } });
-    const termEntry2 = (yearWithTemplate2 as any)?.term_template?.structure?.find((t: any) => t.name === data.termName);
-    if (!termEntry2) throw new NotFoundException('Term not found for given year and name');
+    // Verify term item exists and belongs to the year
+    const termItem2 = await (this.prisma as any).termTemplateItem.findUnique({ where: { id: data.termTemplateItemId } });
+    if (!termItem2) throw new NotFoundException('Term not found for given year and id');
+    if (termItem2.term_template_id !== year.term_template_id) {
+      throw new NotFoundException('Term item does not belong to the academic year template');
+    }
 
     // Get academic summary
-    const summary = await this.getStudentAcademicSummary(data.studentId, adminUserId, data.academicYearId, data.termName);
+    const summary = await this.getStudentAcademicSummary(data.studentId, adminUserId, data.academicYearId, data.termTemplateItemId);
 
     // Calculate rank if requested
     let rank: number | null = null;
@@ -919,7 +926,7 @@ export class ResultsService {
         // Calculate averages for all classmates
         const classAverages = await Promise.all(
           classmates.map(async (enr: any) => {
-            const classSummary = await this.getStudentAcademicSummary(enr.student_id, adminUserId, data.academicYearId, data.termName);
+            const classSummary = await this.getStudentAcademicSummary(enr.student_id, adminUserId, data.academicYearId, data.termTemplateItemId);
             return {
               studentId: enr.student_id,
               average: classSummary.overallAverage,
@@ -942,7 +949,7 @@ export class ResultsService {
         school_id: schoolId,
         student_id: data.studentId,
         academic_year_id: data.academicYearId,
-        term_name: data.termName,
+        term_template_item_id: data.termTemplateItemId,
         overall_average: summary.overallAverage,
         total_subjects: summary.totalSubjects,
         rank: rank,
@@ -978,8 +985,8 @@ export class ResultsService {
 
     await this.assertIsAdminOfSchool(reportCard.school_id, adminUserId);
 
-    // Get the academic summary using stored term_name
-    const summary = await this.getStudentAcademicSummary(reportCard.student_id, adminUserId, reportCard.academic_year_id, reportCard.term_name);
+    // Get the academic summary using stored term template item id
+    const summary = await this.getStudentAcademicSummary(reportCard.student_id, adminUserId, reportCard.academic_year_id, reportCard.term_template_item_id);
 
     return {
       ...reportCard,
