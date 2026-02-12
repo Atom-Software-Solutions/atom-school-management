@@ -842,8 +842,8 @@ export class ResultsService {
       },
       term: {
         id: null,
-        name: termEntry.name,
-        ordinal: termEntry.ordinal || null,
+        name: termItem.name,
+        ordinal: termItem.ordinal || null,
       },
       academicYear: {
         id: year.id,
