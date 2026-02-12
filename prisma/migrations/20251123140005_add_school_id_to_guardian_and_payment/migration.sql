@@ -10,7 +10,6 @@ ALTER TABLE "payment_mgt"."Payment" ADD COLUMN "school_id" TEXT;
 -- Add index on school_id for Payment
 CREATE INDEX "Payment_school_id_idx" ON "payment_mgt"."Payment"("school_id");
 
--- Backfill school_id for existing guardians from their associated students
 UPDATE "student_mgt"."Guardian" g
 SET school_id = (
   SELECT s.school_id 
@@ -21,12 +20,14 @@ SET school_id = (
 )
 WHERE g.school_id IS NULL;
 
--- Make school_id NOT NULL for Guardian (after backfill)
-ALTER TABLE "student_mgt"."Guardian" ALTER COLUMN "school_id" SET NOT NULL;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'student_mgt' AND table_name = 'Guardian' AND column_name = 'school_id'
+  ) THEN
+    EXECUTE 'ALTER TABLE "student_mgt"."Guardian" ALTER COLUMN "school_id" SET NOT NULL';
+  END IF;
+END$$;
 
--- Note: Payment school_id will need to be backfilled separately based on your business logic
--- For now, we'll leave it nullable. You may want to:
--- 1. Backfill from user_id -> SchoolAdmin relationship
--- 2. Or set it when creating payments
--- ALTER TABLE "payment_mgt"."Payment" ALTER COLUMN "school_id" SET NOT NULL;
 

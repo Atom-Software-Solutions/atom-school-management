@@ -15,14 +15,15 @@ export class AssessmentsController {
   @Get()
   list(
     @Param('schoolId') schoolId: string,
-    @Query('termId') termId: string,
+    @Query('yearId') yearId: string,
+    @Query('termItemId') termItemId: string,
     @Query('subjectId') subjectId: string,
     @Request() req: AuthenticatedRequest,
   ) {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
     }
-    return this.resultsService.listAssessments(schoolId, req.user.id, termId, subjectId);
+    return this.resultsService.listAssessments(schoolId, req.user.id, yearId, termItemId, subjectId);
   }
 
   @Post()

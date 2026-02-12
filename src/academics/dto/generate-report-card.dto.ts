@@ -1,4 +1,4 @@
-import { IsUUID, IsNotEmpty, IsOptional, IsBoolean } from 'class-validator';
+import { IsUUID, IsNotEmpty, IsOptional, IsBoolean, IsString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
@@ -20,12 +20,12 @@ export class GenerateReportCardDto {
   academicYearId: string;
 
   @ApiProperty({
-    description: 'Term ID',
-    example: 'uuid-of-term',
+    description: 'Term template item ID (the specific term instance)',
+    example: 'uuid-of-term-template-item',
   })
   @IsUUID()
   @IsNotEmpty()
-  termId: string;
+  termTemplateItemId: string;
 
   @ApiPropertyOptional({
     description: 'Include class rank',

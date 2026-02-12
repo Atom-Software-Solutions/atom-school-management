@@ -859,8 +859,10 @@ Create at least one assessment per subject in the chosen term.
 
 ```json
 {
-  "termId": "<termId>",
+  "yearId": "<yearId>",
+  "termTemplateItemId": "<termItemId>",
   "subjectId": "<subjectIdMath>",
+  "classroomDefinitionId": "<classroomDefinitionId>",
   "name": "Mid-Term Exam",
   "type": "exam",
   "maxScore": 100,
@@ -875,12 +877,16 @@ Create at least one assessment per subject in the chosen term.
 {
   "id": "<assessmentIdMathMid>",
   "school_id": "<schoolId>",
-  "term_id": "<termId>",
+  "academic_year_id": "<yearId>",
+  "term_template_item_id": "<termItemId>",
+  "classroom_definition_id": "<classroomDefinitionId>",
   "subject_id": "<subjectIdMath>",
   "name": "Mid-Term Exam",
   "type": "exam",
   "max_score": "100.00",
-  "weight": "0.40"
+  "weight": "0.40",
+  "assessment_date": "2025-05-01T09:00:00.000Z",
+  "is_published": false
 }
 ```
 
@@ -890,11 +896,40 @@ Repeat for other combinations you want (e.g. English Mid-Term with `weight: 0.4`
 
 **Endpoint**
 
-- `GET /schools/{schoolId}/assessments?termId={termId}`
+-- `GET /schools/{schoolId}/assessments?yearId={yearId}&termItemId={termItemId}&subjectId={subjectId}`
 
 **Headers**
 
 - `Authorization: Bearer <ACCESS_TOKEN>`
+
+**Query Parameters (all optional)**
+- `yearId`: Filter by academic year ID
+- `termItemId`: Filter by term template item id (should be paired with `yearId` for best results)
+- `subjectId`: Filter by subject ID
+
+**Response (200)** – example
+
+```json
+[
+  {
+    "id": "<assessmentIdMathMid>",
+    "school_id": "<schoolId>",
+    "academic_year_id": "<yearId>",
+    "term_template_item_id": "<termItemId>",
+    "subject_id": "<subjectIdMath>",
+    "name": "Mid-Term Exam",
+    "type": "exam",
+    "max_score": "100.00",
+    "weight": "0.40",
+    "assessment_date": "2025-05-01T09:00:00.000Z",
+    "subject": {
+      "id": "<subjectIdMath>",
+      "name": "Mathematics",
+      "code": "MATH"
+    }
+  }
+]
+```
 
 Use this to confirm `assessmentId` values.
 
@@ -1033,13 +1068,13 @@ Once grades are entered, you can fetch detailed results and summaries.
 
 You can also filter by `subjectId`:
 
-- `GET /students/{studentId}/results?termId={termId}&subjectId={subjectIdMath}`
+- `GET /students/{studentId}/results?yearId={yearId}&termItemId={termItemId}&subjectId={subjectIdMath}`
 
 ### 9.2 Academic summary for a term
 
 **Endpoint**
 
-- `GET /students/{studentId}/results/summary?termId={termId}`
+- `GET /students/{studentId}/results/summary?yearId={yearId}&termItemId={termItemId}`
 
 **Headers**
 
@@ -1106,7 +1141,7 @@ Use this to confirm averages before generating report cards.
 {
   "studentId": "<studentId1>",
   "academicYearId": "<yearId>",
-  "termId": "<termId>",
+  "termTemplateItemId": "<termItemId>",
   "includeRank": true,
   "autoPublish": false
 }
@@ -1196,7 +1231,7 @@ If you did **not** set `autoPublish: true` when generating:
   {
     "id": "<reportCardId>",
     "academic_year_id": "<yearId>",
-    "term_id": "<termId>",
+    "term_template_item_id": "<termItemId>",
     "overall_average": "88.75",
     "status": "published"
   }

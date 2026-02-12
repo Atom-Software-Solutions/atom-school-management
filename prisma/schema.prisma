@@ -139,16 +139,36 @@ model TermTemplate {
   id         String   @id @default(uuid())
   school_id  String
   name       String
-  structure  Json
   is_locked  Boolean  @default(false)
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
   academic_years AcademicYear[]
+  term_template_items TermTemplateItem[]
 
   @@unique([school_id, name])
   @@index([school_id])
   @@index([is_locked])
+  @@schema("results_mgt")
+}
+
+model TermTemplateItem {
+  id               String   @id @default(uuid())
+  term_template_id String
+  ordinal          Int
+  name             String
+  start_date       DateTime?
+  end_date         DateTime?
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  term_template TermTemplate @relation(fields: [term_template_id], references: [id], onDelete: Cascade)
+  assessments    Assessment[]
+  report_cards   ReportCard[]
+
+  @@unique([term_template_id, ordinal])
+  @@index([term_template_id])
+  @@index([name])
   @@schema("results_mgt")
 }
 
@@ -164,8 +184,8 @@ model AcademicYear {
   updated_at       DateTime @updatedAt
 
   term_template TermTemplate        @relation(fields: [term_template_id], references: [id], onDelete: Restrict)
-  terms         Term[]
   enrollments   StudentEnrollment[]
+  assessments   Assessment[]
 
   @@unique([school_id, name])
   @@index([school_id])
@@ -175,24 +195,7 @@ model AcademicYear {
   @@schema("results_mgt")
 }
 
-model Term {
-  id               String   @id @default(uuid())
-  academic_year_id String
-  ordinal          Int
-  name             String
-  start_date       DateTime
-  end_date         DateTime
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
-
-  academic_year AcademicYear @relation(fields: [academic_year_id], references: [id], onDelete: Cascade)
-
-  @@unique([academic_year_id, ordinal])
-  @@index([academic_year_id])
-  @@index([start_date])
-  @@index([end_date])
-  @@schema("results_mgt")
-}
+// NOTE: `Term` model removed — per-year terms are derived from the `TermTemplate.structure`.
 
 // ==========================================
 // CLASSROOMS & ENROLLMENTS MODELS
@@ -209,6 +212,7 @@ model ClassroomDefinition {
   updated_at  DateTime @updatedAt
 
   enrollments StudentEnrollment[]
+  assessments Assessment[]
 
   @@unique([school_id, name])
   @@index([school_id])
@@ -261,24 +265,32 @@ model Subject {
 }
 
 model Assessment {
-  id              String    @id @default(uuid())
-  school_id       String
-  term_id         String // Reference to Term (academic term)
-  subject_id      String
-  name            String // e.g., "Mid-Term Exam", "Assignment 1"
-  type            String // "exam", "test", "assignment", "project", "quiz"
-  max_score       Decimal   @db.Decimal(5, 2) // Maximum possible score
-  weight          Decimal   @db.Decimal(5, 2) // Weight for grade calculation (e.g., 0.3 for 30%)
-  assessment_date DateTime?
-  due_date        DateTime?
-  is_published    Boolean   @default(false) // Whether results are published to students/parents
-  created_at      DateTime  @default(now())
-  updated_at      DateTime  @updatedAt
-  subject         Subject   @relation(fields: [subject_id], references: [id], onDelete: Restrict)
-  grades          Grade[]
+  id                      String    @id @default(uuid())
+  school_id               String
+  academic_year_id        String // Reference to AcademicYear
+  term_template_item_id   String // Reference to TermTemplateItem (replaces term_name)
+  classroom_definition_id String // Reference to ClassroomDefinition (required)
+  subject_id              String
+  name                    String // e.g., "Mid-Term Exam", "Assignment 1"
+  type                    String // "exam", "test", "assignment", "project", "quiz"
+  max_score               Decimal   @db.Decimal(5, 2) // Maximum possible score
+  weight                  Decimal   @db.Decimal(5, 2) // Weight for grade calculation (e.g., 0.3 for 30%)
+  assessment_date         DateTime?
+  due_date                DateTime?
+  is_published            Boolean   @default(false) // Whether results are published to students/parents
+  created_at              DateTime  @default(now())
+  updated_at              DateTime  @updatedAt
+
+  academic_year        AcademicYear        @relation(fields: [academic_year_id], references: [id], onDelete: Restrict)
+  subject              Subject             @relation(fields: [subject_id], references: [id], onDelete: Restrict)
+  classroom_definition ClassroomDefinition @relation(fields: [classroom_definition_id], references: [id], onDelete: Restrict)
+  term_template_item   TermTemplateItem    @relation(fields: [term_template_item_id], references: [id], onDelete: Restrict)
+  grades               Grade[]
 
   @@index([school_id])
-  @@index([term_id])
+  @@index([academic_year_id])
+  @@index([term_template_item_id])
+  @@index([classroom_definition_id])
   @@index([subject_id])
   @@index([is_published])
   @@schema("results_mgt")
@@ -313,7 +325,7 @@ model ReportCard {
   school_id        String
   student_id       String
   academic_year_id String // Reference to AcademicYear
-  term_id          String // Reference to Term
+  term_template_item_id String // Reference to TermTemplateItem (replaces term_name)
   overall_average  Decimal?  @db.Decimal(5, 2)
   total_subjects   Int?
   rank             Int? // Class rank (optional)
@@ -325,10 +337,12 @@ model ReportCard {
   generated_by     String? // User ID who generated the report
   pdf_url          String? // URL to generated PDF file
 
+  term_template_item TermTemplateItem @relation(fields: [term_template_item_id], references: [id], onDelete: Restrict)
+
   @@index([school_id])
   @@index([student_id])
   @@index([academic_year_id])
-  @@index([term_id])
+  @@index([term_template_item_id])
   @@index([status])
   @@schema("results_mgt")
 }

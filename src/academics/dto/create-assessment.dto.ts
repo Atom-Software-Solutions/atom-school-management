@@ -3,12 +3,20 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateAssessmentDto {
   @ApiProperty({
-    description: 'Term ID',
-    example: 'uuid-of-term',
+    description: 'Academic year ID',
+    example: 'uuid-of-academic-year',
   })
   @IsUUID()
   @IsNotEmpty()
-  termId: string;
+  yearId: string;
+
+  @ApiProperty({
+    description: 'Term template item ID (the specific term instance)',
+    example: 'uuid-of-term-template-item',
+  })
+  @IsUUID()
+  @IsNotEmpty()
+  termTemplateItemId: string;
 
   @ApiProperty({
     description: 'Subject ID',
@@ -17,6 +25,14 @@ export class CreateAssessmentDto {
   @IsUUID()
   @IsNotEmpty()
   subjectId: string;
+
+  @ApiProperty({
+    description: 'Classroom definition ID where this assessment applies',
+    example: 'uuid-of-classroom-definition',
+  })
+  @IsUUID()
+  @IsNotEmpty()
+  classroomDefinitionId: string;
 
   @ApiProperty({
     description: 'Assessment name',
