@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, BadRequestException, ForbiddenException, Get, Param, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { ResultsService } from './results.service';
@@ -23,6 +23,12 @@ export class AssessmentsController {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
     }
+
+    // This endpoint requires both yearId and termItemId and returns assessments grouped by classroom definition.
+    if (!yearId || !termItemId) {
+      throw new BadRequestException('yearId and termItemId are required');
+    }
+
     return this.resultsService.listAssessments(schoolId, req.user.id, yearId, termItemId, subjectId);
   }
 
