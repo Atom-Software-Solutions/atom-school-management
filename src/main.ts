@@ -4,6 +4,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { PrismaService } from './prisma/prisma.service';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import * as bcrypt from 'bcrypt';
 
 async function ensureSuperAdmin(prisma: PrismaService) {
@@ -66,8 +67,8 @@ async function bootstrap() {
   await prismaService.$connect();
   await ensureSuperAdmin(prismaService);
 
-  // Enable global exception filter for Prisma errors
-  app.useGlobalFilters(new PrismaExceptionFilter());
+  // Enable global exception filters (Prisma-specific first, then general HTTP formatter)
+  app.useGlobalFilters(new PrismaExceptionFilter(), new HttpExceptionFilter());
 
   // Enable global validation
   app.useGlobalPipes(
