@@ -86,7 +86,7 @@ export class AcademicsService {
     });
 
     return templates.map((tpl: any) => {
-      const mapped = (tpl.term_template_items || []).map((it: any) => ({ ordinal: it.ordinal, name: it.name, startDate: it.start_date, endDate: it.end_date }));
+      const mapped = (tpl.term_template_items || []).map((it: any) => ({ id: it.id, ordinal: it.ordinal, name: it.name, startDate: it.start_date, endDate: it.end_date }));
       return { ...tpl, structure: mapped };
     });
   }
@@ -197,7 +197,7 @@ export class AcademicsService {
     if (!tpl) throw new NotFoundException('Term template not found');
 
     await this.assertIsAdminOfSchool(tpl.school_id, adminUserId);
-    const mapped = (tpl as any).term_template_items?.map((it: any) => ({ ordinal: it.ordinal, name: it.name })) || [];
+    const mapped = (tpl as any).term_template_items?.map((it: any) => ({ id: it.id, ordinal: it.ordinal, name: it.name })) || [];
     return { ...tpl, structure: mapped };
   }
 

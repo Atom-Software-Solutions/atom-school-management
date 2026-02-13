@@ -17,7 +17,6 @@ export class AssessmentsController {
     @Param('schoolId') schoolId: string,
     @Query('yearId') yearId: string,
     @Query('termItemId') termItemId: string,
-    @Query('subjectId') subjectId: string,
     @Request() req: AuthenticatedRequest,
   ) {
     if (!req.user) {
@@ -29,7 +28,7 @@ export class AssessmentsController {
       throw new BadRequestException('yearId and termItemId are required');
     }
 
-    return this.resultsService.listAssessments(schoolId, req.user.id, yearId, termItemId, subjectId);
+    return this.resultsService.listAssessments(schoolId, req.user.id, yearId, termItemId);
   }
 
   @Post()
