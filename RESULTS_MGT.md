@@ -827,32 +827,41 @@ Enrollments now operate **directly on classroom definitions** (offerings layer h
 
 Repeat for another subject, e.g. English, and record `subjectIdEng`.
 
-### 6.2 (Optional) List subjects
+### 7.2 List assessments (grouped by classroom definition)
 
 **Endpoint**
 
-- `GET /schools/{schoolId}/subjects?includeInactive=false`
+- `GET /schools/{schoolId}/assessments?yearId={yearId}&termItemId={termItemId}&subjectId={subjectId}`
 
 **Headers**
 
 - `Authorization: Bearer <ACCESS_TOKEN>`
 
-Use this to confirm the subject IDs.
+**Query Parameters**
+- `yearId` (required): Academic year ID
+- `termItemId` (required): Term template item ID
+- `subjectId` (optional): Filter by subject ID
 
----
+When both `yearId` and `termItemId` are provided this endpoint returns assessments grouped by their `classroomDefinition`. A flat list endpoint will be provided separately if needed.
 
-## 7. Create Assessments
+**Response (200)** – example
 
-Create at least one assessment per subject in the chosen term.
-
-### 7.1 Create an assessment
-
-**Endpoint**
-
-- `POST /schools/{schoolId}/assessments`
-
-**Headers**
-
+```json
+[
+  {
+    "classroomDefinition": {
+      "id": "<classroomDefinitionId>",
+      "name": "Primary 7",
+      "level": "Primary"
+    },
+    "assessments": [
+      {
+        "id": "<assessmentIdMathMid>",
+        "school_id": "<schoolId>",
+        "academic_year_id": "<yearId>",
+        "term_template_item_id": "<termItemId>",
+        "subject_id": "<subjectIdMath>",
+        "name": "Mid-Term Exam",
 - `Authorization: Bearer <ACCESS_TOKEN>`
 
 **Request body (example – Mid-Term for Mathematics)**
@@ -892,48 +901,7 @@ Create at least one assessment per subject in the chosen term.
 
 Repeat for other combinations you want (e.g. English Mid-Term with `weight: 0.4`, and maybe smaller tests with `weight: 0.1` each). Ensure the total weights per subject are sensible (they do not have to sum to 1, but they influence averages).
 
-### 7.2 (Optional) List assessments
-
-**Endpoint**
-
--- `GET /schools/{schoolId}/assessments?yearId={yearId}&termItemId={termItemId}&subjectId={subjectId}`
-
-**Headers**
-
-- `Authorization: Bearer <ACCESS_TOKEN>`
-
-**Query Parameters (all optional)**
-- `yearId`: Filter by academic year ID
-- `termItemId`: Filter by term template item id (should be paired with `yearId` for best results)
-- `subjectId`: Filter by subject ID
-
-**Response (200)** – example
-
-```json
-[
-  {
-    "id": "<assessmentIdMathMid>",
-    "school_id": "<schoolId>",
-    "academic_year_id": "<yearId>",
-    "term_template_item_id": "<termItemId>",
-    "subject_id": "<subjectIdMath>",
-    "name": "Mid-Term Exam",
-    "type": "exam",
-    "max_score": "100.00",
-    "weight": "0.40",
-    "assessment_date": "2025-05-01T09:00:00.000Z",
-    "subject": {
-      "id": "<subjectIdMath>",
-      "name": "Mathematics",
-      "code": "MATH"
-    }
-  }
-]
-```
-
-Use this to confirm `assessmentId` values.
-
----
+*** Removed old flat-list assessments section; use the grouped-by-classroom-definition section above. ***
 
 ## 8. Capture Grades
 

@@ -223,27 +223,53 @@ export class ResultsService {
   // ASSESSMENT MANAGEMENT
   // ==========================================
 
-  async listAssessments(schoolId: string, adminUserId: string, yearId?: string, termItemId?: string, subjectId?: string) {
+  async listAssessments(
+    schoolId: string,
+    adminUserId: string,
+    yearId: string,
+    termItemId: string,
+  ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
-    const where: any = { school_id: schoolId };
-    if (yearId) where.academic_year_id = yearId;
-    if (termItemId) where.term_template_item_id = termItemId;
-    if (subjectId) where.subject_id = subjectId;
+    const where: any = {
+      school_id: schoolId,
+      academic_year_id: yearId,
+      term_template_item_id: termItemId,
+    };
 
-    return (this.prisma as any).assessment.findMany({
+    const assessments = await (this.prisma as any).assessment.findMany({
       where,
       include: {
         subject: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-          },
+          select: { id: true, name: true, code: true },
+        },
+        classroom_definition: {
+          select: { id: true, name: true, level: true },
         },
       },
       orderBy: { assessment_date: 'desc' },
     });
+
+    const groups: Record<string, any> = {};
+    for (const a of assessments) {
+      const defId = a.classroom_definition_id || '__unassigned__';
+      if (!groups[defId]) {
+        groups[defId] = {
+          classroomDefinition: a.classroom_definition || null,
+          assessments: [],
+        };
+      }
+      groups[defId].assessments.push(a);
+    }
+
+    // Convert to array and sort by classroom name when available
+    const result = Object.values(groups).sort((x: any, y: any) => {
+      const nameA = x.classroomDefinition?.name || '';
+      const nameB = y.classroomDefinition?.name || '';
+      return nameA.localeCompare(nameB);
+    });
+
+    return result;
   }
 
   async createAssessment(schoolId: string, adminUserId: string, data: CreateAssessmentDto) {
@@ -842,8 +868,8 @@ export class ResultsService {
       },
       term: {
         id: null,
-        name: termEntry.name,
-        ordinal: termEntry.ordinal || null,
+        name: termItem.name,
+        ordinal: termItem.ordinal || null,
       },
       academicYear: {
         id: year.id,
