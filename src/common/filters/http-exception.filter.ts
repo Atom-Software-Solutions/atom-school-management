@@ -66,7 +66,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (typeof resBody === 'string') {
       message = resBody;
     } else if (resBody && typeof resBody === 'object') {
-      if (Array.isArray(resBody.message)) {
+      // Check if exceptionFactory already provided structured errors
+      if (Array.isArray(resBody.errors) && resBody.errors.length > 0 && resBody.errors[0].field !== undefined) {
+        message = 'There were validation errors with your request.';
+        errors = resBody.errors;
+      } else if (Array.isArray(resBody.message)) {
         message = 'There were validation errors with your request.';
         errors = extractValidationErrors(resBody.message);
       } else if (resBody.message) {

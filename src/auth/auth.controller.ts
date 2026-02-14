@@ -42,7 +42,37 @@ export class AuthController {
       whitelist: true,
       transform: true,
       stopAtFirstError: false,
-      exceptionFactory: (errors) => new BadRequestException(errors),
+      exceptionFactory: (validationErrors = []) => {
+        const out: Array<{ field: string | null; message: string }> = [];
+
+        function recurse(node: any, parentPath?: string) {
+          if (!node) return;
+          if (typeof node === 'string') {
+            out.push({ field: parentPath || null, message: node });
+            return;
+          }
+          if (Array.isArray(node)) {
+            node.forEach((n) => recurse(n, parentPath));
+            return;
+          }
+
+          if (node.constraints && typeof node.constraints === 'object') {
+            Object.values(node.constraints).forEach((m: any) => {
+              const fieldPath = parentPath ? `${parentPath}.${node.property}` : node.property || null;
+              out.push({ field: fieldPath, message: String(m) });
+            });
+          }
+
+          if (Array.isArray(node.children) && node.children.length > 0) {
+            node.children.forEach((child: any) => recurse(child, parentPath ? `${parentPath}.${node.property}` : node.property));
+          }
+        }
+
+        validationErrors.forEach((err: any) => recurse(err));
+
+        const messages = out.map((o) => o.message);
+        return new BadRequestException({ message: messages, errors: out });
+      },
     }),
   )
   @ApiOperation({ summary: 'Register a new user' })
