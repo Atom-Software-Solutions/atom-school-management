@@ -1,4 +1,4 @@
-import { IsString, IsEmail, IsOptional, IsNotEmpty, Matches } from 'class-validator';
+import { IsString, IsEmail, IsOptional, IsNotEmpty, Matches, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -9,6 +9,7 @@ export class CreateSchoolDto {
   })
   @IsString()
   @IsNotEmpty()
+  @MinLength(3, { message: 'Code must be at least 3 characters' })
   code: string;
 
   @ApiProperty({
@@ -17,6 +18,7 @@ export class CreateSchoolDto {
   })
   @IsString()
   @IsNotEmpty()
+  @MinLength(3, { message: 'Name must be at least 3 characters' })
   name: string;
 
   @ApiProperty({
@@ -25,16 +27,17 @@ export class CreateSchoolDto {
   })
   @IsString()
   @IsNotEmpty()
+  @MinLength(3, { message: 'Domain must be at least 3 characters' })
   @Transform(({ value }) =>
     typeof value === 'string'
       ? value
-          .toString()
-          .trim()
-          .toLowerCase()
-          // Replace spaces with '-'
-          .replace(/\s+/g, '-')
-          // Collapse multiple '-' into a single '-'
-          .replace(/-+/g, '-')
+        .toString()
+        .trim()
+        .toLowerCase()
+        // Replace spaces with '-'
+        .replace(/\s+/g, '-')
+        // Collapse multiple '-' into a single '-'
+        .replace(/-+/g, '-')
       : value,
   )
   @Matches(/^(?!.*--)[a-z0-9-]+$/, {
@@ -46,7 +49,7 @@ export class CreateSchoolDto {
     description: 'School email address',
     example: 'contact@examplehighschool.com',
   })
-  @IsEmail()
+  @IsEmail({}, { message: 'Invalid email address' })
   @IsNotEmpty()
   email: string;
 
@@ -56,6 +59,8 @@ export class CreateSchoolDto {
   })
   @IsString()
   @IsNotEmpty()
+  @Transform(({ value }) => typeof value === 'string' ? value.replace(/\s+/g, '') : value)
+  @Matches(/^\+?\d{10,}$/, { message: 'Phone number must be at least 10 digits and can start with +.' })
   phone: string;
 
   @ApiPropertyOptional({
@@ -64,7 +69,9 @@ export class CreateSchoolDto {
   })
   @IsString()
   @IsOptional()
-  address?: string;
+  @Transform(({ value }) => value === '' ? undefined : value)
+  @MinLength(3, { message: 'Address must be at least 3 characters' })
+  address?: string | undefined;
 
   @ApiPropertyOptional({
     description: 'URL to school logo',
@@ -72,7 +79,9 @@ export class CreateSchoolDto {
   })
   @IsString()
   @IsOptional()
-  logoUrl?: string;
+  @Transform(({ value }) => value === '' ? undefined : value)
+  @MinLength(3, { message: 'Logo URL must be at least 3 characters' })
+  logoUrl?: string | undefined;
 
   @ApiPropertyOptional({
     description: 'Currency code (ISO 4217)',
@@ -80,7 +89,9 @@ export class CreateSchoolDto {
   })
   @IsString()
   @IsOptional()
-  currency?: string;
+  @Transform(({ value }) => value === '' ? undefined : value)
+  @MinLength(3, { message: 'Currency must be at least 3 characters' })
+  currency?: string | undefined;
 
   @ApiPropertyOptional({
     description: 'Time zone (IANA timezone)',
@@ -88,6 +99,7 @@ export class CreateSchoolDto {
   })
   @IsString()
   @IsOptional()
-  timeZone?: string;
+  @Transform(({ value }) => value === '' ? undefined : value)
+  @MinLength(3, { message: 'Time zone must be at least 3 characters' })
+  timeZone?: string | undefined;
 }
-
