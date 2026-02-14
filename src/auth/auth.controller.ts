@@ -9,6 +9,8 @@ import {
   Request,
   Query,
   Res,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import {
@@ -34,6 +36,7 @@ export class AuthController {
   constructor(private authService: AuthService) { }
 
   @Post('register')
+  @UsePipes(new ValidationPipe({ whitelist: true, transform: true, stopAtFirstError: false }))
   @ApiOperation({ summary: 'Register a new user' })
   @ApiResponse({
     status: 201,
