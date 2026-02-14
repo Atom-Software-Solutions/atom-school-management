@@ -54,7 +54,22 @@ export class AuthController {
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Bad request - validation error' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - combined validation errors',
+    schema: {
+      example: {
+        statusCode: 400,
+        message: [
+          'Email must be a valid email address',
+          'Password must be at least 8 characters long',
+          'First name is required',
+          'Last name is required',
+        ],
+        error: 'Bad Request',
+      },
+    },
+  })
   @ApiResponse({ status: 409, description: 'User already exists' })
   async register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);

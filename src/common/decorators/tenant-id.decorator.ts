@@ -11,4 +11,3 @@ export const TenantId = createParamDecorator(
     return request.tenantId;
   },
 );
-

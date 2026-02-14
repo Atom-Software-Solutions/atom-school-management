@@ -76,6 +76,7 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
+      stopAtFirstError: false, // Collect all validation errors instead of stopping at the first one
     }),
   );
 
