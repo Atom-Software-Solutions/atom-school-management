@@ -4,7 +4,9 @@ import {
   IsNotEmpty,
   IsOptional,
   MinLength,
+  Matches,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class RegisterDto {
@@ -32,7 +34,7 @@ export class RegisterDto {
   })
   @IsNotEmpty({ message: 'First name is required' })
   @IsString({ message: 'First name must be a string' })
-  @MinLength(1, { message: 'First name cannot be empty' })
+  @MinLength(2, { message: 'First name must be at least 2 characters long' })
   firstName: string;
 
   @ApiProperty({
@@ -41,15 +43,17 @@ export class RegisterDto {
   })
   @IsNotEmpty({ message: 'Last name is required' })
   @IsString({ message: 'Last name must be a string' })
-  @MinLength(1, { message: 'Last name cannot be empty' })
+  @MinLength(2, { message: 'Last name must be at least 2 characters long' })
   lastName: string;
 
   @ApiPropertyOptional({
     description: 'User phone number',
     example: '1234567890',
   })
-  @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.replace(/\s+/g, '') : value))
   @IsOptional()
+  @IsString({ message: 'Phone must be a string' })
+  @Matches(/^\+?\d{10,}$/, { message: "phone must be at least 10 digits, optionally prefixed with '+'" })
   phone?: string;
 
   @ApiPropertyOptional({
