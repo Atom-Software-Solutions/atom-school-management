@@ -30,23 +30,45 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let errors: any = undefined;
     let param: any = undefined;
 
+    function extractValidationErrors(arr: any[]): Array<{ field: string | null; message: string }> {
+      const out: Array<{ field: string | null; message: string }> = [];
+
+      function recurse(node: any, parentPath?: string) {
+        if (!node) return;
+        if (typeof node === 'string') {
+          out.push({ field: parentPath || null, message: node });
+          return;
+        }
+
+        // ValidationError shape from class-validator
+        if (node.constraints && typeof node.constraints === 'object') {
+          Object.values(node.constraints).forEach((m: any) => {
+            const fieldPath = parentPath ? `${parentPath}.${node.property}` : node.property || null;
+            out.push({ field: fieldPath, message: String(m) });
+          });
+        }
+
+        // If there are children, recurse into them to collect nested messages
+        if (Array.isArray(node.children) && node.children.length > 0) {
+          node.children.forEach((child: any) => recurse(child, parentPath ? `${parentPath}.${node.property}` : node.property));
+        }
+
+        // If this node is an array (sometimes the top-level message is an array of strings or objects)
+        if (Array.isArray(node)) {
+          node.forEach((n) => recurse(n, parentPath));
+        }
+      }
+
+      arr.forEach((item) => recurse(item));
+      return out;
+    }
+
     if (typeof resBody === 'string') {
       message = resBody;
     } else if (resBody && typeof resBody === 'object') {
       if (Array.isArray(resBody.message)) {
         message = 'There were validation errors with your request.';
-        errors = resBody.message.map((m: any) => {
-          if (typeof m === 'string') {
-            const match = m.match(/^(.+?)\s/);
-            const field = match ? match[1] : null;
-            return { field, message: m };
-          }
-          if (m?.constraints) {
-            const first = Object.values(m.constraints)[0];
-            return { field: m.property || null, message: first };
-          }
-          return { field: m?.field || null, message: m?.message || JSON.stringify(m) };
-        });
+        errors = extractValidationErrors(resBody.message);
       } else if (resBody.message) {
         message = typeof resBody.message === 'string' ? resBody.message : JSON.stringify(resBody.message);
       } else if (resBody.error) {
