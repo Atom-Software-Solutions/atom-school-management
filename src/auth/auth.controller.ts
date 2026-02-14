@@ -11,6 +11,7 @@ import {
   Res,
   UsePipes,
   ValidationPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import {
@@ -36,7 +37,14 @@ export class AuthController {
   constructor(private authService: AuthService) { }
 
   @Post('register')
-  @UsePipes(new ValidationPipe({ whitelist: true, transform: true, stopAtFirstError: false }))
+  @UsePipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      stopAtFirstError: false,
+      exceptionFactory: (errors) => new BadRequestException(errors),
+    }),
+  )
   @ApiOperation({ summary: 'Register a new user' })
   @ApiResponse({
     status: 201,
