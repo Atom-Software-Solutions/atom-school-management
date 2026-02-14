@@ -47,24 +47,19 @@ export class AuthController {
 
         function recurse(node: any, parentPath?: string) {
           if (!node) return;
-          if (typeof node === 'string') {
-            out.push({ field: parentPath || null, message: node });
-            return;
-          }
-          if (Array.isArray(node)) {
-            node.forEach((n) => recurse(n, parentPath));
-            return;
-          }
 
-          if (node.constraints && typeof node.constraints === 'object') {
+          // If node has a 'property' field (ValidationError from class-validator)
+          if (node.property && node.constraints) {
+            const fieldPath = parentPath ? `${parentPath}.${node.property}` : node.property;
             Object.values(node.constraints).forEach((m: any) => {
-              const fieldPath = parentPath ? `${parentPath}.${node.property}` : node.property || null;
               out.push({ field: fieldPath, message: String(m) });
             });
           }
 
+          // Recurse into children
           if (Array.isArray(node.children) && node.children.length > 0) {
-            node.children.forEach((child: any) => recurse(child, parentPath ? `${parentPath}.${node.property}` : node.property));
+            const newPath = parentPath && node.property ? `${parentPath}.${node.property}` : node.property || parentPath;
+            node.children.forEach((child: any) => recurse(child, newPath));
           }
         }
 
