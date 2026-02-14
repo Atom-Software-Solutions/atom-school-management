@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { PrismaService } from './prisma/prisma.service';
@@ -77,6 +77,32 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
       transform: true,
       stopAtFirstError: false, // Collect all validation errors instead of stopping at the first one
+      exceptionFactory: (validationErrors = []) => {
+        const out: Array<{ field: string | null; message: string }> = [];
+
+        function recurse(node: any, parentPath?: string) {
+          if (!node) return;
+
+          // If node has a 'property' field (ValidationError from class-validator)
+          if (node.property && node.constraints) {
+            const fieldPath = parentPath ? `${parentPath}.${node.property}` : node.property;
+            Object.values(node.constraints).forEach((m: any) => {
+              out.push({ field: fieldPath, message: String(m) });
+            });
+          }
+
+          // Recurse into children
+          if (Array.isArray(node.children) && node.children.length > 0) {
+            const newPath = parentPath && node.property ? `${parentPath}.${node.property}` : node.property || parentPath;
+            node.children.forEach((child: any) => recurse(child, newPath));
+          }
+        }
+
+        validationErrors.forEach((err: any) => recurse(err));
+
+        const messages = out.map((o) => o.message);
+        return new BadRequestException({ message: messages, errors: out });
+      },
     }),
   );
 

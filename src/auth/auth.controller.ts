@@ -9,9 +9,6 @@ import {
   Request,
   Query,
   Res,
-  UsePipes,
-  ValidationPipe,
-  BadRequestException,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import {
@@ -37,39 +34,6 @@ export class AuthController {
   constructor(private authService: AuthService) { }
 
   @Post('register')
-  @UsePipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-      stopAtFirstError: false,
-      exceptionFactory: (validationErrors = []) => {
-        const out: Array<{ field: string | null; message: string }> = [];
-
-        function recurse(node: any, parentPath?: string) {
-          if (!node) return;
-
-          // If node has a 'property' field (ValidationError from class-validator)
-          if (node.property && node.constraints) {
-            const fieldPath = parentPath ? `${parentPath}.${node.property}` : node.property;
-            Object.values(node.constraints).forEach((m: any) => {
-              out.push({ field: fieldPath, message: String(m) });
-            });
-          }
-
-          // Recurse into children
-          if (Array.isArray(node.children) && node.children.length > 0) {
-            const newPath = parentPath && node.property ? `${parentPath}.${node.property}` : node.property || parentPath;
-            node.children.forEach((child: any) => recurse(child, newPath));
-          }
-        }
-
-        validationErrors.forEach((err: any) => recurse(err));
-
-        const messages = out.map((o) => o.message);
-        return new BadRequestException({ message: messages, errors: out });
-      },
-    }),
-  )
   @ApiOperation({ summary: 'Register a new user' })
   @ApiResponse({
     status: 201,
