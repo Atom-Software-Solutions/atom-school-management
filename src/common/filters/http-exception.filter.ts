@@ -94,6 +94,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
       this.logger.error(`${request.method} ${request.url} -> ${status}`, (exception as any)?.stack || JSON.stringify(exception));
     } else {
       this.logger.warn(`${request.method} ${request.url} -> ${status}: ${message}`);
+      if (status === HttpStatus.BAD_REQUEST) {
+        try {
+          this.logger.debug('BadRequest response body: ' + JSON.stringify(resBody, null, 2));
+        } catch (e) {
+          this.logger.debug('BadRequest response body logging failed');
+        }
+      }
     }
 
     response.status(status).json(payload);
