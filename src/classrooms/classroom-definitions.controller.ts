@@ -11,7 +11,7 @@ import type { AuthenticatedRequest } from '../common/middleware/tenant.middlewar
 export class ClassroomDefinitionsController {
   private readonly logger = new Logger(ClassroomDefinitionsController.name);
 
-  constructor(private readonly classroomsService: ClassroomsService) {}
+  constructor(private readonly classroomsService: ClassroomsService) { }
 
   @Get()
   list(@Param('schoolId') schoolId: string, @Request() req: AuthenticatedRequest) {
@@ -39,5 +39,4 @@ export class ClassroomDefinitionsController {
       ordinal: dto.ordinal,
     });
   }
-
 }
