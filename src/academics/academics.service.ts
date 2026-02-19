@@ -242,7 +242,7 @@ export class AcademicsService {
     
     // Validate dates
     if (data.startDate >= data.endDate) {
-      throw new BadRequestException('startDate must be before endDate');
+      throw new BadRequestException('Start Date must be before End Date');
     }
 
     const tpl = await (this.prisma as any).termTemplate.findUnique({ where: { id: data.termTemplateId } });

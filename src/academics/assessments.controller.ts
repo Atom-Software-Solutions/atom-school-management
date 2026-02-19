@@ -47,6 +47,17 @@ export class AssessmentsController {
     return this.resultsService.getAssessment(id, req.user.id);
   }
 
+  @Get(':id/enrolled-students')
+  async getEnrolledStudents(
+    @Param('id') id: string,
+    @Request() req: AuthenticatedRequest
+  ) {
+    if (!req.user) {
+      throw new ForbiddenException('Authentication required');
+    }
+    return this.resultsService.getEnrolledStudentsForAssessment(id, req.user.id);
+  }
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateAssessmentDto, @Request() req: AuthenticatedRequest) {
     if (!req.user) {

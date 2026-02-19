@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsDateString, IsUUID } from 'class-validator';
+import { IsString, IsNotEmpty, IsDateString, IsUUID, MinLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateAcademicYearDto {
@@ -8,6 +8,7 @@ export class CreateAcademicYearDto {
   })
   @IsString()
   @IsNotEmpty()
+  @MinLength(3, { message: 'Academic year name must be at least 3 characters' })
   name: string;
 
   @ApiProperty({

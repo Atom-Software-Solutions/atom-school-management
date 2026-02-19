@@ -95,7 +95,7 @@ export class StudentsController {
   }
 
   @Post()
-  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true, stopAtFirstError: false }))
   create(
     @Query('schoolId') schoolId: string,
     @Body() body: CreateStudentDto,
@@ -162,7 +162,7 @@ export class StudentsController {
   }
 
   @Patch(':id')
-  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true, stopAtFirstError: false }))
   update(
     @Param('id') id: string,
     @Body() body: UpdateStudentDto,
