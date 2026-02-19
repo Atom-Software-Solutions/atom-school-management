@@ -791,6 +791,52 @@ Enrollments now operate **directly on classroom definitions** (offerings layer h
 
 ---
 
+### 5.6 List enrolled students for an assessment
+
+**Endpoint**
+
+- `GET /schools/{schoolId}/assessments/{assessmentId}/enrolled-students`
+
+**Headers**
+
+- `Authorization: Bearer <ACCESS_TOKEN>`
+
+**Description**
+
+Given an `assessmentId`, this endpoint returns all students enrolled in the assessment's academic year and classroom definition.
+
+**Response (200)** – example
+
+```json
+[
+  {
+    "id": "<studentId1>",
+    "first_name": "John",
+    "last_name": "Doe",
+    "student_no": "STU001",
+    "reg_no": "REG001",
+    "email": "john.doe@student.test",
+    "phone": "0700000002"
+  },
+  {
+    "id": "<studentId2>",
+    "first_name": "Jane",
+    "last_name": "Smith",
+    "student_no": "STU002",
+    "reg_no": "REG002",
+    "email": "jane.smith@student.test",
+    "phone": "0700000003"
+  }
+]
+```
+
+**Behavior:**
+- Only students with `status: 'active'` enrollment for the assessment's year and classroom are returned.
+- SCHOOL_ADMIN role required.
+- Useful for bulk grade entry, attendance, or results workflows.
+
+---
+
 ## 6. Define Subjects
 
 ### 6.1 Create subjects for the school
@@ -1327,13 +1373,11 @@ If you complete all the above successfully, the results management flow—from S
 
  - We need to set remarks in the DB such that we don't need to manually set them when we are entering grades for assessments as below.
 
-"95 – 100 → Outstanding
+95 – 100 → Outstanding
 90 – 94.99 → Excellent 
 85 – 89.99 → Good performance 
 75 – 84.99 → Very good
 65 – 74.99 → Good
 50 – 64.99 → Satisfactory
 40 – 49.99 → Needs improvement
-Below 40 → Poor"
-
- - 
+Below 40 → Poor

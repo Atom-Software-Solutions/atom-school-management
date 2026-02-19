@@ -14,7 +14,7 @@ import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.in
 export class ResultsService {
   private readonly logger = new Logger(ResultsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   private async assertIsAdminOfSchool(schoolId: string, userId: string) {
     const rel = await this.prisma.schoolAdmin.findUnique({
@@ -390,13 +390,13 @@ export class ResultsService {
       const checkType = data.type !== undefined ? data.type : assessment.type;
       const existing = await (this.prisma as any).assessment.findFirst({
         where: {
-            academic_year_id: assessment.academic_year_id,
-            term_template_item_id: assessment.term_template_item_id,
-            subject_id: assessment.subject_id,
-            name: checkName,
-            type: checkType,
-            id: { not: assessmentId }, // Exclude current assessment
-          },
+          academic_year_id: assessment.academic_year_id,
+          term_template_item_id: assessment.term_template_item_id,
+          subject_id: assessment.subject_id,
+          name: checkName,
+          type: checkType,
+          id: { not: assessmentId }, // Exclude current assessment
+        },
       });
       if (existing) {
         throw new BadRequestException('An assessment with this name and type already exists for this subject and term');
@@ -429,6 +429,35 @@ export class ResultsService {
     return (this.prisma as any).assessment.delete({
       where: { id: assessmentId },
     });
+  }
+
+  async getEnrolledStudentsForAssessment(assessmentId: string, adminUserId: string) {
+    // 1. Lookup assessment
+    const assessment = await (this.prisma as any).assessment.findUnique({
+      where: { id: assessmentId },
+      select: {
+        academic_year_id: true,
+        classroom_definition_id: true,
+        school_id: true,
+      },
+    });
+    if (!assessment) throw new NotFoundException('Assessment not found');
+    await this.assertIsAdminOfSchool(assessment.school_id, adminUserId);
+
+    // 2. Query enrollments for that year and classroom
+    const enrollments = await (this.prisma as any).studentEnrollment.findMany({
+      where: {
+        academic_year_id: assessment.academic_year_id,
+        classroom_definition_id: assessment.classroom_definition_id,
+        status: 'active',
+      },
+      include: {
+        student: true,
+      },
+      orderBy: { created_at: 'asc' },
+    });
+    // 3. Return student details
+    return enrollments.map((e: any) => e.student);
   }
 
   // ==========================================
