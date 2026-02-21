@@ -62,7 +62,7 @@ async function bootstrap() {
 
   // Get PrismaService to initialize SUPER_ADMIN
   const prismaService = app.get(PrismaService);
-  
+
   // Ensure PrismaService is connected before checking for SUPER_ADMIN
   await prismaService.$connect();
   await ensureSuperAdmin(prismaService);
@@ -113,9 +113,9 @@ async function bootstrap() {
   const allowedOrigins = allowAllOrigins
     ? []
     : corsOriginSetting
-        .split(',')
-        .map((origin) => origin.trim())
-        .filter(Boolean);
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean);
 
   if (allowAllOrigins) {
     app.enableCors({
@@ -176,6 +176,8 @@ async function bootstrap() {
 }
 
 bootstrap().catch((err) => {
-  console.error('Error starting server:', err);
+  console.error('Error starting server 1:', err);
+  if (err.stack) console.error('Stack trace:', err.stack);
+  // Optionally, log to a file or external service here
   process.exit(1);
 });

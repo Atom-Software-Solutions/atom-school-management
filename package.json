@@ -6,8 +6,9 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "nest build",
-    "postbuild": "node scripts/postbuild-copy-prisma.cjs",
+    "vercel-build": "npm install && prisma generate && nest build",
+    "build": "prisma generate && nest build",
+    "postinstall": "prisma generate",
     "dev": "npm run build && npm run start:prod",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
@@ -19,15 +20,7 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
-    "docker:build": "docker build -t atom-school-management:test .",
-    "docker:build:no-cache": "docker build --no-cache -t atom-school-management:test .",
-    "docker:build:ci": "docker buildx build --platform linux/amd64 --load -t atom-school-management:test .",
-    "docker:test": "docker build -t atom-school-management:test . && docker run --rm atom-school-management:test sh -c \"test -f dist/src/main.js && test -d generated/prisma && echo '✅ Build verified'\"",
-    "docker:test:ci": "./test-docker-ci.sh",
-    "docker:test:unit": "docker build --target build -t atom-school-management:test . && docker run --rm atom-school-management:test npm test",
-    "docker:test:e2e": "docker build --target build -t atom-school-management:test . && docker run --rm --network host -e DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atom_school_db_test -e NODE_ENV=test atom-school-management:test npm run test:e2e",
-    "docker:test:all": "docker build --target build -t atom-school-management:test . && docker run --rm --network host -e DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atom_school_db_test -e NODE_ENV=test atom-school-management:test sh -c 'npm test && npm run test:e2e'"
+    "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -45,13 +38,13 @@
     "nodemailer": "^7.0.10",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
-    "prisma": "6.19.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "tsconfig-paths": "^4.2.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "prisma": "6.19.0",
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.18.0",
     "@nestjs/cli": "^11.0.0",
@@ -88,11 +81,6 @@
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
-    },
-    "moduleNameMapper": {
-      "^@generated/prisma$": "<rootDir>/../generated/prisma",
-      "^@generated/(.*)$": "<rootDir>/../generated/$1",
-      "^@prisma/client$": "<rootDir>/../generated/prisma"
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"

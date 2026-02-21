@@ -444,19 +444,28 @@ export class ResultsService {
     if (!assessment) throw new NotFoundException('Assessment not found');
     await this.assertIsAdminOfSchool(assessment.school_id, adminUserId);
 
-    // 2. Query enrollments for that year and classroom
+    // 2. Get all students already graded for this assessment
+    const gradedStudentIds = (
+      await (this.prisma as any).grade.findMany({
+        where: { assessment_id: assessmentId },
+        select: { student_id: true },
+      })
+    ).map((g: any) => g.student_id);
+
+    // 3. Query enrollments for that year and classroom, filter out graded students
     const enrollments = await (this.prisma as any).studentEnrollment.findMany({
       where: {
         academic_year_id: assessment.academic_year_id,
         classroom_definition_id: assessment.classroom_definition_id,
         status: 'active',
+        student_id: gradedStudentIds.length > 0 ? { notIn: gradedStudentIds } : undefined,
       },
       include: {
         student: true,
       },
       orderBy: { created_at: 'asc' },
     });
-    // 3. Return student details
+    // 4. Return student details
     return enrollments.map((e: any) => e.student);
   }
 
