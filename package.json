@@ -6,6 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
+    "vercel-build": "npm install && prisma generate && nest build",
     "build": "nest build",
     "postbuild": "node scripts/postbuild-copy-prisma.cjs",
     "postinstall": "prisma generate",
