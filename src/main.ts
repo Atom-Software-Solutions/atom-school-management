@@ -176,6 +176,7 @@ async function bootstrap() {
 }
 
 bootstrap().catch((err) => {
-  console.error('Error starting server:', err);
+  console.error('Error starting server 1:', err);
+  if (err.stack) console.error(`Error starting server 2: ${err.stack}`);
   process.exit(1);
 });
