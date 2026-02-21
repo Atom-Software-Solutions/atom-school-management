@@ -1,3 +1,4 @@
+import { PrismaClient } from '@prisma/client';
 import { Role } from '../../../generated/prisma';
 
 export interface UserResponse {
