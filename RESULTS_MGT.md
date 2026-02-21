@@ -569,7 +569,6 @@ For report card ranking to work, students must be enrolled in a classroom offeri
 }
 ```
 
-
 ### 5.2 Classroom Offerings (Deprecated)
 
 **Note:** As of February 2026, classroom offerings have been removed from the active API. Enrollments now operate **directly on classroom definitions** paired with academic years.
@@ -791,7 +790,7 @@ Enrollments now operate **directly on classroom definitions** (offerings layer h
 
 ---
 
-### 5.6 List enrolled students for an assessment
+### 5.x List students enrolled but not yet graded for an assessment
 
 **Endpoint**
 
@@ -803,7 +802,7 @@ Enrollments now operate **directly on classroom definitions** (offerings layer h
 
 **Description**
 
-Given an `assessmentId`, this endpoint returns all students enrolled in the assessment's academic year and classroom definition.
+Returns all students enrolled in the assessment's academic year and classroom definition who have NOT yet been graded for that assessment. This is useful for bulk grading workflows.
 
 **Response (200)** – example
 
@@ -813,27 +812,19 @@ Given an `assessmentId`, this endpoint returns all students enrolled in the asse
     "id": "<studentId1>",
     "first_name": "John",
     "last_name": "Doe",
-    "student_no": "STU001",
-    "reg_no": "REG001",
-    "email": "john.doe@student.test",
-    "phone": "0700000002"
+    ...
   },
   {
     "id": "<studentId2>",
     "first_name": "Jane",
     "last_name": "Smith",
-    "student_no": "STU002",
-    "reg_no": "REG002",
-    "email": "jane.smith@student.test",
-    "phone": "0700000003"
+    ...
   }
 ]
 ```
 
-**Behavior:**
-- Only students with `status: 'active'` enrollment for the assessment's year and classroom are returned.
-- SCHOOL_ADMIN role required.
-- Useful for bulk grade entry, attendance, or results workflows.
+- Only students with an active enrollment in the relevant classroom/year and who have not yet received a grade for the assessment are returned.
+- Use this endpoint to drive UI for bulk grade entry or to check which students are still pending grading for a given assessment.
 
 ---
 
@@ -1373,11 +1364,13 @@ If you complete all the above successfully, the results management flow—from S
 
  - We need to set remarks in the DB such that we don't need to manually set them when we are entering grades for assessments as below.
 
-95 – 100 → Outstanding
+"95 – 100 → Outstanding
 90 – 94.99 → Excellent 
 85 – 89.99 → Good performance 
 75 – 84.99 → Very good
 65 – 74.99 → Good
 50 – 64.99 → Satisfactory
 40 – 49.99 → Needs improvement
-Below 40 → Poor
+Below 40 → Poor"
+
+ -

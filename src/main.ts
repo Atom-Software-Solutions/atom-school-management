@@ -62,7 +62,7 @@ async function bootstrap() {
 
   // Get PrismaService to initialize SUPER_ADMIN
   const prismaService = app.get(PrismaService);
-  
+
   // Ensure PrismaService is connected before checking for SUPER_ADMIN
   await prismaService.$connect();
   await ensureSuperAdmin(prismaService);
@@ -113,9 +113,9 @@ async function bootstrap() {
   const allowedOrigins = allowAllOrigins
     ? []
     : corsOriginSetting
-        .split(',')
-        .map((origin) => origin.trim())
-        .filter(Boolean);
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean);
 
   if (allowAllOrigins) {
     app.enableCors({
