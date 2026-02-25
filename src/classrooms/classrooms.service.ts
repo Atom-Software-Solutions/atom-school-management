@@ -104,6 +104,24 @@ export class ClassroomsService {
         },
       });
     } catch (e: any) {
+      // Check for Prisma unique constraint error on name
+      if (e?.code === 'P2002' && Array.isArray(e?.meta?.target) && e.meta.target.includes('name')) {
+        // Find the existing definition by name
+        const existing = await (this.prisma as any).classroomDefinition.findUnique({
+          where: { school_id_name: { school_id: schoolId, name: data.name.trim() } },
+        });
+        if (existing && existing.is_archived) {
+          // Unarchive and update fields
+          return await (this.prisma as any).classroomDefinition.update({
+            where: { id: existing.id },
+            data: {
+              is_archived: false,
+              level: data.level?.trim() || null,
+              ordinal: data.ordinal,
+            },
+          });
+        }
+      }
       this.handlePrismaUniqueError(e, 'name');
     }
   }
