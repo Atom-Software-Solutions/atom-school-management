@@ -98,6 +98,21 @@ export class ResultsService {
   async createSubject(schoolId: string, adminUserId: string, data: CreateSubjectDto) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
+    // Check for existing subject with same name or code (active)
+    const existing = await (this.prisma as any).subject.findFirst({
+      where: {
+        school_id: schoolId,
+        OR: [
+          { name: data.name.trim() },
+          { code: data.code?.trim() || null },
+        ],
+        is_active: true,
+      },
+    });
+    if (existing) {
+      throw new BadRequestException('A subject with this name or code already exists for this school');
+    }
+
     try {
       return await (this.prisma as any).subject.create({
         data: {
@@ -109,9 +124,6 @@ export class ResultsService {
         },
       });
     } catch (e: any) {
-      if (e?.code === 'P2002') {
-        throw new BadRequestException('A subject with this name already exists for this school');
-      }
       throw e;
     }
   }
@@ -128,6 +140,21 @@ export class ResultsService {
 
     for (let i = 0; i < dataArray.length; i++) {
       const data = dataArray[i];
+      // Check for existing subject with same name or code (active)
+      const existing = await (this.prisma as any).subject.findFirst({
+        where: {
+          school_id: schoolId,
+          OR: [
+            { name: data.name.trim() },
+            { code: data.code?.trim() || null },
+          ],
+          is_active: true,
+        },
+      });
+      if (existing) {
+        errors.push(`Subject ${i + 1} (${data.name}): A subject with this name or code already exists for this school`);
+        continue;
+      }
       try {
         const subject = await (this.prisma as any).subject.create({
           data: {
@@ -140,11 +167,7 @@ export class ResultsService {
         });
         results.push(subject);
       } catch (e: any) {
-        if (e?.code === 'P2002') {
-          errors.push(`Subject ${i + 1} (${data.name}): A subject with this name already exists for this school`);
-        } else {
-          errors.push(`Subject ${i + 1} (${data.name}): ${e?.message || 'Failed to create'}`);
-        }
+        errors.push(`Subject ${i + 1} (${data.name}): ${e?.message || 'Failed to create'}`);
       }
     }
 
