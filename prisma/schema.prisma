@@ -92,6 +92,7 @@ model Student {
   student_no    String
   guardians     StudentGuardian[]
   enrollments   StudentEnrollment[]
+  grades        Grade[]
 
   @@unique([school_id, first_name, last_name, date_of_birth])
   @@unique([school_id, student_no])
@@ -135,14 +136,14 @@ model StudentGuardian {
 // ==========================================
 
 model TermTemplate {
-  id         String   @id @default(uuid())
-  school_id  String
-  name       String
-  is_locked  Boolean  @default(false)
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  id                String            @id @default(uuid())
+  school_id         String
+  name              String
+  is_locked         Boolean           @default(false)
+  created_at        DateTime          @default(now())
+  updated_at        DateTime          @updatedAt
 
-  academic_years AcademicYear[]
+  academic_years    AcademicYear[]
   term_template_items TermTemplateItem[]
 
   @@unique([school_id, name])
@@ -298,18 +299,19 @@ model Assessment {
 model Grade {
   id            String     @id @default(uuid())
   school_id     String
-  student_id    String // Reference to Student
+  student_id    String
   assessment_id String
   subject_id    String
-  score         Decimal    @db.Decimal(5, 2) // Actual score obtained
-  percentage    Decimal?   @db.Decimal(5, 2) // Calculated percentage
-  letter_grade  String? // A, B, C, D, F (optional, can be calculated)
+  score         Decimal    @db.Decimal(5, 2)
+  percentage    Decimal?   @db.Decimal(5, 2)
+  letter_grade  String?
   remarks       String?
   created_at    DateTime   @default(now())
   updated_at    DateTime   @updatedAt
-  created_by    String? // User ID who entered the grade
+  created_by    String?
   assessment    Assessment @relation(fields: [assessment_id], references: [id], onDelete: Cascade)
   subject       Subject    @relation(fields: [subject_id], references: [id], onDelete: Restrict)
+  student       Student    @relation(fields: [student_id], references: [id], onDelete: Restrict)
 
   @@unique([student_id, assessment_id])
   @@index([school_id])

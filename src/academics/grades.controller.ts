@@ -52,5 +52,20 @@ export class GradesController {
     }
     return this.resultsService.deleteGrade(id, req.user.id);
   }
-}
 
+  @Get()
+  async listGrades(
+    @Param('schoolId') schoolId: string,
+    @Query('assessmentId') assessmentId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    if (!req.user) {
+      throw new ForbiddenException('Authentication required');
+    }
+    return this.resultsService.listGradesForAssessment(
+      schoolId,
+      req.user.id,
+      assessmentId,
+    );
+  }
+}

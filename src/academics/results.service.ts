@@ -1125,5 +1125,53 @@ export class ResultsService {
       },
     });
   }
-}
 
+  async listGradesForAssessmentAndClassroom(
+    schoolId: string,
+    adminUserId: string,
+    assessmentId: string,
+    classroomDefinitionId: string,
+  ) {
+    await this.assertIsAdminOfSchool(schoolId, adminUserId);
+
+    // Find grades for the assessment and classroom
+    return (this.prisma as any).grade.findMany({
+      where: {
+        school_id: schoolId,
+        assessment_id: assessmentId,
+        student: {
+          enrollments: {
+            some: {
+              classroom_definition_id: classroomDefinitionId,
+              status: 'active',
+            },
+          },
+        },
+      },
+      include: {
+        assessment: true,
+        student: true,
+      },
+      orderBy: { created_at: 'asc' },
+    });
+  }
+
+  async listGradesForAssessment(
+    schoolId: string,
+    adminUserId: string,
+    assessmentId: string,
+  ) {
+    await this.assertIsAdminOfSchool(schoolId, adminUserId);
+    return (this.prisma as any).grade.findMany({
+      where: {
+        school_id: schoolId,
+        assessment_id: assessmentId,
+      },
+      include: {
+        // assessment: true,
+        student: true,
+      },
+      orderBy: { created_at: 'asc' },
+    });
+  }
+}
