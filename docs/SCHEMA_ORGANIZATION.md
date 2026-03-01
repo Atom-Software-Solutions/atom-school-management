@@ -177,7 +177,6 @@ model Payment {
 ```prisma
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {

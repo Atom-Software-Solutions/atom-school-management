@@ -13,6 +13,7 @@ import { GradesController } from './grades.controller';
 import { StudentResultsController } from './student-results.controller';
 import { ReportCardsController } from './report-cards.controller';
 import { StudentReportCardsController } from './student-report-cards.controller';
+import { SchoolStructureController } from './school-structure.controller';
 
 @Module({
   controllers: [
@@ -25,6 +26,7 @@ import { StudentReportCardsController } from './student-report-cards.controller'
     StudentResultsController,
     ReportCardsController,
     StudentReportCardsController,
+    SchoolStructureController,
   ],
   providers: [AcademicsService, ResultsService, PrismaService, JwtAuthGuard, RolesGuard],
 })

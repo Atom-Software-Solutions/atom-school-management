@@ -899,41 +899,14 @@ When both `yearId` and `termItemId` are provided this endpoint returns assessmen
         "term_template_item_id": "<termItemId>",
         "subject_id": "<subjectIdMath>",
         "name": "Mid-Term Exam",
-- `Authorization: Bearer <ACCESS_TOKEN>`
-
-**Request body (example – Mid-Term for Mathematics)**
-
-```json
-{
-  "yearId": "<yearId>",
-  "termTemplateItemId": "<termItemId>",
-  "subjectId": "<subjectIdMath>",
-  "classroomDefinitionId": "<classroomDefinitionId>",
-  "name": "Mid-Term Exam",
-  "type": "exam",
-  "maxScore": 100,
-  "weight": 0.4,
-  "assessmentDate": "2025-05-01T09:00:00Z"
-}
-```
-
-**Response (201)** – important fields
-
-```json
-{
-  "id": "<assessmentIdMathMid>",
-  "school_id": "<schoolId>",
-  "academic_year_id": "<yearId>",
-  "term_template_item_id": "<termItemId>",
-  "classroom_definition_id": "<classroomDefinitionId>",
-  "subject_id": "<subjectIdMath>",
-  "name": "Mid-Term Exam",
-  "type": "exam",
-  "max_score": "100.00",
-  "weight": "0.40",
-  "assessment_date": "2025-05-01T09:00:00.000Z",
-  "is_published": false
-}
+        "type": "exam",
+        "maxScore": 100,
+        "weight": 0.4,
+        "assessmentDate": "2025-05-01T09:00:00Z"
+      }
+    ]
+  }
+]
 ```
 
 Repeat for other combinations you want (e.g. English Mid-Term with `weight: 0.4`, and maybe smaller tests with `weight: 0.1` each). Ensure the total weights per subject are sensible (they do not have to sum to 1, but they influence averages).
@@ -992,6 +965,7 @@ You can create grades one-by-one or in bulk. For manual testing, bulk creation i
     {
       "id": "<gradeId2>",
       "student_id": "<studentId2>",
+      "assessment_id": "<assessmentIdMathMid>",
       "score": "92.00",
       "percentage": "92.00",
       "letter_grade": "A"
@@ -1361,16 +1335,161 @@ Use this as a high-level checklist:
 
 If you complete all the above successfully, the results management flow—from SCHOOL_ADMIN and SCHOOL creation all the way to report card generation and publication—has been exercised end-to-end.
 
+---
 
- - We need to set remarks in the DB such that we don't need to manually set them when we are entering grades for assessments as below.
+## 14. Fetching Students' Grades – Recommended UX & Endpoints
 
-"95 – 100 → Outstanding
-90 – 94.99 → Excellent 
-85 – 89.99 → Good performance 
-75 – 84.99 → Very good
-65 – 74.99 → Good
-50 – 64.99 → Satisfactory
-40 – 49.99 → Needs improvement
-Below 40 → Poor"
+This section describes the recommended user flow and API endpoints for fetching and managing student grades in a user-friendly, stepwise manner.
 
- -
+### 14.1 Step 1: Fetch Academic Years
+
+**Endpoint**
+- `GET /schools/{schoolId}/years`
+
+**Headers**
+- `Authorization: Bearer <ACCESS_TOKEN>`
+
+**Response (200)**
+```json
+[
+  { "id": "<yearId>", "name": "2025", ... },
+  ...
+]
+```
+
+### 14.2 Step 2: Fetch Terms for Selected Academic Year
+
+**Endpoint**
+- `GET /years/{yearId}/terms`
+
+**Headers**
+- `Authorization: Bearer <ACCESS_TOKEN>`
+
+**Response (200)**
+```json
+[
+  { "id": "<termId>", "name": "Term 1", "ordinal": 1, ... },
+  ...
+]
+```
+
+### 14.3 Step 3: Fetch Classroom Definitions for Year & Term
+
+**Endpoint**
+- `GET /schools/{schoolId}/classroom-definitions?yearId={yearId}&termId={termId}`
+
+**Headers**
+- `Authorization: Bearer <ACCESS_TOKEN>`
+
+**Response (200)**
+```json
+[
+  { "id": "<classroomDefinitionId>", "name": "Primary 7", ... },
+  ...
+]
+```
+
+### 14.4 Step 4: Fetch Assessments for Selected Classroom, Year & Term
+
+**Endpoint**
+- `GET /schools/{schoolId}/assessments?yearId={yearId}&termItemId={termId}&classroomDefinitionId={classroomDefinitionId}`
+
+**Headers**
+- `Authorization: Bearer <ACCESS_TOKEN>`
+
+**Response (200)**
+```json
+[
+  {
+    "classroomDefinition": { "id": "<classroomDefinitionId>", ... },
+    "assessments": [
+      { "id": "<assessmentId>", "name": "Mid-Term Exam", ... },
+      ...
+    ]
+  }
+]
+```
+
+### 14.5 Step 5: Fetch Students' Grades for an Assessment
+
+**Endpoint**
+- `GET /schools/{schoolId}/grades?assessmentId={assessmentId}`
+
+**Headers**
+- `Authorization: Bearer <ACCESS_TOKEN>`
+
+**Response (200)**
+```json
+[
+  {
+    "id": "<gradeId>",
+    "student_id": "<studentId>",
+    "score": "85.50",
+    "percentage": "85.50",
+    "letter_grade": "B",
+    "remarks": "Good performance",
+    "assessment": { "id": "<assessmentId>", ... }
+  },
+  ...
+]
+```
+
+**Recommended UX Flow:**
+1. User selects Academic Year → fetches Terms.
+2. User selects Term → fetches Classroom Definitions.
+3. User selects Classroom → fetches Assessments.
+4. User selects Assessment → fetches Grades for students in that classroom/assessment.
+
+This stepwise approach ensures a fast, clear, and user-friendly experience.
+
+---
+
+### 14.x Fetch School Structure (Years, Terms, Classroom Definitions & Assessments)
+
+**Endpoint**
+- `GET /schools/{schoolId}/structure`
+
+**Headers**
+- `Authorization: Bearer <ACCESS_TOKEN>`
+
+**Description**
+Returns the academic years, terms, and classroom definitions for the school. Each classroom definition includes its assessments (with year, term, and subject info).
+
+**Response (200)**
+```json
+{
+  "years": [
+    { "id": "<yearId>", "name": "2025", ... },
+    ...
+  ],
+  "terms": [
+    { "id": "<termId>", "name": "Term 1", "ordinal": 1, ... },
+    ...
+  ],
+  "classroomDefinitions": [
+    {
+      "id": "<classroomDefinitionId>",
+      "name": "Primary 7",
+      ...,
+      "assessments": [
+        {
+          "id": "<assessmentId>",
+          "name": "Mid-Term Exam",
+          "academic_year": { "id": "<yearId>", "name": "2025" },
+          "term_template_item": { "id": "<termId>", "name": "Term 1" },
+          "subject": { "id": "<subjectId>", "name": "Mathematics" },
+          ...
+        },
+        ...
+      ]
+    },
+    ...
+  ]
+}
+```
+
+**Usage:**
+- Use this endpoint to populate select fields for academic year, term, classroom, and available assessments in a single call.
+- Recommended as the first step in the grading UX flow.
+
+---
