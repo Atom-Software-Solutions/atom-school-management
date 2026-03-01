@@ -41,6 +41,11 @@ export class SchoolStructureController {
       },
       orderBy: { assessment_date: 'desc' },
     });
+    // Fetch all subjects for this school
+    const subjects = await this.prisma.subject.findMany({
+      where: { school_id: schoolId },
+      orderBy: { name: 'asc' },
+    });
     // Map classroom definitions to include their assessments
     const classroomDefsWithAssessments = classroomDefinitions.map(def => {
       const defAssessments = assessments.filter(a => a.classroom_definition_id === def.id);
@@ -53,6 +58,7 @@ export class SchoolStructureController {
       years,
       terms,
       classroomDefinitions: classroomDefsWithAssessments,
+      subjects,
     };
   }
 }
