@@ -1049,56 +1049,66 @@ You can also filter by `subjectId`:
 
 - `GET /students/{studentId}/results?yearId={yearId}&termItemId={termItemId}&subjectId={subjectIdMath}`
 
-### 9.2 Academic summary for a term
+---
+
+### 9.1.1 Fetch student results by identity (studentNo or regNo)
 
 **Endpoint**
 
-- `GET /students/{studentId}/results/summary?yearId={yearId}&termItemId={termItemId}`
+- `GET /schools/{schoolId}/results/by-identity?yearId={yearId}&termId={termId}&identity={studentNoOrRegNo}`
 
 **Headers**
 
 - `Authorization: Bearer <ACCESS_TOKEN>`
 
-**Response (200)** – key structure
+**Description**
+
+Fetches all grades for a student in a given academic year and term, using either their `studentNo` or `regNo` as the identity. Returns a summary including overall average and letter grade.
+
+**Request Example**
+
+```
+GET /api/schools/545f3884-cd5b-4f4f-8b79-e112059983b8/results/by-identity?yearId=9540a9a7-aee9-4407-b747-ac59c1883827&termId=43061b70-2ad4-4130-8e87-902ea19f1785&identity=STU001
+```
+
+**Response Example**
 
 ```json
 {
   "student": {
-    "id": "<studentId1>",
+    "id": "<studentId>",
+    "student_no": "STU001",
+    "reg_no": "REG001",
     "first_name": "John",
-    "last_name": "Doe",
-    "student_no": "STU001"
-  },
-  "term": {
-    "id": "<termId>",
-    "name": "Term 1",
-    "ordinal": 1
+    "last_name": "Doe"
   },
   "academicYear": {
-    "id": "<yearId>",
-    "name": "2025"
+    "id": "<yearId>"
   },
-  "overallAverage": 88.75,
-  "overallLetterGrade": "B",
-  "subjects": [
+  "term": {
+    "id": "<termId>"
+  },
+  "grades": [
     {
-      "subject": {
-        "id": "<subjectIdMath>",
-        "name": "Mathematics",
-        "code": "MATH"
+      "assessment": {
+        "id": "<assessmentId>",
+        "name": "Mid-Term Exam",
+        "subject": { "id": "<subjectId>", "name": "Mathematics" }
       },
-      "average": 89.5,
-      "letterGrade": "B",
-      "grades": [
-        { "id": "<gradeId1>", "percentage": "85.50" }
-      ]
+      "score": "85.50",
+      "percentage": "85.50",
+      "letter_grade": "B",
+      "remarks": "Good performance"
     }
   ],
-  "totalSubjects": 2
+  "overallAverage": 88.75,
+  "overallLetterGrade": "B"
 }
 ```
 
-Use this to confirm averages before generating report cards.
+**Notes:**
+- The `identity` parameter can be either the student's `studentNo` or `regNo`.
+- Returns all grades for the student in the specified year and term, plus summary.
 
 ---
 

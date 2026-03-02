@@ -1,17 +1,17 @@
-import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, Req, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
-import { ResultsService } from './results.service';
+import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
+import { BulkCreateGradesDto } from './dto/bulk-create-grades.dto';
 import { CreateGradeDto } from './dto/create-grade.dto';
 import { UpdateGradeDto } from './dto/update-grade.dto';
-import { BulkCreateGradesDto } from './dto/bulk-create-grades.dto';
-import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
+import { ResultsService } from './results.service';
 
 @Controller('schools/:schoolId/grades')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('SCHOOL_ADMIN')
 export class GradesController {
-  constructor(private readonly resultsService: ResultsService) {}
+  constructor(private readonly resultsService: ResultsService) { }
 
   @Post()
   create(@Param('schoolId') schoolId: string, @Body() dto: CreateGradeDto, @Request() req: AuthenticatedRequest) {
@@ -27,6 +27,23 @@ export class GradesController {
       throw new ForbiddenException('Authentication required');
     }
     return this.resultsService.bulkCreateGrades(schoolId, req.user.id, dto);
+  }
+
+  @Get('results-by-identity')
+  async getStudentResultsByIdentity(
+    @Param('schoolId') schoolId: string,
+    @Query('identity') identity: string,
+    @Query('yearId') yearId: string,
+    @Query('termId') termId: string,
+    @Req() req: any,
+  ) {
+    return this.resultsService.getStudentResultsByIdentity(
+      schoolId,
+      req.user.id,
+      yearId,
+      termId,
+      identity,
+    );
   }
 
   @Get(':id')
