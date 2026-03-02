@@ -41,7 +41,7 @@ Legend:
 - [x] `GET /users/:id` - Get user profile
 - [x] `PATCH /users/:id` - Update user
 - [x] `DELETE /users/:id` - Deactivate user (soft delete)
-- [ ] `POST /users/:id/reset-password` - Reset user password (admin action)
+- [x] `POST /users/:id/reset-password` - Reset user password (admin action)
 
 ---
 
@@ -139,15 +139,15 @@ Legend:
 
 ## Fee & Billing
 
-- [ ] `GET /fees/categories` - List fee categories
-- [ ] `POST /fees/categories` - Create fee category
-- [ ] `GET /fees/structures` - List fee structures
-- [ ] `POST /fees/structures` - Create fee structure
-- [ ] `GET /invoices` - List invoices
-- [ ] `POST /invoices` - Create invoice
-- [ ] `GET /invoices/:id` - View invoice details
-- [ ] `PATCH /invoices/:id` - Update invoice
-- [ ] `POST /invoices/:id/cancel` - Cancel invoice
+- [x] `GET /fees/categories` - List fee categories
+- [x] `POST /fees/categories` - Create fee category
+- [x] `GET /fees/structures` - List fee structures
+- [x] `POST /fees/structures` - Create fee structure
+- [x] `GET /invoices` - List invoices
+- [x] `POST /invoices` - Create invoice
+- [x] `GET /invoices/:id` - View invoice details
+- [x] `PATCH /invoices/:id` - Update invoice
+- [x] `POST /invoices/:id/cancel` - Cancel invoice
 
 ---
 
@@ -211,10 +211,10 @@ Legend:
 ## Summary
 
 - **Total Endpoints**: 110
-- **Implemented**: 75
+- **Implemented**: 84
 - **In Progress**: 0
-- **Not Implemented**: 35
-- **Completion**: 68.2%
+- **Not Implemented**: 26
+- **Completion**: 76.4%
 
 ---
 

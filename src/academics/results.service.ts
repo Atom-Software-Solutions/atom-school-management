@@ -1,14 +1,14 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateSubjectDto } from './dto/create-subject.dto';
-import { UpdateSubjectDto } from './dto/update-subject.dto';
-import { CreateAssessmentDto } from './dto/create-assessment.dto';
-import { UpdateAssessmentDto } from './dto/update-assessment.dto';
-import { CreateGradeDto } from './dto/create-grade.dto';
-import { UpdateGradeDto } from './dto/update-grade.dto';
-import { BulkCreateGradesDto } from './dto/bulk-create-grades.dto';
-import { GenerateReportCardDto } from './dto/generate-report-card.dto';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { PrismaService } from '../prisma/prisma.service';
+import { BulkCreateGradesDto } from './dto/bulk-create-grades.dto';
+import { CreateAssessmentDto } from './dto/create-assessment.dto';
+import { CreateGradeDto } from './dto/create-grade.dto';
+import { CreateSubjectDto } from './dto/create-subject.dto';
+import { GenerateReportCardDto } from './dto/generate-report-card.dto';
+import { UpdateAssessmentDto } from './dto/update-assessment.dto';
+import { UpdateGradeDto } from './dto/update-grade.dto';
+import { UpdateSubjectDto } from './dto/update-subject.dto';
 
 @Injectable()
 export class ResultsService {
@@ -1173,5 +1173,70 @@ export class ResultsService {
       },
       orderBy: { created_at: 'asc' },
     });
+  }
+
+  async getStudentResultsByIdentity(
+    schoolId: string,
+    adminUserId: string,
+    yearId: string,
+    termItemId: string,
+    identity: string,
+  ) {
+    await this.assertIsAdminOfSchool(schoolId, adminUserId);
+
+    if (!identity) {
+      throw new BadRequestException('Student identity (studentNo or regNo) is required');
+    }
+
+    // Find student by student_no OR reg_no
+    const student = await this.prisma.student.findFirst({
+      where: {
+        school_id: schoolId,
+        OR: [
+          { student_no: identity },
+          { reg_no: identity },
+        ],
+      },
+    });
+    if (!student) throw new NotFoundException('Student not found');
+
+    // Get grades for this student in the specified year and term
+    const grades = await this.getStudentGradesInternal(student, yearId, termItemId);
+
+    // Optionally, calculate overall average and letter grade
+    let overallAverage = 0;
+    let overallLetterGrade = '';
+    if (grades.length > 0) {
+      const avg = grades.reduce((sum: any, g: any) => sum + (g.percentage || 0), 0) / grades.length;
+      overallAverage = Number(avg.toFixed(2));
+      overallLetterGrade = this.calculateLetterGrade(overallAverage);
+    }
+
+    return {
+      student: {
+        id: student.id,
+        student_no: student.student_no,
+        reg_no: student.reg_no,
+        first_name: student.first_name,
+        last_name: student.last_name,
+      },
+      academicYear: { id: yearId },
+      term: { id: termItemId },
+      grades: grades.map((g: any) => ({
+        assessment: {
+          id: g.assessment?.id,
+          name: g.assessment?.name,
+          subject: g.assessment?.subject
+            ? { id: g.assessment.subject.id, name: g.assessment.subject.name }
+            : null,
+        },
+        score: g.score,
+        percentage: g.percentage,
+        letter_grade: g.letter_grade,
+        remarks: g.remarks,
+      })),
+      overallAverage,
+      overallLetterGrade,
+    };
   }
 }
