@@ -18,6 +18,7 @@ export class AssessmentsController {
     @Query('yearId') yearId: string,
     @Query('termItemId') termItemId: string,
     @Request() req: AuthenticatedRequest,
+    @Query('definitionId') definitionId?: string,
   ) {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
@@ -28,6 +29,9 @@ export class AssessmentsController {
       throw new BadRequestException('yearId and termItemId are required');
     }
 
+    if (definitionId) {
+      return this.resultsService.listAssessmentsByDefinition(schoolId, req.user.id, yearId, termItemId, definitionId);
+    }
     return this.resultsService.listAssessments(schoolId, req.user.id, yearId, termItemId);
   }
 

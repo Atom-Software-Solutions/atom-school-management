@@ -323,6 +323,60 @@ export class ResultsService {
     return result;
   }
 
+  async listAssessmentsByDefinition(
+    schoolId: string,
+    adminUserId: string,
+    yearId: string,
+    termItemId: string,
+    definitionId: string,
+  ) {
+    await this.assertIsAdminOfSchool(schoolId, adminUserId);
+
+    const where: any = {
+      school_id: schoolId,
+      academic_year_id: yearId,
+      term_template_item_id: termItemId,
+      classroom_definition_id: definitionId,
+    };
+
+    const assessments = await (this.prisma as any).assessment.findMany({
+      where,
+      include: {
+        subject: {
+          select: { id: true, name: true, code: true },
+        },
+        classroom_definition: {
+          select: { id: true, name: true, level: true },
+        },
+        term_template_item: true,
+      },
+      orderBy: { assessment_date: 'desc' },
+    });
+
+    // Group by classroom definition (should be only one group)
+    const groups: Record<string, any> = {};
+    for (const a of assessments) {
+      const defId = a.classroom_definition_id || '__unassigned__';
+      if (!groups[defId]) {
+        groups[defId] = {
+          classroomDefinition: a.classroom_definition || null,
+          termTemplateItem: a.term_template_item || null,
+          assessments: [],
+        };
+      }
+      groups[defId].assessments.push(a);
+    }
+
+    // Convert to array and sort by classroom name
+    const result = Object.values(groups).sort((x: any, y: any) => {
+      const nameA = x.classroomDefinition?.name || '';
+      const nameB = y.classroomDefinition?.name || '';
+      return nameA.localeCompare(nameB);
+    });
+
+    return result;
+  }
+
   async createAssessment(
     schoolId: string,
     adminUserId: string,
