@@ -28,4 +28,24 @@ export class ResultsController {
             identity,
         );
     }
+
+    @Get('by-classroom')
+    async getResultsByClassroom(
+        @Param('schoolId') schoolId: string,
+        @Query('yearId') yearId: string,
+        @Query('termId') termId: string,
+        @Query('definitionId') definitionId: string,
+        @Req() req: any,
+    ) {
+        if (!req.user) {
+            throw new ForbiddenException('Authentication required');
+        }
+        return this.resultsService.getResultsByClassroom(
+            schoolId,
+            req.user.id,
+            yearId,
+            termId,
+            definitionId,
+        );
+    }
 }

@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable, Logger,
+  NotFoundException
+} from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { PrismaService } from '../prisma/prisma.service';
 import { BulkCreateGradesDto } from './dto/bulk-create-grades.dto';
@@ -84,7 +89,11 @@ export class ResultsService {
   // SUBJECT MANAGEMENT
   // ==========================================
 
-  async listSubjects(schoolId: string, adminUserId: string, includeInactive = false) {
+  async listSubjects(
+    schoolId: string,
+    adminUserId: string,
+    includeInactive = false
+  ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
     return (this.prisma as any).subject.findMany({
       where: {
@@ -95,7 +104,11 @@ export class ResultsService {
     });
   }
 
-  async createSubject(schoolId: string, adminUserId: string, data: CreateSubjectDto) {
+  async createSubject(
+    schoolId: string,
+    adminUserId: string,
+    data: CreateSubjectDto
+  ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     // Check for existing subject with same name or code (active)
@@ -110,7 +123,9 @@ export class ResultsService {
       },
     });
     if (existing) {
-      throw new BadRequestException('A subject with this name or code already exists for this school');
+      throw new BadRequestException(
+        'A subject with this name or code already exists for this school'
+      );
     }
 
     try {
@@ -128,7 +143,11 @@ export class ResultsService {
     }
   }
 
-  async createSubjects(schoolId: string, adminUserId: string, dataArray: CreateSubjectDto[]) {
+  async createSubjects(
+    schoolId: string,
+    adminUserId: string,
+    dataArray: CreateSubjectDto[]
+  ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     if (!Array.isArray(dataArray) || dataArray.length === 0) {
@@ -152,7 +171,9 @@ export class ResultsService {
         },
       });
       if (existing) {
-        errors.push(`Subject ${i + 1} (${data.name}): A subject with this name or code already exists for this school`);
+        errors.push(
+          `Subject ${i + 1} (${data.name}): A subject with this name or code already exists for this school`
+        );
         continue;
       }
       try {
@@ -189,7 +210,11 @@ export class ResultsService {
     return subject;
   }
 
-  async updateSubject(subjectId: string, adminUserId: string, data: UpdateSubjectDto) {
+  async updateSubject(
+    subjectId: string,
+    adminUserId: string,
+    data: UpdateSubjectDto
+  ) {
     const subject = await (this.prisma as any).subject.findUnique({
       where: { id: subjectId },
     });
@@ -269,6 +294,9 @@ export class ResultsService {
         classroom_definition: {
           select: { id: true, name: true, level: true },
         },
+        term_template_item: {
+          select: { id: true, name: true, ordinal: true },
+        },
       },
       orderBy: { assessment_date: 'desc' },
     });
@@ -295,7 +323,11 @@ export class ResultsService {
     return result;
   }
 
-  async createAssessment(schoolId: string, adminUserId: string, data: CreateAssessmentDto) {
+  async createAssessment(
+    schoolId: string,
+    adminUserId: string,
+    data: CreateAssessmentDto
+  ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     // Verify academic year exists and belongs to school
@@ -308,10 +340,14 @@ export class ResultsService {
     }
 
     // Verify term item exists and belongs to the academic year's term template
-    const termItem = await (this.prisma as any).termTemplateItem.findUnique({ where: { id: (data as any).termTemplateItemId } });
+    const termItem = await (this.prisma as any).termTemplateItem.findUnique({
+      where: { id: (data as any).termTemplateItemId },
+    });
     if (!termItem) throw new NotFoundException('Term template item not found');
     if (termItem.term_template_id !== year.term_template_id) {
-      throw new BadRequestException('Term item does not belong to the academic year term template');
+      throw new BadRequestException(
+        'Term item does not belong to the academic year term template'
+      );
     }
 
     // Verify subject exists and belongs to school
@@ -344,7 +380,9 @@ export class ResultsService {
       },
     });
     if (existing) {
-      throw new BadRequestException('An assessment with this name and type already exists for this subject and term');
+      throw new BadRequestException(
+        'An assessment with this name and type already exists for this subject and term'
+      );
     }
     return (this.prisma as any).assessment.create({
       data: {
@@ -377,7 +415,11 @@ export class ResultsService {
     return assessment;
   }
 
-  async updateAssessment(assessmentId: string, adminUserId: string, data: UpdateAssessmentDto) {
+  async updateAssessment(
+    assessmentId: string,
+    adminUserId: string,
+    data: UpdateAssessmentDto
+  ) {
     const assessment = await (this.prisma as any).assessment.findUnique({
       where: { id: assessmentId },
     });
@@ -388,10 +430,14 @@ export class ResultsService {
     // Prevent updating immutable fields (yearId, termTemplateItemId, classroomDefinitionId)
     const dataAsAny = data as any;
     if (dataAsAny.yearId !== undefined || dataAsAny.termTemplateItemId !== undefined || dataAsAny.termItemId !== undefined) {
-      throw new BadRequestException('yearId and termTemplateItemId are immutable after creation. Delete and recreate the assessment if term context must change.');
+      throw new BadRequestException(
+        'yearId and termTemplateItemId are immutable after creation. Delete and recreate the assessment if term context must change.'
+      );
     }
     if (dataAsAny.classroomDefinitionId !== undefined) {
-      throw new BadRequestException('classroomDefinitionId is immutable after creation. Delete and recreate the assessment to change classroom context.');
+      throw new BadRequestException(
+        'classroomDefinitionId is immutable after creation. Delete and recreate the assessment to change classroom context.'
+      );
     }
 
     const updateData: any = {};
@@ -422,7 +468,9 @@ export class ResultsService {
         },
       });
       if (existing) {
-        throw new BadRequestException('An assessment with this name and type already exists for this subject and term');
+        throw new BadRequestException(
+          'An assessment with this name and type already exists for this subject and term'
+        );
       }
     }
 
@@ -657,7 +705,9 @@ export class ResultsService {
           const errorInfo = this.formatGradeErrorMessage(gradeData.studentId, innerE);
           errorDetails.push(errorInfo);
           this.logger.warn(
-            `Failed to create grade for student ${gradeData.studentId}: ${errorInfo.message} (${errorInfo.statusCode})`,
+            `Failed to create grade for student
+             ${gradeData.studentId}: 
+             ${errorInfo.message} (${errorInfo.statusCode})`,
           );
         }
       }
@@ -782,7 +832,13 @@ export class ResultsService {
   // STUDENT ACADEMIC HISTORY
   // ==========================================
 
-  async getStudentGrades(studentId: string, adminUserId: string, yearId?: string, termItemId?: string, subjectId?: string) {
+  async getStudentGrades(
+    studentId: string,
+    adminUserId: string,
+    yearId?: string,
+    termItemId?: string,
+    subjectId?: string
+  ) {
     const student = await this.prisma.student.findUnique({
       where: { id: studentId },
     });
@@ -881,7 +937,13 @@ export class ResultsService {
     });
 
     // Calculate subject averages
-    const subjectAverages: Record<string, { subject: any; totalScore: number; totalWeight: number; average: number; grades: any[] }> = {};
+    const subjectAverages: Record<string, {
+      subject: any;
+      totalScore: number;
+      totalWeight: number;
+      average: number;
+      grades: any[];
+    }> = {};
 
     for (const grade of grades) {
       const subjectId = grade.subject_id;
@@ -1073,7 +1135,12 @@ export class ResultsService {
     await this.assertIsAdminOfSchool(reportCard.school_id, adminUserId);
 
     // Get the academic summary using stored term template item id
-    const summary = await this.getStudentAcademicSummary(reportCard.student_id, adminUserId, reportCard.academic_year_id, reportCard.term_template_item_id);
+    const summary = await this.getStudentAcademicSummary(
+      reportCard.student_id,
+      adminUserId,
+      reportCard.academic_year_id,
+      reportCard.term_template_item_id
+    );
 
     return {
       ...reportCard,
@@ -1237,6 +1304,104 @@ export class ResultsService {
       })),
       overallAverage,
       overallLetterGrade,
+    };
+  }
+
+  async getResultsByClassroom(
+    schoolId: string,
+    adminUserId: string,
+    yearId: string,
+    termItemId: string,
+    definitionId: string,
+  ) {
+    await this.assertIsAdminOfSchool(schoolId, adminUserId);
+
+    // 1. Find all active enrollments for the classroom in the given year
+    const enrollments = await (this.prisma as any).studentEnrollment.findMany({
+      where: {
+        academic_year_id: yearId,
+        classroom_definition_id: definitionId,
+        status: 'active',
+      },
+      include: {
+        student: true,
+      },
+    });
+
+    const studentIds = enrollments.map((e: any) => e.student_id);
+
+    // 2. Get all grades for these students in the specified term/classroom
+    const grades = await (this.prisma as any).grade.findMany({
+      where: {
+        school_id: schoolId,
+        student_id: { in: studentIds },
+        assessment: {
+          academic_year_id: yearId,
+          term_template_item_id: termItemId,
+          classroom_definition_id: definitionId,
+        },
+      },
+      include: {
+        student: true,
+        assessment: {
+          include: {
+            subject: true,
+          },
+        },
+      },
+      orderBy: { created_at: 'asc' },
+    });
+
+    // 3. Group grades by student_id
+    const gradesByStudent: Record<string, any[]> = {};
+    for (const grade of grades) {
+      if (!gradesByStudent[grade.student_id]) {
+        gradesByStudent[grade.student_id] = [];
+      }
+      gradesByStudent[grade.student_id].push({
+        assessment: {
+          id: grade.assessment?.id,
+          name: grade.assessment?.name,
+          subject: grade.assessment?.subject
+            ? { id: grade.assessment.subject.id, name: grade.assessment.subject.name }
+            : null,
+        },
+        score: grade.score,
+        percentage: grade.percentage,
+        letter_grade: grade.letter_grade,
+        remarks: grade.remarks,
+      });
+    }
+
+    // 4. Build result for every enrolled student (even if no grades)
+    const results = enrollments.map((enrollment: any) => ({
+      student: {
+        id: enrollment.student.id,
+        student_no: enrollment.student.student_no,
+        reg_no: enrollment.student.reg_no,
+        first_name: enrollment.student.first_name,
+        last_name: enrollment.student.last_name,
+      },
+      grades: gradesByStudent[enrollment.student_id] || [],
+    }));
+
+    // 5. Get all assessments for this classroom/year/term
+    const assessments = await (this.prisma as any).assessment.findMany({
+      where: {
+        school_id: schoolId,
+        academic_year_id: yearId,
+        term_template_item_id: termItemId,
+        classroom_definition_id: definitionId,
+      },
+      include: {
+        subject: true,
+      },
+      orderBy: { assessment_date: 'asc' },
+    });
+
+    return {
+      assessments,
+      results,
     };
   }
 }
