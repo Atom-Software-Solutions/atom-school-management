@@ -1112,6 +1112,84 @@ GET /api/schools/545f3884-cd5b-4f4f-8b79-e112059983b8/results/by-identity?yearId
 
 ---
 
+### 9.2 Fetch results for all students in a classroom (by year, term, and classroom definition)
+
+**Endpoint**
+
+- `GET /schools/{schoolId}/results/by-classroom?yearId={yearId}&termId={termId}&definitionId={classroomDefinitionId}`
+
+**Headers**
+
+- `Authorization: Bearer <ACCESS_TOKEN>`
+
+**Description**
+
+Returns the results (grades) for all students enrolled in the specified classroom definition for the given academic year and term.
+
+**Request Example**
+
+```
+GET /api/schools/{schoolId}/results/by-classroom?yearId={yearId}&termId={termId}&definitionId={classroomDefinitionId}
+```
+
+**Response Example**
+
+```json
+[
+  {
+    "student": {
+      "id": "<studentId1>",
+      "student_no": "STU001",
+      "reg_no": "REG001",
+      "first_name": "John",
+      "last_name": "Doe"
+    },
+    "grades": [
+      {
+        "assessment": {
+          "id": "<assessmentId>",
+          "name": "Mid-Term Exam",
+          "subject": { "id": "<subjectId>", "name": "Mathematics" }
+        },
+        "score": 85.5,
+        "percentage": 85.5,
+        "letter_grade": "B",
+        "remarks": "Good performance"
+      }
+    ]
+  },
+  {
+    "student": {
+      "id": "<studentId2>",
+      "student_no": "STU002",
+      "reg_no": "REG002",
+      "first_name": "Jane",
+      "last_name": "Smith"
+    },
+    "grades": [
+      {
+        "assessment": {
+          "id": "<assessmentId>",
+          "name": "Mid-Term Exam",
+          "subject": { "id": "<subjectId>", "name": "Mathematics" }
+        },
+        "score": 92,
+        "percentage": 92,
+        "letter_grade": "A",
+        "remarks": "Excellent"
+      }
+    ]
+  }
+]
+```
+
+**Notes:**
+- Only students with active enrollment in the specified classroom/year are included.
+- Each student object contains their grades for the specified term and classroom.
+- Use this endpoint to display classroom-wide results, rankings, or summaries.
+
+---
+
 ## 10. Generate a Report Card
 
 ### 10.1 Generate report card for a student and term
