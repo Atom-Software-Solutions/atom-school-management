@@ -323,6 +323,60 @@ export class ResultsService {
     return result;
   }
 
+  async listAssessmentsByDefinition(
+    schoolId: string,
+    adminUserId: string,
+    yearId: string,
+    termItemId: string,
+    definitionId: string,
+  ) {
+    await this.assertIsAdminOfSchool(schoolId, adminUserId);
+
+    const where: any = {
+      school_id: schoolId,
+      academic_year_id: yearId,
+      term_template_item_id: termItemId,
+      classroom_definition_id: definitionId,
+    };
+
+    const assessments = await (this.prisma as any).assessment.findMany({
+      where,
+      include: {
+        subject: {
+          select: { id: true, name: true, code: true },
+        },
+        classroom_definition: {
+          select: { id: true, name: true, level: true },
+        },
+        term_template_item: true,
+      },
+      orderBy: { assessment_date: 'desc' },
+    });
+
+    // Group by classroom definition (should be only one group)
+    const groups: Record<string, any> = {};
+    for (const a of assessments) {
+      const defId = a.classroom_definition_id || '__unassigned__';
+      if (!groups[defId]) {
+        groups[defId] = {
+          classroomDefinition: a.classroom_definition || null,
+          termTemplateItem: a.term_template_item || null,
+          assessments: [],
+        };
+      }
+      groups[defId].assessments.push(a);
+    }
+
+    // Convert to array and sort by classroom name
+    const result = Object.values(groups).sort((x: any, y: any) => {
+      const nameA = x.classroomDefinition?.name || '';
+      const nameB = y.classroomDefinition?.name || '';
+      return nameA.localeCompare(nameB);
+    });
+
+    return result;
+  }
+
   async createAssessment(
     schoolId: string,
     adminUserId: string,
@@ -980,6 +1034,7 @@ export class ResultsService {
       subjectResults.length > 0
         ? subjectResults.reduce((sum, subj) => sum + subj.average, 0) / subjectResults.length
         : 0;
+    console.log("subjectResults.length", subjectResults.length);
     const overallAverage = Number(overallAverageRaw.toFixed(2));
 
     return {
@@ -1270,14 +1325,32 @@ export class ResultsService {
     // Get grades for this student in the specified year and term
     const grades = await this.getStudentGradesInternal(student, yearId, termItemId);
 
-    // Optionally, calculate overall average and letter grade
-    let overallAverage = 0;
-    let overallLetterGrade = '';
-    if (grades.length > 0) {
-      const avg = grades.reduce((sum: any, g: any) => sum + (g.percentage || 0), 0) / grades.length;
-      overallAverage = Number(avg.toFixed(2));
-      overallLetterGrade = this.calculateLetterGrade(overallAverage);
+    // Calculate subject-level weighted averages
+    const subjectAverages: Record<string, { subject: any, totalScore: number, totalWeight: number }> = {};
+    for (const g of grades) {
+      const weight = Number(g.assessment?.weight ?? 1);
+      const percentage = Number(g.percentage ?? 0);
+      const subjectId = g.assessment?.subject?.id ?? 'unknown';
+      if (!subjectAverages[subjectId]) {
+        subjectAverages[subjectId] = { subject: g.assessment?.subject, totalScore: 0, totalWeight: 0 };
+      }
+      subjectAverages[subjectId].totalScore += percentage * weight;
+      subjectAverages[subjectId].totalWeight += weight;
     }
+    const subjectResults = Object.entries(subjectAverages).map(([subjectId, agg]) => {
+      const avg = agg.totalWeight > 0 ? agg.totalScore / agg.totalWeight : 0;
+      return {
+        subject: agg.subject,
+        average: Number(avg.toFixed(2)),
+        letterGrade: this.calculateLetterGrade(avg),
+      };
+    });
+    const overallAverageRaw =
+      subjectResults.length > 0
+        ? subjectResults.reduce((sum, subj) => sum + subj.average, 0) / subjectResults.length
+        : 0;
+    const overallAverage = Number(overallAverageRaw.toFixed(2));
+    const overallLetterGrade = subjectResults.length > 0 ? this.calculateLetterGrade(overallAverage) : null;
 
     return {
       student: {
@@ -1302,6 +1375,7 @@ export class ResultsService {
         letter_grade: g.letter_grade,
         remarks: g.remarks,
       })),
+      subjects: subjectResults,
       overallAverage,
       overallLetterGrade,
     };
@@ -1358,32 +1432,63 @@ export class ResultsService {
       if (!gradesByStudent[grade.student_id]) {
         gradesByStudent[grade.student_id] = [];
       }
-      gradesByStudent[grade.student_id].push({
-        assessment: {
-          id: grade.assessment?.id,
-          name: grade.assessment?.name,
-          subject: grade.assessment?.subject
-            ? { id: grade.assessment.subject.id, name: grade.assessment.subject.name }
-            : null,
-        },
-        score: grade.score,
-        percentage: grade.percentage,
-        letter_grade: grade.letter_grade,
-        remarks: grade.remarks,
-      });
+      gradesByStudent[grade.student_id].push(grade);
     }
 
     // 4. Build result for every enrolled student (even if no grades)
-    const results = enrollments.map((enrollment: any) => ({
-      student: {
-        id: enrollment.student.id,
-        student_no: enrollment.student.student_no,
-        reg_no: enrollment.student.reg_no,
-        first_name: enrollment.student.first_name,
-        last_name: enrollment.student.last_name,
-      },
-      grades: gradesByStudent[enrollment.student_id] || [],
-    }));
+    const results = enrollments.map((enrollment: any) => {
+      const studentGrades = gradesByStudent[enrollment.student_id] || [];
+      // Group by subject
+      const subjectAverages: Record<string, { subject: any, totalScore: number, totalWeight: number }> = {};
+      for (const g of studentGrades) {
+        const weight = Number(g.assessment?.weight ?? 1);
+        const percentage = Number(g.percentage ?? 0);
+        const subjectId = g.assessment?.subject?.id ?? 'unknown';
+        if (!subjectAverages[subjectId]) {
+          subjectAverages[subjectId] = { subject: g.assessment?.subject, totalScore: 0, totalWeight: 0 };
+        }
+        subjectAverages[subjectId].totalScore += percentage * weight;
+        subjectAverages[subjectId].totalWeight += weight;
+      }
+      const subjectResults = Object.entries(subjectAverages).map(([subjectId, agg]) => {
+        const avg = agg.totalWeight > 0 ? agg.totalScore / agg.totalWeight : 0;
+        return {
+          subject: agg.subject,
+          average: Number(avg.toFixed(2)),
+          letterGrade: this.calculateLetterGrade(avg),
+        };
+      });
+      const overallAverageRaw =
+        subjectResults.length > 0
+          ? subjectResults.reduce((sum, subj) => sum + subj.average, 0) / subjectResults.length
+          : 0;
+      const overallAverage = Number(overallAverageRaw.toFixed(2));
+      return {
+        student: {
+          id: enrollment.student.id,
+          student_no: enrollment.student.student_no,
+          reg_no: enrollment.student.reg_no,
+          first_name: enrollment.student.first_name,
+          last_name: enrollment.student.last_name,
+        },
+        subjects: subjectResults,
+        overallAverage,
+        overallLetterGrade: subjectResults.length > 0 ? this.calculateLetterGrade(overallAverage) : null,
+        grades: studentGrades.map((g: any) => ({
+          assessment: {
+            id: g.assessment?.id,
+            name: g.assessment?.name,
+            subject: g.assessment?.subject
+              ? { id: g.assessment.subject.id, name: g.assessment.subject.name }
+              : null,
+          },
+          score: g.score,
+          percentage: g.percentage,
+          letter_grade: g.letter_grade,
+          remarks: g.remarks,
+        })),
+      };
+    });
 
     // 5. Get all assessments for this classroom/year/term
     const assessments = await (this.prisma as any).assessment.findMany({
