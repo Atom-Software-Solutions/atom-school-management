@@ -5,7 +5,8 @@ import { PrismaService } from '../prisma/prisma.service';
 export class AcademicsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private async assertIsAdminOfSchool(schoolId: string, userId: string) {
+  private async assertIsAdminOfSchool(schoolId: string, userId: string, userRole?: string) {
+    if (userRole === 'SUPER_ADMIN') return;
     const rel = await this.prisma.schoolAdmin.findUnique({
       where: { school_id_user_id: { school_id: schoolId, user_id: userId } },
     });

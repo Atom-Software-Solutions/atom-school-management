@@ -7,10 +7,11 @@ export class ClassroomsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  private async assertIsAdminOfSchool(schoolId: string, userId: string) {
+  private async assertIsAdminOfSchool(schoolId: string, userId: string, userRole?: string) {
     let normalizedSchoolId = (schoolId ?? '').trim();
     const normalizedUserId = (userId ?? '').trim();
 
+    if (userRole === 'SUPER_ADMIN') return;
     // Guard against malformed URLs where the Swagger-style placeholder "{schoolId}" wasn't replaced properly.
     // We've seen values like: "<uuid>schoolId}" (i.e. only "{" got replaced), which will always fail the lookup.
     if (normalizedSchoolId.toLowerCase().endsWith('schoolid}')) {

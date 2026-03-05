@@ -100,13 +100,12 @@ export class StudentsService {
     throw new BadRequestException("gender must be 'M' or 'F'");
   }
 
-  private async assertIsAdminOfSchool(schoolId: string, userId: string) {
+  private async assertIsAdminOfSchool(schoolId: string, userId: string, userRole?: string) {
+    if (userRole === 'SUPER_ADMIN') return;
     const rel = await this.prisma.schoolAdmin.findUnique({
       where: { school_id_user_id: { school_id: schoolId, user_id: userId } },
     });
-    if (!rel) {
-      throw new ForbiddenException('Insufficient permissions for this school');
-    }
+    if (!rel) throw new ForbiddenException('Insufficient permissions for this school');
   }
 
   async listBySchool(schoolId: string, adminUserId: string) {
