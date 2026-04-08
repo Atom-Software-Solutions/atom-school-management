@@ -1,6 +1,7 @@
-import { Injectable, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import * as XLSX from 'xlsx';
+import { PrismaService } from '../prisma/prisma.service';
 
 // File validation constants
 const MAX_FILE_SIZE = parseInt(process.env.MAX_IMPORT_FILE_SIZE || '5242880'); // 5MB default
@@ -978,5 +979,41 @@ export class StudentsService {
       })),
       totalStudents: enrollments.length,
     };
+  }
+
+  async getByIdentity(identity: string, schoolId: string, user: AuthenticatedUser) {
+    await this.assertIsAdminOfSchool(schoolId, user.id);
+
+    const student = await this.prisma.student.findFirst({
+      where: {
+        school_id: schoolId,
+        OR: [
+          { student_no: identity },
+          { reg_no: identity }
+        ]
+      }
+    });
+    if (!student) throw new NotFoundException('Student not found');
+
+    // Fetch guardians via join table
+    const studentGuardians = await this.prisma.studentGuardian.findMany({
+      where: { student_id: student.id },
+      select: { guardian_id: true, relation: true }
+    });
+    const guardianIds = studentGuardians.map(sg => sg.guardian_id);
+      let guardians: Array<{ relation: string | null; email: string | null; phone: string | null; id: string; school_id: string; created_at: Date; first_name: string; last_name: string; updated_at: Date; }> = [];
+    if (guardianIds.length > 0) {
+      const guardianRecords = await this.prisma.guardian.findMany({
+        where: { id: { in: guardianIds } }
+      });
+      // Attach relation to each guardian using push
+      guardianRecords.forEach(g => {
+        const sg = studentGuardians.find(sg => sg.guardian_id === g.id);
+        
+        if (sg) guardians.push({ ...g, relation: sg.relation });
+      });
+    }
+      (student as any).guardians = guardians;
+    return student;
   }
 }
