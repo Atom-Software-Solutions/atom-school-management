@@ -1,13 +1,31 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, UseGuards, Res, BadRequestException, UnprocessableEntityException, HttpCode, UsePipes, ValidationPipe } from '@nestjs/common';
-import { StudentsService } from './students.service';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Request,
+  Res,
+  UnprocessableEntityException,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+  UsePipes,
+  ValidationPipe
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response as ExpressResponse } from 'express';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Roles, RolesGuard } from '../auth/guards/roles.guard';
+import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard, Roles } from '../auth/guards/roles.guard';
-import type { Response as ExpressResponse } from 'express';
-import { UploadedFile, UseInterceptors } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
+import { StudentsService } from './students.service';
 
 // File validation constants
 const MAX_FILE_SIZE = parseInt(process.env.MAX_IMPORT_FILE_SIZE || '5242880'); // 5MB default
@@ -361,5 +379,23 @@ export class StudentsController {
       throw new BadRequestException('Missing required query parameter: academicYearId');
     }
     return this.studentsService.getEnrolledStudentsByClassroom(tenantSchoolId, academicYearId, adminUserId);
+  }
+
+  @Get('identity/:identity')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SCHOOL_ADMIN', 'SUPER_ADMIN')
+  async getByIdentity(
+    @Param('identity') identity: string,
+    @Query('schoolId') schoolId: string,
+    @Request() req: AuthenticatedRequest
+  ) {
+    if (!req.user) {
+      throw new ForbiddenException('Authentication required');
+    }
+    if (!schoolId || typeof schoolId !== 'string' || schoolId.trim() === '') {
+      throw new BadRequestException('Missing required query parameter: schoolId');
+    }
+    // Pass schoolId and user info to service for permission check
+    return this.studentsService.getByIdentity(identity, schoolId, req.user);
   }
 }

@@ -1112,6 +1112,52 @@ GET /api/schools/545f3884-cd5b-4f4f-8b79-e112059983b8/results/by-identity?yearId
 
 ---
 
+### 9.1.2 Fetch student profile by identity (studentNo or regNo)
+
+**Endpoint**
+
+- `GET /schools/{schoolId}/students/by-identity?identity={studentNoOrRegNo}`
+
+**Headers**
+
+- `Authorization: Bearer <ACCESS_TOKEN>`
+
+**Description**
+
+Fetches a student's profile using either their `studentNo` or `regNo` as the identity, scoped to the specified school. The logged-in user must be a SCHOOL_ADMIN or SUPER_ADMIN for the school.
+
+**Request Example**
+
+```
+GET /api/schools/545f3884-cd5b-4f4f-8b79-e112059983b8/students/by-identity?identity=STU001
+```
+
+**Response Example**
+
+```json
+{
+  "id": "<studentId>",
+  "school_id": "545f3884-cd5b-4f4f-8b79-e112059983b8",
+  "student_no": "STU001",
+  "reg_no": "REG001",
+  "first_name": "John",
+  "last_name": "Doe",
+  "email": "john.doe@student.test",
+  "phone": "0700000002",
+  "date_of_birth": "2008-05-15",
+  "gender": "Male",
+  "status": "active",
+  "address": "123 Main St"
+}
+```
+
+**Notes:**
+- The `identity` parameter can be either the student's `studentNo` or `regNo`.
+- Only returns a student from the specified school.
+- The user must be a SCHOOL_ADMIN or SUPER_ADMIN for the school.
+
+---
+
 ### 9.2 Fetch results for all students in a classroom (by year, term, and classroom definition)
 
 **Endpoint**
