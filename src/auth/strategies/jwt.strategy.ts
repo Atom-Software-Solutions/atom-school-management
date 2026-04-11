@@ -8,7 +8,10 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(private usersService: UsersService, private prisma: PrismaService) {
+  constructor(
+    private usersService: UsersService,
+    private prisma: PrismaService,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -20,7 +23,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
     // Check active session by jti
     if (payload.jti) {
-      const session = await this.prisma.session.findUnique({ where: { jti: payload.jti } });
+      const session = await this.prisma.session.findUnique({
+        where: { jti: payload.jti },
+      });
       if (!session || !session.is_active || session.expires_at < new Date()) {
         throw new UnauthorizedException('Session is not active');
       }
@@ -34,7 +39,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     // Get school_id from payload (already validated in token) or fetch from database
     let schoolId: string | null = payload.school_id || null;
-    
+
     // If not in payload (for backward compatibility), fetch from database
     if (!schoolId && user.role !== 'SUPER_ADMIN') {
       const schoolAdmin = await this.prisma.schoolAdmin.findFirst({

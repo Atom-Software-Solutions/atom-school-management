@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsUUID, IsNumber, IsOptional, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsUUID,
+  IsNumber,
+  IsOptional,
+  Min,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
@@ -9,7 +16,7 @@ export class CreateGradeDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  studentId: string;
+  studentId!: string;
 
   @ApiProperty({
     description: 'Assessment ID',
@@ -17,7 +24,7 @@ export class CreateGradeDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  assessmentId: string;
+  assessmentId!: string;
 
   @ApiProperty({
     description: 'Score obtained',
@@ -26,7 +33,7 @@ export class CreateGradeDto {
   @IsNumber()
   @Min(0)
   @Type(() => Number)
-  score: number;
+  score!: number;
 
   @ApiPropertyOptional({
     description: 'Letter grade (A, B, C, D, F)',
@@ -44,4 +51,3 @@ export class CreateGradeDto {
   @IsOptional()
   remarks?: string;
 }
-

@@ -1,4 +1,14 @@
-import { Body, Controller, ForbiddenException, Get, Logger, Param, Post, Request, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Logger,
+  Param,
+  Post,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { ClassroomsService } from './classrooms.service';
@@ -11,10 +21,13 @@ import type { AuthenticatedRequest } from '../common/middleware/tenant.middlewar
 export class ClassroomDefinitionsController {
   private readonly logger = new Logger(ClassroomDefinitionsController.name);
 
-  constructor(private readonly classroomsService: ClassroomsService) { }
+  constructor(private readonly classroomsService: ClassroomsService) {}
 
   @Get()
-  list(@Param('schoolId') schoolId: string, @Request() req: AuthenticatedRequest) {
+  list(
+    @Param('schoolId') schoolId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
     }

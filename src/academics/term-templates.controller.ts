@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Request, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { AcademicsService } from './academics.service';
@@ -13,7 +23,10 @@ export class TermTemplatesController {
   constructor(private readonly academics: AcademicsService) {}
 
   @Get()
-  list(@Param('schoolId') schoolId: string, @Request() req: AuthenticatedRequest) {
+  list(
+    @Param('schoolId') schoolId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
     const adminUserId = req.user?.id as string;
     return this.academics.listTermTemplates(schoolId, adminUserId);
   }

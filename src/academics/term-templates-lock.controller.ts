@@ -16,4 +16,3 @@ export class TermTemplatesLockController {
     return this.academics.lockTemplate(id, adminUserId);
   }
 }
-

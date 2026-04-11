@@ -15,6 +15,8 @@ import { SubjectsController } from './subjects.controller';
 import { TermTemplatesLockController } from './term-templates-lock.controller';
 import { TermTemplatesController } from './term-templates.controller';
 import { YearsController } from './years.controller';
+import { PdfGenerationService } from './pdf-generation.service';
+import { PdfStorageService } from './pdf-storage.service';
 
 @Module({
   controllers: [
@@ -30,6 +32,14 @@ import { YearsController } from './years.controller';
     SchoolStructureController,
     ResultsController,
   ],
-  providers: [AcademicsService, ResultsService, PrismaService, JwtAuthGuard, RolesGuard],
+  providers: [
+    AcademicsService,
+    ResultsService,
+    PrismaService,
+    JwtAuthGuard,
+    RolesGuard,
+    PdfGenerationService,
+    PdfStorageService,
+  ],
 })
-export class AcademicsModule { }
+export class AcademicsModule {}

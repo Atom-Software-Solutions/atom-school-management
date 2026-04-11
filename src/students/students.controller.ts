@@ -16,7 +16,7 @@ import {
   UseGuards,
   UseInterceptors,
   UsePipes,
-  ValidationPipe
+  ValidationPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response as ExpressResponse } from 'express';
@@ -29,7 +29,10 @@ import { StudentsService } from './students.service';
 
 // File validation constants
 const MAX_FILE_SIZE = parseInt(process.env.MAX_IMPORT_FILE_SIZE || '5242880'); // 5MB default
-const ALLOWED_MIME_TYPES = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'];
+const ALLOWED_MIME_TYPES = [
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel',
+];
 const ALLOWED_EXTENSIONS = ['.xlsx'];
 
 // File validation helper
@@ -44,18 +47,29 @@ function validateFileSize(buffer: Buffer | undefined): FileValidationError {
   }
   if (buffer.length > MAX_FILE_SIZE) {
     const maxSizeMB = Math.round(MAX_FILE_SIZE / 1024 / 1024);
-    return { valid: false, error: `File size exceeds maximum of ${maxSizeMB}MB` };
+    return {
+      valid: false,
+      error: `File size exceeds maximum of ${maxSizeMB}MB`,
+    };
   }
   return { valid: true };
 }
 
-function validateFileType(mimeType: string | undefined, originalName: string | undefined): FileValidationError {
+function validateFileType(
+  mimeType: string | undefined,
+  originalName: string | undefined,
+): FileValidationError {
   if (!originalName) {
     return { valid: false, error: 'File name is required' };
   }
-  const extension = originalName.toLowerCase().substring(originalName.lastIndexOf('.'));
+  const extension = originalName
+    .toLowerCase()
+    .substring(originalName.lastIndexOf('.'));
   if (!ALLOWED_EXTENSIONS.includes(extension)) {
-    return { valid: false, error: `Invalid file extension. Only .xlsx files are allowed` };
+    return {
+      valid: false,
+      error: `Invalid file extension. Only .xlsx files are allowed`,
+    };
   }
   if (mimeType && !ALLOWED_MIME_TYPES.includes(mimeType)) {
     return { valid: false, error: `Invalid file type. Must be Excel (.xlsx)` };
@@ -71,7 +85,11 @@ function parseDateDDMMYYYY(dateStr: string): Date | null {
   const d = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
   if (isNaN(d.getTime())) return null;
   // Validate that input matches parsed date (prevent invalid dates like 31-02-2020)
-  if (d.getDate() !== parseInt(day) || d.getMonth() !== parseInt(month) - 1 || d.getFullYear() !== parseInt(year)) {
+  if (
+    d.getDate() !== parseInt(day) ||
+    d.getMonth() !== parseInt(month) - 1 ||
+    d.getFullYear() !== parseInt(year)
+  ) {
     return null;
   }
   return d;
@@ -81,39 +99,60 @@ function parseDateDDMMYYYY(dateStr: string): Date | null {
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('SCHOOL_ADMIN')
 export class StudentsController {
-  constructor(private readonly studentsService: StudentsService) { }
+  constructor(private readonly studentsService: StudentsService) {}
 
-  private resolveTenantSchoolId(req: AuthenticatedRequest, providedSchoolId?: string): string {
+  private resolveTenantSchoolId(
+    req: AuthenticatedRequest,
+    providedSchoolId?: string,
+  ): string {
     const tenantSchoolId = req.user?.school_id as string | undefined;
     if (!tenantSchoolId) {
       throw new BadRequestException('Missing tenant school context');
     }
     if (providedSchoolId && providedSchoolId !== tenantSchoolId) {
-      throw new BadRequestException('schoolId does not match authenticated tenant');
+      throw new BadRequestException(
+        'schoolId does not match authenticated tenant',
+      );
     }
     return tenantSchoolId;
   }
 
   @Get()
-  list(@Query('schoolId') schoolId: string, @Request() req: AuthenticatedRequest) {
+  list(
+    @Query('schoolId') schoolId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
     const adminUserId = (req as any).user?.id as string;
     if (!schoolId || typeof schoolId !== 'string' || schoolId.trim() === '') {
-      throw new BadRequestException('Missing required query parameter: schoolId');
+      throw new BadRequestException(
+        'Missing required query parameter: schoolId',
+      );
     }
     return this.studentsService.listBySchool(schoolId, adminUserId);
   }
 
   @Get('new')
-  listNew(@Query('schoolId') schoolId: string, @Request() req: AuthenticatedRequest) {
+  listNew(
+    @Query('schoolId') schoolId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
     const adminUserId = (req as any).user?.id as string;
     if (!schoolId || typeof schoolId !== 'string' || schoolId.trim() === '') {
-      throw new BadRequestException('Missing required query parameter: schoolId');
+      throw new BadRequestException(
+        'Missing required query parameter: schoolId',
+      );
     }
     return this.studentsService.listUnenrolledStudents(schoolId, adminUserId);
   }
 
   @Post()
-  @UsePipes(new ValidationPipe({ transform: true, whitelist: true, stopAtFirstError: false }))
+  @UsePipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      stopAtFirstError: false,
+    }),
+  )
   create(
     @Query('schoolId') schoolId: string,
     @Body() body: CreateStudentDto,
@@ -121,7 +160,9 @@ export class StudentsController {
   ) {
     const adminUserId = (req as any).user?.id as string;
     if (!schoolId || schoolId.trim() === '') {
-      throw new BadRequestException('Missing required query parameter: schoolId');
+      throw new BadRequestException(
+        'Missing required query parameter: schoolId',
+      );
     }
     const firstName = (body?.firstName ?? '').toString().trim();
     const lastName = (body?.lastName ?? '').toString().trim();
@@ -140,7 +181,9 @@ export class StudentsController {
     }
     if (phone !== undefined && phone !== '') {
       if (!/^\+?\d{10,}$/.test(phone)) {
-        throw new BadRequestException('phone must be at least 10 digits, optionally prefixed with +');
+        throw new BadRequestException(
+          'phone must be at least 10 digits, optionally prefixed with +',
+        );
       }
     }
 
@@ -180,7 +223,13 @@ export class StudentsController {
   }
 
   @Patch(':id')
-  @UsePipes(new ValidationPipe({ transform: true, whitelist: true, stopAtFirstError: false }))
+  @UsePipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      stopAtFirstError: false,
+    }),
+  )
   update(
     @Param('id') id: string,
     @Body() body: UpdateStudentDto,
@@ -190,7 +239,9 @@ export class StudentsController {
     if (body?.phone !== undefined && body.phone !== null) {
       const phone = body.phone.toString().trim();
       if (phone !== '' && !/^\+?\d{10,}$/.test(phone)) {
-        throw new BadRequestException('phone must be at least 10 digits, optionally prefixed with +');
+        throw new BadRequestException(
+          'phone must be at least 10 digits, optionally prefixed with +',
+        );
       }
     }
     if (body?.email !== undefined && body.email !== null) {
@@ -204,7 +255,9 @@ export class StudentsController {
       if (raw && raw !== '') {
         const d = parseDateDDMMYYYY(raw);
         if (!d) {
-          throw new BadRequestException('dateOfBirth must be in DD-MM-YYYY format');
+          throw new BadRequestException(
+            'dateOfBirth must be in DD-MM-YYYY format',
+          );
         }
       }
     }
@@ -223,7 +276,10 @@ export class StudentsController {
     if (!studentNo && !regNo) {
       throw new BadRequestException('Provide studentNo and/or regNo');
     }
-    return this.studentsService.updateIdentifiers(id, adminUserId, { studentNo, regNo });
+    return this.studentsService.updateIdentifiers(id, adminUserId, {
+      studentNo,
+      regNo,
+    });
   }
 
   @Delete(':id')
@@ -247,7 +303,14 @@ export class StudentsController {
   @Post(':id/guardians')
   addGuardian(
     @Param('id') id: string,
-    @Body() body: { firstName: string; lastName: string; email?: string; phone?: string; relation?: string },
+    @Body()
+    body: {
+      firstName: string;
+      lastName: string;
+      email?: string;
+      phone?: string;
+      relation?: string;
+    },
     @Request() req: AuthenticatedRequest,
   ) {
     const adminUserId = (req as any).user?.id as string;
@@ -257,11 +320,16 @@ export class StudentsController {
   @Get('import/template')
   downloadTemplate(@Res() res: ExpressResponse) {
     const buffer = this.studentsService.generateImportTemplate();
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename="students_template.xlsx"');
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="students_template.xlsx"',
+    );
     return res.send(buffer);
   }
-
 
   @Post('import/validate')
   @UseInterceptors(FileInterceptor('file'))
@@ -272,45 +340,71 @@ export class StudentsController {
   ) {
     const adminUserId = (req as any).user?.id as string;
     if (!schoolId || schoolId.trim() === '') {
-      throw new BadRequestException('Missing required query parameter: schoolId');
+      throw new BadRequestException(
+        'Missing required query parameter: schoolId',
+      );
     }
     // Validate file size
     const sizeValidation = validateFileSize(file?.buffer);
     if (!sizeValidation.valid) {
-      console.log("xxx sizeValidation", sizeValidation);
-      throw new UnprocessableEntityException({ valid: false, errors: [sizeValidation.error], total: 0 });
+      console.log('xxx sizeValidation', sizeValidation);
+      throw new UnprocessableEntityException({
+        valid: false,
+        errors: [sizeValidation.error],
+        total: 0,
+      });
     }
 
     // Validate file type (expecting spreadsheet upload)
     const typeValidation = validateFileType(file?.mimetype, file?.originalname);
     if (!typeValidation.valid) {
-      console.log("xxx typeValidation", typeValidation);
-      throw new UnprocessableEntityException({ valid: false, errors: [typeValidation.error], total: 0 });
+      console.log('xxx typeValidation', typeValidation);
+      throw new UnprocessableEntityException({
+        valid: false,
+        errors: [typeValidation.error],
+        total: 0,
+      });
     }
 
     const buffer = file?.buffer || Buffer.alloc(0);
-    return this.studentsService.validateImportFile(schoolId, adminUserId, buffer).then(async (result) => {
-      // If validation failed, return 422
-      if (!result.valid) {
-        console.log("xxx importValidation", result);
-        throw new UnprocessableEntityException(result);
-      }
-      // Only import when validation fully passed
-      const importResult = await this.studentsService.importStudents(schoolId, adminUserId, buffer);
-      return { ...result, ...importResult };
-    });
+    return this.studentsService
+      .validateImportFile(schoolId, adminUserId, buffer)
+      .then(async (result) => {
+        // If validation failed, return 422
+        if (!result.valid) {
+          console.log('xxx importValidation', result);
+          throw new UnprocessableEntityException(result);
+        }
+        // Only import when validation fully passed
+        const importResult = await this.studentsService.importStudents(
+          schoolId,
+          adminUserId,
+          buffer,
+        );
+        return { ...result, ...importResult };
+      });
   }
 
   @Post(':id/promote')
   promote(
     @Param('id') id: string,
     @Query('schoolId') schoolId: string,
-    @Body() body: { fromEnrollmentId?: string; toYearId?: string; toDefinitionId?: string; actionDate?: string; narration?: string },
+    @Body()
+    body: {
+      fromEnrollmentId?: string;
+      toYearId?: string;
+      toDefinitionId?: string;
+      actionDate?: string;
+      narration?: string;
+    },
     @Request() req: AuthenticatedRequest,
   ) {
     const adminUserId = (req as any).user?.id as string;
     const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
-    if (!body?.fromEnrollmentId || !body?.toYearId || !body?.toDefinitionId) throw new BadRequestException('Missing fromEnrollmentId/toYearId/toDefinitionId');
+    if (!body?.fromEnrollmentId || !body?.toYearId || !body?.toDefinitionId)
+      throw new BadRequestException(
+        'Missing fromEnrollmentId/toYearId/toDefinitionId',
+      );
     return this.studentsService.promoteStudent(
       id,
       adminUserId,
@@ -329,25 +423,31 @@ export class StudentsController {
   retain(
     @Param('id') id: string,
     @Query('schoolId') schoolId: string,
-    @Body() body: { fromEnrollmentId?: string; toYearId?: string; toDefinitionId?: string; actionDate?: string; narration?: string; reason?: string },
+    @Body()
+    body: {
+      fromEnrollmentId?: string;
+      toYearId?: string;
+      toDefinitionId?: string;
+      actionDate?: string;
+      narration?: string;
+      reason?: string;
+    },
     @Request() req: AuthenticatedRequest,
   ) {
     const adminUserId = (req as any).user?.id as string;
     const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
-    if (!body?.fromEnrollmentId || !body?.toYearId || !body?.toDefinitionId) throw new BadRequestException('Missing fromEnrollmentId/toYearId/toDefinitionId');
-    return this.studentsService.retainStudent(
-      id,
-      adminUserId,
-      tenantSchoolId,
-      {
-        fromEnrollmentId: body.fromEnrollmentId,
-        toYearId: body.toYearId,
-        toDefinitionId: body.toDefinitionId,
-        actionDate: body.actionDate ? new Date(body.actionDate) : undefined,
-        narration: body.narration,
-        reason: body.reason,
-      },
-    );
+    if (!body?.fromEnrollmentId || !body?.toYearId || !body?.toDefinitionId)
+      throw new BadRequestException(
+        'Missing fromEnrollmentId/toYearId/toDefinitionId',
+      );
+    return this.studentsService.retainStudent(id, adminUserId, tenantSchoolId, {
+      fromEnrollmentId: body.fromEnrollmentId,
+      toYearId: body.toYearId,
+      toDefinitionId: body.toDefinitionId,
+      actionDate: body.actionDate ? new Date(body.actionDate) : undefined,
+      narration: body.narration,
+      reason: body.reason,
+    });
   }
 
   @Get(':id/enrollments/history')
@@ -361,10 +461,15 @@ export class StudentsController {
     const adminUserId = (req as any).user?.id as string;
     const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
     const includeInactiveBool = includeInactive === 'true';
-    return this.studentsService.getEnrollmentHistory(id, adminUserId, tenantSchoolId, {
-      yearId: yearId || undefined,
-      includeInactive: includeInactiveBool,
-    });
+    return this.studentsService.getEnrollmentHistory(
+      id,
+      adminUserId,
+      tenantSchoolId,
+      {
+        yearId: yearId || undefined,
+        includeInactive: includeInactiveBool,
+      },
+    );
   }
 
   @Get('enrolled/by-classroom')
@@ -376,9 +481,15 @@ export class StudentsController {
     const adminUserId = (req as any).user?.id as string;
     const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
     if (!academicYearId || academicYearId.trim() === '') {
-      throw new BadRequestException('Missing required query parameter: academicYearId');
+      throw new BadRequestException(
+        'Missing required query parameter: academicYearId',
+      );
     }
-    return this.studentsService.getEnrolledStudentsByClassroom(tenantSchoolId, academicYearId, adminUserId);
+    return this.studentsService.getEnrolledStudentsByClassroom(
+      tenantSchoolId,
+      academicYearId,
+      adminUserId,
+    );
   }
 
   @Get('identity/:identity')
@@ -387,13 +498,15 @@ export class StudentsController {
   async getByIdentity(
     @Param('identity') identity: string,
     @Query('schoolId') schoolId: string,
-    @Request() req: AuthenticatedRequest
+    @Request() req: AuthenticatedRequest,
   ) {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
     }
     if (!schoolId || typeof schoolId !== 'string' || schoolId.trim() === '') {
-      throw new BadRequestException('Missing required query parameter: schoolId');
+      throw new BadRequestException(
+        'Missing required query parameter: schoolId',
+      );
     }
     // Pass schoolId and user info to service for permission check
     return this.studentsService.getByIdentity(identity, schoolId, req.user);

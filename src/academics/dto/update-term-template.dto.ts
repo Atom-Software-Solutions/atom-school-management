@@ -1,4 +1,10 @@
-import { IsString, IsOptional, IsArray, ValidateNested, ArrayMinSize } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsArray,
+  ValidateNested,
+  ArrayMinSize,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TermStructureItemDto } from './create-term-template.dto';
@@ -13,7 +19,8 @@ export class UpdateTermTemplateDto {
   name?: string;
 
   @ApiPropertyOptional({
-    description: 'Array of term definitions with ordinal and name. For locked templates, can only add new terms (higher ordinals).',
+    description:
+      'Array of term definitions with ordinal and name. For locked templates, can only add new terms (higher ordinals).',
     example: [
       { ordinal: 1, name: 'Term 1' },
       { ordinal: 2, name: 'Term 2' },
@@ -28,4 +35,3 @@ export class UpdateTermTemplateDto {
   @IsOptional()
   structure?: TermStructureItemDto[];
 }
-

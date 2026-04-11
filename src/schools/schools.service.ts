@@ -16,9 +16,17 @@ export class SchoolsService {
   async create(createSchoolDto: CreateSchoolDto, creatorUserId?: string) {
     // If request originated from an authenticated user, enforce verification for SCHOOL_ADMINs
     if (creatorUserId) {
-      const creator = await this.prisma.user.findUnique({ where: { id: creatorUserId } });
-      if (creator && creator.role === 'SCHOOL_ADMIN' && !creator.email_verified) {
-        throw new ForbiddenException('Email must be verified before creating a school');
+      const creator = await this.prisma.user.findUnique({
+        where: { id: creatorUserId },
+      });
+      if (
+        creator &&
+        creator.role === 'SCHOOL_ADMIN' &&
+        !creator.email_verified
+      ) {
+        throw new ForbiddenException(
+          'Email must be verified before creating a school',
+        );
       }
     }
 
@@ -59,8 +67,14 @@ export class SchoolsService {
     if (creatorUserId) {
       await this.prisma.schoolAdmin
         .upsert({
-          where: { school_id_user_id: { school_id: school.id, user_id: creatorUserId } },
-          create: { school_id: school.id, user_id: creatorUserId, is_super_admin: true },
+          where: {
+            school_id_user_id: { school_id: school.id, user_id: creatorUserId },
+          },
+          create: {
+            school_id: school.id,
+            user_id: creatorUserId,
+            is_super_admin: true,
+          },
           update: {},
         })
         .catch(() => undefined);
@@ -161,8 +175,10 @@ export class SchoolsService {
       updateData.address = updateSchoolDto.address;
     if (updateSchoolDto.logoUrl !== undefined)
       updateData.logo_url = updateSchoolDto.logoUrl;
-    if (updateSchoolDto.currency) updateData.currency = updateSchoolDto.currency;
-    if (updateSchoolDto.timeZone) updateData.time_zone = updateSchoolDto.timeZone;
+    if (updateSchoolDto.currency)
+      updateData.currency = updateSchoolDto.currency;
+    if (updateSchoolDto.timeZone)
+      updateData.time_zone = updateSchoolDto.timeZone;
     if (updateSchoolDto.isActive !== undefined)
       updateData.is_active = updateSchoolDto.isActive;
 
@@ -187,7 +203,11 @@ export class SchoolsService {
     });
   }
 
-  async updateIfAdmin(id: string, userId: string, updateSchoolDto: UpdateSchoolDto) {
+  async updateIfAdmin(
+    id: string,
+    userId: string,
+    updateSchoolDto: UpdateSchoolDto,
+  ) {
     await this.assertIsAdminOfSchool(id, userId);
     return this.update(id, updateSchoolDto);
   }
@@ -249,7 +269,11 @@ export class SchoolsService {
     };
   }
 
-  async updateSettingsIfAdmin(id: string, userId: string, updateSettingsDto: UpdateSettingsDto) {
+  async updateSettingsIfAdmin(
+    id: string,
+    userId: string,
+    updateSettingsDto: UpdateSettingsDto,
+  ) {
     await this.assertIsAdminOfSchool(id, userId);
     return this.updateSettings(id, updateSettingsDto);
   }

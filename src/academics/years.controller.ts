@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, Patch, Post, Request, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { AcademicsService } from './academics.service';
@@ -13,7 +22,10 @@ export class YearsController {
   constructor(private readonly academics: AcademicsService) {}
 
   @Get('schools/:schoolId/years')
-  list(@Param('schoolId') schoolId: string, @Request() req: AuthenticatedRequest) {
+  list(
+    @Param('schoolId') schoolId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
     const adminUserId = req.user?.id as string;
     return this.academics.listYears(schoolId, adminUserId);
   }
@@ -25,16 +37,12 @@ export class YearsController {
     @Request() req: AuthenticatedRequest,
   ) {
     const adminUserId = req.user?.id as string;
-    return this.academics.createYear(
-      schoolId,
-      adminUserId,
-      {
-        name: dto.name,
-        startDate: new Date(dto.startDate),
-        endDate: new Date(dto.endDate),
-        termTemplateId: dto.termTemplateId,
-      },
-    );
+    return this.academics.createYear(schoolId, adminUserId, {
+      name: dto.name,
+      startDate: new Date(dto.startDate),
+      endDate: new Date(dto.endDate),
+      termTemplateId: dto.termTemplateId,
+    });
   }
 
   @Get('years/:yearId')
@@ -44,7 +52,10 @@ export class YearsController {
   }
 
   @Get('years/:yearId/terms')
-  listTerms(@Param('yearId') yearId: string, @Request() req: AuthenticatedRequest) {
+  listTerms(
+    @Param('yearId') yearId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
     const adminUserId = req.user?.id as string;
     return this.academics.listTerms(yearId, adminUserId);
   }

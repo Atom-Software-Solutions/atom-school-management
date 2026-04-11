@@ -17,6 +17,5 @@ export class UpdateYearStatusDto {
     message: 'status must be one of: planned, active, closed',
   })
   @IsNotEmpty()
-  status: 'planned' | 'active' | 'closed';
+  status!: 'planned' | 'active' | 'closed';
 }
-

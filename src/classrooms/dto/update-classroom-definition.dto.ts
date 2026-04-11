@@ -35,4 +35,3 @@ export class UpdateClassroomDefinitionDto {
   @IsOptional()
   ordinal?: number;
 }
-

@@ -10,7 +10,7 @@ export class BulkCreateGradesDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  assessmentId: string;
+  assessmentId!: string;
 
   @ApiProperty({
     description: 'Array of grades to create',
@@ -19,6 +19,5 @@ export class BulkCreateGradesDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => BulkGradeItemDto)
-  grades: BulkGradeItemDto[];
+  grades!: BulkGradeItemDto[];
 }
-

@@ -27,8 +27,12 @@ async function ensureSuperAdmin(prisma: PrismaService) {
 
   // Validate required environment variables
   if (!email || !password) {
-    console.warn('⚠️  SUPER_ADMIN_EMAIL and SUPER_ADMIN_PASSWORD are required to create super admin');
-    console.warn('   Skipping SUPER_ADMIN creation. Please set these in your .env file.');
+    console.warn(
+      '⚠️  SUPER_ADMIN_EMAIL and SUPER_ADMIN_PASSWORD are required to create super admin',
+    );
+    console.warn(
+      '   Skipping SUPER_ADMIN creation. Please set these in your .env file.',
+    );
     return;
   }
 
@@ -50,7 +54,9 @@ async function ensureSuperAdmin(prisma: PrismaService) {
       },
     });
 
-    console.log(`✅ SUPER_ADMIN user created successfully: ${createdUser.email}`);
+    console.log(
+      `✅ SUPER_ADMIN user created successfully: ${createdUser.email}`,
+    );
   } catch (error) {
     console.error('❌ Failed to create SUPER_ADMIN user:', error);
     throw error;
@@ -85,7 +91,9 @@ async function bootstrap() {
 
           // If node has a 'property' field (ValidationError from class-validator)
           if (node.property && node.constraints) {
-            const fieldPath = parentPath ? `${parentPath}.${node.property}` : node.property;
+            const fieldPath = parentPath
+              ? `${parentPath}.${node.property}`
+              : node.property;
             Object.values(node.constraints).forEach((m: any) => {
               out.push({ field: fieldPath, message: String(m) });
             });
@@ -93,7 +101,10 @@ async function bootstrap() {
 
           // Recurse into children
           if (Array.isArray(node.children) && node.children.length > 0) {
-            const newPath = parentPath && node.property ? `${parentPath}.${node.property}` : node.property || parentPath;
+            const newPath =
+              parentPath && node.property
+                ? `${parentPath}.${node.property}`
+                : node.property || parentPath;
             node.children.forEach((child: any) => recurse(child, newPath));
           }
         }
@@ -113,9 +124,9 @@ async function bootstrap() {
   const allowedOrigins = allowAllOrigins
     ? []
     : corsOriginSetting
-      .split(',')
-      .map((origin) => origin.trim())
-      .filter(Boolean);
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean);
 
   if (allowAllOrigins) {
     app.enableCors({

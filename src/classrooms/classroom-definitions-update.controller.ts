@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Request, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  Param,
+  Patch,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { ClassroomsService } from './classrooms.service';
@@ -47,4 +57,3 @@ export class ClassroomDefinitionsUpdateController {
     return this.classroomsService.deleteDefinitionById(id, adminUserId);
   }
 }
-

@@ -2,51 +2,56 @@ import { ApiProperty } from '@nestjs/swagger';
 
 class MembershipDto {
   @ApiProperty()
-  schoolId: string;
+  schoolId!: string;
 
   @ApiProperty()
-  schoolName: string;
+  schoolName!: string;
 
   @ApiProperty()
-  role: string;
+  role!: string;
 }
 
 export class ProfileResponseDto {
   @ApiProperty()
-  id: string;
+  id!: string;
 
   @ApiProperty()
-  email: string;
+  email!: string;
 
   @ApiProperty()
-  emailVerified: boolean;
+  emailVerified!: boolean;
 
   @ApiProperty()
-  firstName: string;
+  firstName!: string;
 
   @ApiProperty()
-  lastName: string;
+  lastName!: string;
 
   @ApiProperty()
-  role: string;
+  role!: string;
 
   @ApiProperty({ required: false, nullable: true })
   phone?: string | null;
 
   @ApiProperty()
-  isActive: boolean;
+  isActive!: boolean;
 
-  @ApiProperty({ type: String, format: 'date-time', required: false, nullable: true })
+  @ApiProperty({
+    type: String,
+    format: 'date-time',
+    required: false,
+    nullable: true,
+  })
   lastLogin?: Date | null;
 
   @ApiProperty({ type: String, format: 'date-time' })
-  createdAt: Date;
+  createdAt!: Date;
 
   @ApiProperty({ type: String, format: 'date-time' })
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @ApiProperty({ type: [MembershipDto] })
-  memberships: MembershipDto[];
+  memberships!: MembershipDto[];
 }
 
 export default ProfileResponseDto;

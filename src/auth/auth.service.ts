@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
@@ -19,7 +24,7 @@ export class AuthService {
     private jwtService: JwtService,
     private prisma: PrismaService,
     private emailService: EmailService,
-  ) { }
+  ) {}
 
   async register(registerDto: RegisterDto) {
     // Generate verification token
@@ -49,7 +54,10 @@ export class AuthService {
     } catch (error) {
       // Log and continue. In local/dev environments email may not be configured.
       // The user can still be verified manually via the /auth/verify-email endpoint.
-      console.error('Failed to send verification email:', (error as any)?.message ?? error);
+      console.error(
+        'Failed to send verification email:',
+        error instanceof Error ? error.message : String(error),
+      );
     }
 
     const accessToken = await this.generateAccessToken(user);
@@ -146,7 +154,10 @@ export class AuthService {
     };
   }
 
-  private async getUserSchoolId(userId: string, role: string): Promise<string | null> {
+  private async getUserSchoolId(
+    userId: string,
+    role: string,
+  ): Promise<string | null> {
     // SUPER_ADMIN doesn't belong to a specific school
     if (role === 'SUPER_ADMIN') {
       return null;
@@ -162,20 +173,26 @@ export class AuthService {
   }
 
   // Return all schools the user has an admin relationship with.
-  async getUserMemberships(userId: string): Promise<Array<{ schoolId: string; schoolName: string; role: string }>> {
+  async getUserMemberships(
+    userId: string,
+  ): Promise<Array<{ schoolId: string; schoolName: string; role: string }>> {
     const rels = await this.prisma.schoolAdmin.findMany({
       where: { user_id: userId },
       include: { school: { select: { id: true, name: true } } },
     });
 
-    return rels.map(r => ({
+    return rels.map((r) => ({
       schoolId: r.school.id,
       schoolName: r.school.name,
       role: r.is_super_admin ? 'super_admin' : 'admin',
     }));
   }
 
-  private async generateAccessToken(user: { id: string; email: string; role: string }) {
+  private async generateAccessToken(user: {
+    id: string;
+    email: string;
+    role: string;
+  }) {
     const jti = randomUUID();
     const schoolId = await this.getUserSchoolId(user.id, user.role);
 
@@ -185,11 +202,13 @@ export class AuthService {
       email: user.email,
       role: user.role,
       school_id: schoolId || undefined,
-      jti
+      jti,
     } as JwtPayload);
     const decoded: any = this.jwtService.decode(token);
     const expSeconds: number | undefined = decoded?.exp;
-    const expiresAt = expSeconds ? new Date(expSeconds * 1000) : new Date(Date.now() + 7 * 24 * 3600 * 1000);
+    const expiresAt = expSeconds
+      ? new Date(expSeconds * 1000)
+      : new Date(Date.now() + 7 * 24 * 3600 * 1000);
 
     await this.prisma.session.create({
       data: {
@@ -203,7 +222,11 @@ export class AuthService {
     return token;
   }
 
-  private async generateRefreshToken(user: { id: string; email: string; role: string }) {
+  private async generateRefreshToken(user: {
+    id: string;
+    email: string;
+    role: string;
+  }) {
     const jti = randomUUID();
     // Refresh token expires in 30 days
     const expiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000);
@@ -238,7 +261,7 @@ export class AuthService {
   async refreshToken(refreshTokenDto: RefreshTokenDto) {
     try {
       // Verify and decode the refresh token
-      const payload = this.jwtService.verify(refreshTokenDto.refresh_token) as any;
+      const payload = this.jwtService.verify(refreshTokenDto.refresh_token);
 
       // Check if it's a refresh token
       if (payload.type !== 'refresh') {
@@ -288,7 +311,8 @@ export class AuthService {
     if (!user) {
       // Still return success to prevent email enumeration
       return {
-        message: 'If an account with that email exists, a password reset link has been sent.',
+        message:
+          'If an account with that email exists, a password reset link has been sent.',
       };
     }
 
@@ -318,7 +342,8 @@ export class AuthService {
     }
 
     return {
-      message: 'If an account with that email exists, a password reset link has been sent.',
+      message:
+        'If an account with that email exists, a password reset link has been sent.',
     };
   }
 
@@ -333,7 +358,10 @@ export class AuthService {
     }
 
     // Check if token has expired
-    if (!user.password_reset_expires || user.password_reset_expires < new Date()) {
+    if (
+      !user.password_reset_expires ||
+      user.password_reset_expires < new Date()
+    ) {
       throw new BadRequestException('Reset token has expired');
     }
 
@@ -399,7 +427,10 @@ export class AuthService {
         verificationToken,
       );
     } catch (error) {
-      console.error('Failed to send verification email:', (error as any)?.message ?? error);
+      console.error(
+        'Failed to send verification email:',
+        error instanceof Error ? error.message : String(error),
+      );
       throw new Error('Failed to send verification email');
     }
 

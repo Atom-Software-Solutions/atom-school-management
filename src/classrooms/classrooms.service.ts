@@ -1,4 +1,10 @@
-import { Injectable, ForbiddenException, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  ForbiddenException,
+  BadRequestException,
+  NotFoundException,
+  Logger,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -31,7 +37,12 @@ export class ClassroomsService {
     }
 
     const rel = await this.prisma.schoolAdmin.findUnique({
-      where: { school_id_user_id: { school_id: normalizedSchoolId, user_id: normalizedUserId } },
+      where: {
+        school_id_user_id: {
+          school_id: normalizedSchoolId,
+          user_id: normalizedUserId,
+        },
+      },
     });
 
     if (!rel) {
@@ -66,7 +77,9 @@ export class ClassroomsService {
     if (error?.code === 'P2002' && Array.isArray(error?.meta?.target)) {
       const target = error.meta.target as string[];
       if (target.includes(fieldName)) {
-        throw new BadRequestException(`A classroom definition with this ${fieldName} already exists for this school`);
+        throw new BadRequestException(
+          `A classroom definition with this ${fieldName} already exists for this school`,
+        );
       }
     }
     throw error;
@@ -88,11 +101,15 @@ export class ClassroomsService {
   ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
     // Ensure ordinal is unique within the school (ignore archived definitions)
-    const existingOrdinal = await (this.prisma as any).classroomDefinition.findFirst({
+    const existingOrdinal = await (
+      this.prisma as any
+    ).classroomDefinition.findFirst({
       where: { school_id: schoolId, ordinal: data.ordinal, is_archived: false },
     });
     if (existingOrdinal) {
-      throw new BadRequestException('A classroom definition with this ordinal already exists for this school');
+      throw new BadRequestException(
+        'A classroom definition with this ordinal already exists for this school',
+      );
     }
     try {
       return await (this.prisma as any).classroomDefinition.create({
@@ -105,10 +122,18 @@ export class ClassroomsService {
       });
     } catch (e: any) {
       // Check for Prisma unique constraint error on name
-      if (e?.code === 'P2002' && Array.isArray(e?.meta?.target) && e.meta.target.includes('name')) {
+      if (
+        e?.code === 'P2002' &&
+        Array.isArray(e?.meta?.target) &&
+        e.meta.target.includes('name')
+      ) {
         // Find the existing definition by name
-        const existing = await (this.prisma as any).classroomDefinition.findUnique({
-          where: { school_id_name: { school_id: schoolId, name: data.name.trim() } },
+        const existing = await (
+          this.prisma as any
+        ).classroomDefinition.findUnique({
+          where: {
+            school_id_name: { school_id: schoolId, name: data.name.trim() },
+          },
         });
         if (existing && existing.is_archived) {
           // Unarchive and update fields
@@ -127,33 +152,53 @@ export class ClassroomsService {
   }
 
   async getDefinitionById(id: string, adminUserId: string) {
-    const definition = await (this.prisma as any).classroomDefinition.findUnique({ where: { id } });
-    if (!definition) throw new NotFoundException('Classroom definition not found');
-    
+    const definition = await (
+      this.prisma as any
+    ).classroomDefinition.findUnique({ where: { id } });
+    if (!definition)
+      throw new NotFoundException('Classroom definition not found');
+
     await this.assertIsAdminOfSchool(definition.school_id, adminUserId);
-    
+
     return definition;
   }
 
   async updateDefinitionById(
     id: string,
     adminUserId: string,
-    data: { name?: string; level?: string | null; isArchived?: boolean; ordinal?: number },
+    data: {
+      name?: string;
+      level?: string | null;
+      isArchived?: boolean;
+      ordinal?: number;
+    },
   ) {
-    const definition = await (this.prisma as any).classroomDefinition.findUnique({ where: { id } });
-    if (!definition) throw new NotFoundException('Classroom definition not found');
-    
+    const definition = await (
+      this.prisma as any
+    ).classroomDefinition.findUnique({ where: { id } });
+    if (!definition)
+      throw new NotFoundException('Classroom definition not found');
+
     await this.assertIsAdminOfSchool(definition.school_id, adminUserId);
 
     const updateData: any = {};
     if (data.name !== undefined) {
       // Check for duplicate name if name is changing
       if (data.name.trim() !== definition.name) {
-        const existing = await (this.prisma as any).classroomDefinition.findUnique({
-          where: { school_id_name: { school_id: definition.school_id, name: data.name.trim() } },
+        const existing = await (
+          this.prisma as any
+        ).classroomDefinition.findUnique({
+          where: {
+            school_id_name: {
+              school_id: definition.school_id,
+              name: data.name.trim(),
+            },
+          },
         });
         if (existing) {
-          throw new BadRequestException('A classroom definition with this name already exists for this school');
+          throw new BadRequestException(
+            'A classroom definition with this name already exists for this school',
+          );
         }
       }
       updateData.name = data.name.trim();
@@ -164,11 +209,20 @@ export class ClassroomsService {
     if (data.ordinal !== undefined) {
       // If ordinal is changing, ensure no other (non-archived) definition in the same school uses it
       if (data.ordinal !== definition.ordinal) {
-        const conflict = await (this.prisma as any).classroomDefinition.findFirst({
-          where: { school_id: definition.school_id, ordinal: data.ordinal, is_archived: false, NOT: { id } },
+        const conflict = await (
+          this.prisma as any
+        ).classroomDefinition.findFirst({
+          where: {
+            school_id: definition.school_id,
+            ordinal: data.ordinal,
+            is_archived: false,
+            NOT: { id },
+          },
         });
         if (conflict) {
-          throw new BadRequestException('A classroom definition with this ordinal already exists for this school');
+          throw new BadRequestException(
+            'A classroom definition with this ordinal already exists for this school',
+          );
         }
       }
       updateData.ordinal = data.ordinal;
@@ -192,41 +246,68 @@ export class ClassroomsService {
   }
 
   async deleteDefinitionById(id: string, adminUserId: string) {
-    const definition = await (this.prisma as any).classroomDefinition.findUnique({ where: { id } });
-    if (!definition) throw new NotFoundException('Classroom definition not found');
+    const definition = await (
+      this.prisma as any
+    ).classroomDefinition.findUnique({ where: { id } });
+    if (!definition)
+      throw new NotFoundException('Classroom definition not found');
 
     await this.assertIsAdminOfSchool(definition.school_id, adminUserId);
 
-    if (definition.is_archived) throw new BadRequestException('Classroom definition already deleted');
+    if (definition.is_archived)
+      throw new BadRequestException('Classroom definition already deleted');
 
-    return (this.prisma as any).classroomDefinition.update({ where: { id }, data: { is_archived: true } });
+    return (this.prisma as any).classroomDefinition.update({
+      where: { id },
+      data: { is_archived: true },
+    });
   }
 
   // Offerings have been removed; enrollments operate directly on classroom definitions.
 
   // Enrollments
-  async enrollStudent(yearId: string, definitionId: string, studentId: string, adminUserId: string, schoolId: string, startDate?: Date) {
+  async enrollStudent(
+    yearId: string,
+    definitionId: string,
+    studentId: string,
+    adminUserId: string,
+    schoolId: string,
+    startDate?: Date,
+  ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
-    const student = await this.prisma.student.findUnique({ where: { id: studentId } });
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+    });
     if (!student || student.school_id !== schoolId) {
       throw new ForbiddenException('Student not accessible for this school');
     }
 
-    const year = await (this.prisma as any).academicYear.findUnique({ where: { id: yearId } });
+    const year = await (this.prisma as any).academicYear.findUnique({
+      where: { id: yearId },
+    });
     if (!year) throw new NotFoundException('Academic year not found');
-    if (year.school_id !== schoolId) throw new ForbiddenException('Academic year not accessible');
+    if (year.school_id !== schoolId)
+      throw new ForbiddenException('Academic year not accessible');
 
-    const definition = await (this.prisma as any).classroomDefinition.findUnique({ where: { id: definitionId } });
-    if (!definition || definition.school_id !== year.school_id) throw new ForbiddenException('Classroom definition not accessible');
-    if (definition.is_archived) throw new BadRequestException('Classroom definition is archived');
+    const definition = await (
+      this.prisma as any
+    ).classroomDefinition.findUnique({ where: { id: definitionId } });
+    if (!definition || definition.school_id !== year.school_id)
+      throw new ForbiddenException('Classroom definition not accessible');
+    if (definition.is_archived)
+      throw new BadRequestException('Classroom definition is archived');
 
     const effectiveStartDate = startDate ?? new Date();
 
     if (year.start_date && effectiveStartDate < year.start_date) {
-      throw new BadRequestException('startDate must be within the academic year');
+      throw new BadRequestException(
+        'startDate must be within the academic year',
+      );
     }
     if (year.end_date && effectiveStartDate > year.end_date) {
-      throw new BadRequestException('startDate must be within the academic year');
+      throw new BadRequestException(
+        'startDate must be within the academic year',
+      );
     }
 
     // Ensure no active enrollment for this student in this academic year
@@ -238,10 +319,15 @@ export class ClassroomsService {
         OR: [{ end_date: null }, { status: 'active' }],
       },
     });
-    if (existing) throw new BadRequestException('Student already has an active enrollment in this academic year');
+    if (existing)
+      throw new BadRequestException(
+        'Student already has an active enrollment in this academic year',
+      );
 
     // Disallow returning to same classroom definition in later years
-    const priorSameClass = await (this.prisma as any).studentEnrollment.findFirst({
+    const priorSameClass = await (
+      this.prisma as any
+    ).studentEnrollment.findFirst({
       where: {
         student_id: studentId,
         status: { in: ['completed'] },
@@ -250,7 +336,10 @@ export class ClassroomsService {
       },
       include: { academic_year: true },
     });
-    if (priorSameClass) throw new BadRequestException('Student cannot return to the same classroom in a later academic year');
+    if (priorSameClass)
+      throw new BadRequestException(
+        'Student cannot return to the same classroom in a later academic year',
+      );
 
     return (this.prisma as any).studentEnrollment.create({
       data: {
@@ -263,14 +352,22 @@ export class ClassroomsService {
     });
   }
 
-  async completeEnrollment(enrollmentId: string, adminUserId: string, schoolId: string, endDate?: Date, status: 'completed' | 'withdrawn' = 'completed') {
+  async completeEnrollment(
+    enrollmentId: string,
+    adminUserId: string,
+    schoolId: string,
+    endDate?: Date,
+    status: 'completed' | 'withdrawn' = 'completed',
+  ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
     const enr = await (this.prisma as any).studentEnrollment.findUnique({
       where: { id: enrollmentId },
       include: { academic_year: true },
     });
-    if (!enr || enr.academic_year.school_id !== schoolId) throw new ForbiddenException('Enrollment not accessible');
-    if (enr.end_date) throw new BadRequestException('Enrollment already closed');
+    if (!enr || enr.academic_year.school_id !== schoolId)
+      throw new ForbiddenException('Enrollment not accessible');
+    if (enr.end_date)
+      throw new BadRequestException('Enrollment already closed');
     const effectiveEndDate = endDate ?? new Date();
     if (enr.start_date && effectiveEndDate < enr.start_date) {
       throw new BadRequestException('endDate cannot be before startDate');
@@ -281,23 +378,59 @@ export class ClassroomsService {
     });
   }
 
-  async updateEnrollmentStatus(enrollmentId: string, status: 'pending' | 'active' | 'completed' | 'withdrawn', adminUserId: string, schoolId: string) {
+  async updateEnrollmentStatus(
+    enrollmentId: string,
+    status: 'pending' | 'active' | 'completed' | 'withdrawn',
+    adminUserId: string,
+    schoolId: string,
+  ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
-    const enr = await (this.prisma as any).studentEnrollment.findUnique({ where: { id: enrollmentId }, include: { academic_year: true } });
-    if (!enr || enr.academic_year.school_id !== schoolId) throw new ForbiddenException('Enrollment not accessible');
-    return (this.prisma as any).studentEnrollment.update({ where: { id: enrollmentId }, data: { status } });
+    const enr = await (this.prisma as any).studentEnrollment.findUnique({
+      where: { id: enrollmentId },
+      include: { academic_year: true },
+    });
+    if (!enr || enr.academic_year.school_id !== schoolId)
+      throw new ForbiddenException('Enrollment not accessible');
+    return (this.prisma as any).studentEnrollment.update({
+      where: { id: enrollmentId },
+      data: { status },
+    });
   }
 
-  async deleteEnrollment(enrollmentId: string, adminUserId: string, schoolId: string, reason?: string) {
+  async deleteEnrollment(
+    enrollmentId: string,
+    adminUserId: string,
+    schoolId: string,
+    reason?: string,
+  ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
-    const enr = await (this.prisma as any).studentEnrollment.findUnique({ where: { id: enrollmentId }, include: { academic_year: true } });
-    if (!enr || enr.academic_year.school_id !== schoolId) throw new ForbiddenException('Enrollment not accessible');
-    if (enr.deleted_at) throw new BadRequestException('Enrollment already deleted');
+    const enr = await (this.prisma as any).studentEnrollment.findUnique({
+      where: { id: enrollmentId },
+      include: { academic_year: true },
+    });
+    if (!enr || enr.academic_year.school_id !== schoolId)
+      throw new ForbiddenException('Enrollment not accessible');
+    if (enr.deleted_at)
+      throw new BadRequestException('Enrollment already deleted');
     const now = new Date();
-    return (this.prisma as any).studentEnrollment.update({ where: { id: enrollmentId }, data: { deleted_at: now, reason: reason ?? null, status: 'withdrawn', end_date: enr.end_date ?? now } });
+    return (this.prisma as any).studentEnrollment.update({
+      where: { id: enrollmentId },
+      data: {
+        deleted_at: now,
+        reason: reason ?? null,
+        status: 'withdrawn',
+        end_date: enr.end_date ?? now,
+      },
+    });
   }
 
-  async bulkEnrollStudents(yearId: string, definitionId: string, enrollments: { studentId: string; startDate?: Date }[], adminUserId: string, schoolId: string) {
+  async bulkEnrollStudents(
+    yearId: string,
+    definitionId: string,
+    enrollments: { studentId: string; startDate?: Date }[],
+    adminUserId: string,
+    schoolId: string,
+  ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     if (!enrollments || enrollments.length === 0) {
@@ -305,29 +438,42 @@ export class ClassroomsService {
     }
 
     // Validate year and definition
-    const year = await (this.prisma as any).academicYear.findUnique({ where: { id: yearId } });
+    const year = await (this.prisma as any).academicYear.findUnique({
+      where: { id: yearId },
+    });
     if (!year) throw new NotFoundException('Academic year not found');
-    if (year.school_id !== schoolId) throw new ForbiddenException('Academic year not accessible');
+    if (year.school_id !== schoolId)
+      throw new ForbiddenException('Academic year not accessible');
 
-    const definition = await (this.prisma as any).classroomDefinition.findUnique({ where: { id: definitionId } });
-    if (!definition || definition.school_id !== year.school_id) throw new ForbiddenException('Classroom definition not accessible');
-    if (definition.is_archived) throw new BadRequestException('Classroom definition is archived');
+    const definition = await (
+      this.prisma as any
+    ).classroomDefinition.findUnique({ where: { id: definitionId } });
+    if (!definition || definition.school_id !== year.school_id)
+      throw new ForbiddenException('Classroom definition not accessible');
+    if (definition.is_archived)
+      throw new BadRequestException('Classroom definition is archived');
 
     const academicYearId = yearId;
 
     // Validate all students exist and belong to the school
-    const studentIds = enrollments.map(e => e.studentId);
+    const studentIds = enrollments.map((e) => e.studentId);
     const students = await this.prisma.student.findMany({
       where: { id: { in: studentIds }, school_id: schoolId },
     });
-    const foundStudentIds = students.map(s => s.id);
-    const missingStudents = studentIds.filter(id => !foundStudentIds.includes(id));
+    const foundStudentIds = students.map((s) => s.id);
+    const missingStudents = studentIds.filter(
+      (id) => !foundStudentIds.includes(id),
+    );
     if (missingStudents.length > 0) {
-      throw new BadRequestException(`Students not found or not accessible: ${missingStudents.join(', ')}`);
+      throw new BadRequestException(
+        `Students not found or not accessible: ${missingStudents.join(', ')}`,
+      );
     }
 
     // Check for existing active enrollments
-    const existingEnrollments = await (this.prisma as any).studentEnrollment.findMany({
+    const existingEnrollments = await (
+      this.prisma as any
+    ).studentEnrollment.findMany({
       where: {
         student_id: { in: studentIds },
         academic_year_id: academicYearId,
@@ -337,12 +483,18 @@ export class ClassroomsService {
       include: { student: { select: { student_no: true } } },
     });
     if (existingEnrollments.length > 0) {
-      const conflictingStudents = existingEnrollments.map(e => e.student.student_no);
-      throw new BadRequestException(`Students already have active enrollments in this academic year: ${conflictingStudents.join(', ')}`);
+      const conflictingStudents = existingEnrollments.map(
+        (e) => e.student.student_no,
+      );
+      throw new BadRequestException(
+        `Students already have active enrollments in this academic year: ${conflictingStudents.join(', ')}`,
+      );
     }
 
     // Check for returning to same classroom definition in later years
-    const priorSameClassEnrollments = await (this.prisma as any).studentEnrollment.findMany({
+    const priorSameClassEnrollments = await (
+      this.prisma as any
+    ).studentEnrollment.findMany({
       where: {
         student_id: { in: studentIds },
         status: { in: ['completed'] },
@@ -352,8 +504,12 @@ export class ClassroomsService {
       include: { student: { select: { student_no: true } } },
     });
     if (priorSameClassEnrollments.length > 0) {
-      const conflictingStudents = priorSameClassEnrollments.map(e => e.student.student_no);
-      throw new BadRequestException(`Students cannot return to the same classroom in a later academic year: ${conflictingStudents.join(', ')}`);
+      const conflictingStudents = priorSameClassEnrollments.map(
+        (e) => e.student.student_no,
+      );
+      throw new BadRequestException(
+        `Students cannot return to the same classroom in a later academic year: ${conflictingStudents.join(', ')}`,
+      );
     }
 
     // Create enrollments in a transaction
@@ -366,10 +522,14 @@ export class ClassroomsService {
           const effectiveStartDate = enrollment.startDate ?? new Date();
 
           if (year.start_date && effectiveStartDate < year.start_date) {
-            throw new BadRequestException('startDate must be within the academic year');
+            throw new BadRequestException(
+              'startDate must be within the academic year',
+            );
           }
           if (year.end_date && effectiveStartDate > year.end_date) {
-            throw new BadRequestException('startDate must be within the academic year');
+            throw new BadRequestException(
+              'startDate must be within the academic year',
+            );
           }
 
           const created = await tx.studentEnrollment.create({
@@ -385,7 +545,7 @@ export class ClassroomsService {
         } catch (error) {
           errors.push({
             studentId: enrollment.studentId,
-            error: `Failed to enroll student ${enrollment.studentId}: ${error.message || 'Unknown error'}`,
+            error: `Failed to enroll student ${enrollment.studentId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
           });
         }
       }

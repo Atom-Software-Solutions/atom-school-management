@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsOptional, IsInt, Min, MinLength } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsInt,
+  Min,
+  MinLength,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateClassroomDefinitionDto {
@@ -9,7 +16,7 @@ export class CreateClassroomDefinitionDto {
   @IsString()
   @IsNotEmpty()
   @MinLength(3, { message: 'Name must be at least 3 characters' })
-  name: string;
+  name!: string;
 
   @ApiPropertyOptional({
     description: 'Classroom level (e.g., "Primary", "Secondary", "Nursery")',
@@ -26,6 +33,5 @@ export class CreateClassroomDefinitionDto {
   })
   @IsInt()
   @Min(0)
-  ordinal: number;
+  ordinal!: number;
 }
-

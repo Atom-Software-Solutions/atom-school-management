@@ -31,7 +31,7 @@ import { ProfileResponseDto } from './dto/profile-response.dto';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) { }
+  constructor(private authService: AuthService) {}
 
   @Post('register')
   @ApiOperation({ summary: 'Register a new user' })
@@ -123,7 +123,9 @@ export class AuthController {
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getProfile(@Request() req: AuthenticatedRequest): Promise<ProfileResponseDto> {
+  async getProfile(
+    @Request() req: AuthenticatedRequest,
+  ): Promise<ProfileResponseDto> {
     const user = req.user;
     if (!user) {
       throw new Error('User not authenticated');
@@ -162,7 +164,9 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async logout(@Request() req: any) {
     const authHeader = req.headers['authorization'] || '';
-    const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
+    const token = authHeader.startsWith('Bearer ')
+      ? authHeader.substring(7)
+      : undefined;
     if (token) {
       const decoded: any = this.authService['jwtService'].decode(token);
       await this.authService.revokeSessionByJti(decoded?.jti);
@@ -178,10 +182,7 @@ export class AuthController {
     description: 'Email verification token',
     example: 'verification-token-here',
   })
-  async verifyEmail(
-    @Query('token') token: string,
-    @Res() res: Response,
-  ) {
+  async verifyEmail(@Query('token') token: string, @Res() res: Response) {
     const result = await this.authService.verifyEmail(token);
 
     const baseUrl = process.env.FRONTEND_URL;
@@ -224,7 +225,8 @@ export class AuthController {
     description: 'Password reset email sent (if account exists)',
     schema: {
       example: {
-        message: 'If an account with that email exists, a password reset link has been sent.',
+        message:
+          'If an account with that email exists, a password reset link has been sent.',
       },
     },
   })

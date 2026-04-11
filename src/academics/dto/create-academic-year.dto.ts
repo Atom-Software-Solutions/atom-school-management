@@ -1,4 +1,10 @@
-import { IsString, IsNotEmpty, IsDateString, IsUUID, MinLength } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsDateString,
+  IsUUID,
+  MinLength,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateAcademicYearDto {
@@ -9,7 +15,7 @@ export class CreateAcademicYearDto {
   @IsString()
   @IsNotEmpty()
   @MinLength(3, { message: 'Academic year name must be at least 3 characters' })
-  name: string;
+  name!: string;
 
   @ApiProperty({
     description: 'Academic year start date (ISO 8601)',
@@ -17,7 +23,7 @@ export class CreateAcademicYearDto {
   })
   @IsDateString()
   @IsNotEmpty()
-  startDate: string;
+  startDate!: string;
 
   @ApiProperty({
     description: 'Academic year end date (ISO 8601)',
@@ -25,7 +31,7 @@ export class CreateAcademicYearDto {
   })
   @IsDateString()
   @IsNotEmpty()
-  endDate: string;
+  endDate!: string;
 
   @ApiProperty({
     description: 'Term template ID to use for this academic year',
@@ -33,6 +39,5 @@ export class CreateAcademicYearDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  termTemplateId: string;
+  termTemplateId!: string;
 }
-

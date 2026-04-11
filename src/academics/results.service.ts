@@ -1,11 +1,14 @@
 import {
   BadRequestException,
   ForbiddenException,
-  Injectable, Logger,
-  NotFoundException
+  Injectable,
+  Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { PrismaService } from '../prisma/prisma.service';
+import { PdfGenerationService } from './pdf-generation.service';
+import { PdfStorageService } from './pdf-storage.service';
 import { BulkCreateGradesDto } from './dto/bulk-create-grades.dto';
 import { CreateAssessmentDto } from './dto/create-assessment.dto';
 import { CreateGradeDto } from './dto/create-grade.dto';
@@ -19,17 +22,27 @@ import { UpdateSubjectDto } from './dto/update-subject.dto';
 export class ResultsService {
   private readonly logger = new Logger(ResultsService.name);
 
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pdfGenerationService: PdfGenerationService,
+    private readonly pdfStorageService: PdfStorageService,
+  ) {}
 
   private async assertIsAdminOfSchool(schoolId: string, userId: string) {
     const rel = await this.prisma.schoolAdmin.findUnique({
       where: { school_id_user_id: { school_id: schoolId, user_id: userId } },
     });
-    if (!rel) throw new ForbiddenException('Insufficient permissions for this school');
+    if (!rel)
+      throw new ForbiddenException('Insufficient permissions for this school');
   }
 
-  private async assertCanViewStudent(studentId: string, user: AuthenticatedUser) {
-    const student = await this.prisma.student.findUnique({ where: { id: studentId } });
+  private async assertCanViewStudent(
+    studentId: string,
+    user: AuthenticatedUser,
+  ) {
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+    });
     if (!student) {
       throw new NotFoundException('Student not found');
     }
@@ -43,7 +56,9 @@ export class ResultsService {
     // Parents can only view their own children within the same school
     if (user.role === 'PARENT') {
       if (!user.school_id || user.school_id !== student.school_id) {
-        throw new ForbiddenException('Insufficient permissions for this student');
+        throw new ForbiddenException(
+          'Insufficient permissions for this student',
+        );
       }
 
       const guardians = await (this.prisma as any).guardian.findMany({
@@ -63,7 +78,9 @@ export class ResultsService {
       );
 
       if (!canView) {
-        throw new ForbiddenException('Insufficient permissions for this student');
+        throw new ForbiddenException(
+          'Insufficient permissions for this student',
+        );
       }
 
       return student;
@@ -92,7 +109,7 @@ export class ResultsService {
   async listSubjects(
     schoolId: string,
     adminUserId: string,
-    includeInactive = false
+    includeInactive = false,
   ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
     return (this.prisma as any).subject.findMany({
@@ -107,7 +124,7 @@ export class ResultsService {
   async createSubject(
     schoolId: string,
     adminUserId: string,
-    data: CreateSubjectDto
+    data: CreateSubjectDto,
   ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
@@ -115,16 +132,13 @@ export class ResultsService {
     const existing = await (this.prisma as any).subject.findFirst({
       where: {
         school_id: schoolId,
-        OR: [
-          { name: data.name.trim() },
-          { code: data.code?.trim() || null },
-        ],
+        OR: [{ name: data.name.trim() }, { code: data.code?.trim() || null }],
         is_active: true,
       },
     });
     if (existing) {
       throw new BadRequestException(
-        'A subject with this name or code already exists for this school'
+        'A subject with this name or code already exists for this school',
       );
     }
 
@@ -146,7 +160,7 @@ export class ResultsService {
   async createSubjects(
     schoolId: string,
     adminUserId: string,
-    dataArray: CreateSubjectDto[]
+    dataArray: CreateSubjectDto[],
   ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
@@ -163,16 +177,13 @@ export class ResultsService {
       const existing = await (this.prisma as any).subject.findFirst({
         where: {
           school_id: schoolId,
-          OR: [
-            { name: data.name.trim() },
-            { code: data.code?.trim() || null },
-          ],
+          OR: [{ name: data.name.trim() }, { code: data.code?.trim() || null }],
           is_active: true,
         },
       });
       if (existing) {
         errors.push(
-          `Subject ${i + 1} (${data.name}): A subject with this name or code already exists for this school`
+          `Subject ${i + 1} (${data.name}): A subject with this name or code already exists for this school`,
         );
         continue;
       }
@@ -188,7 +199,9 @@ export class ResultsService {
         });
         results.push(subject);
       } catch (e: any) {
-        errors.push(`Subject ${i + 1} (${data.name}): ${e?.message || 'Failed to create'}`);
+        errors.push(
+          `Subject ${i + 1} (${data.name}): ${e?.message || 'Failed to create'}`,
+        );
       }
     }
 
@@ -213,7 +226,7 @@ export class ResultsService {
   async updateSubject(
     subjectId: string,
     adminUserId: string,
-    data: UpdateSubjectDto
+    data: UpdateSubjectDto,
   ) {
     const subject = await (this.prisma as any).subject.findUnique({
       where: { id: subjectId },
@@ -225,7 +238,8 @@ export class ResultsService {
     const updateData: any = {};
     if (data.name !== undefined) updateData.name = data.name.trim();
     if (data.code !== undefined) updateData.code = data.code?.trim() || null;
-    if (data.description !== undefined) updateData.description = data.description?.trim() || null;
+    if (data.description !== undefined)
+      updateData.description = data.description?.trim() || null;
     if (data.isActive !== undefined) updateData.is_active = data.isActive;
 
     if (Object.keys(updateData).length === 0) {
@@ -239,7 +253,9 @@ export class ResultsService {
       });
     } catch (e: any) {
       if (e?.code === 'P2002') {
-        throw new BadRequestException('A subject with this name already exists for this school');
+        throw new BadRequestException(
+          'A subject with this name already exists for this school',
+        );
       }
       throw e;
     }
@@ -259,7 +275,9 @@ export class ResultsService {
     });
 
     if (assessmentCount > 0) {
-      throw new BadRequestException('Cannot delete subject with existing assessments');
+      throw new BadRequestException(
+        'Cannot delete subject with existing assessments',
+      );
     }
 
     return (this.prisma as any).subject.delete({
@@ -380,7 +398,7 @@ export class ResultsService {
   async createAssessment(
     schoolId: string,
     adminUserId: string,
-    data: CreateAssessmentDto
+    data: CreateAssessmentDto,
   ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
@@ -390,7 +408,9 @@ export class ResultsService {
     });
     if (!year) throw new NotFoundException('Academic year not found');
     if (year.school_id !== schoolId) {
-      throw new ForbiddenException('Academic year does not belong to this school');
+      throw new ForbiddenException(
+        'Academic year does not belong to this school',
+      );
     }
 
     // Verify term item exists and belongs to the academic year's term template
@@ -400,7 +420,7 @@ export class ResultsService {
     if (!termItem) throw new NotFoundException('Term template item not found');
     if (termItem.term_template_id !== year.term_template_id) {
       throw new BadRequestException(
-        'Term item does not belong to the academic year term template'
+        'Term item does not belong to the academic year term template',
       );
     }
 
@@ -414,12 +434,17 @@ export class ResultsService {
     }
 
     // Verify classroom definition exists and belongs to school
-    const classroomDef = await (this.prisma as any).classroomDefinition.findUnique({
+    const classroomDef = await (
+      this.prisma as any
+    ).classroomDefinition.findUnique({
       where: { id: (data as any).classroomDefinitionId },
     });
-    if (!classroomDef) throw new NotFoundException('Classroom definition not found');
+    if (!classroomDef)
+      throw new NotFoundException('Classroom definition not found');
     if (classroomDef.school_id !== schoolId) {
-      throw new ForbiddenException('Classroom definition does not belong to this school');
+      throw new ForbiddenException(
+        'Classroom definition does not belong to this school',
+      );
     }
 
     // Check for duplicate assessment (same year, term item, subject, classroom, name, and type)
@@ -435,7 +460,7 @@ export class ResultsService {
     });
     if (existing) {
       throw new BadRequestException(
-        'An assessment with this name and type already exists for this subject and term'
+        'An assessment with this name and type already exists for this subject and term',
       );
     }
     return (this.prisma as any).assessment.create({
@@ -449,7 +474,9 @@ export class ResultsService {
         type: data.type,
         max_score: data.maxScore,
         weight: data.weight,
-        assessment_date: data.assessmentDate ? new Date(data.assessmentDate) : null,
+        assessment_date: data.assessmentDate
+          ? new Date(data.assessmentDate)
+          : null,
         due_date: data.dueDate ? new Date(data.dueDate) : null,
         is_published: data.isPublished || false,
       },
@@ -472,7 +499,7 @@ export class ResultsService {
   async updateAssessment(
     assessmentId: string,
     adminUserId: string,
-    data: UpdateAssessmentDto
+    data: UpdateAssessmentDto,
   ) {
     const assessment = await (this.prisma as any).assessment.findUnique({
       where: { id: assessmentId },
@@ -483,14 +510,18 @@ export class ResultsService {
 
     // Prevent updating immutable fields (yearId, termTemplateItemId, classroomDefinitionId)
     const dataAsAny = data as any;
-    if (dataAsAny.yearId !== undefined || dataAsAny.termTemplateItemId !== undefined || dataAsAny.termItemId !== undefined) {
+    if (
+      dataAsAny.yearId !== undefined ||
+      dataAsAny.termTemplateItemId !== undefined ||
+      dataAsAny.termItemId !== undefined
+    ) {
       throw new BadRequestException(
-        'yearId and termTemplateItemId are immutable after creation. Delete and recreate the assessment if term context must change.'
+        'yearId and termTemplateItemId are immutable after creation. Delete and recreate the assessment if term context must change.',
       );
     }
     if (dataAsAny.classroomDefinitionId !== undefined) {
       throw new BadRequestException(
-        'classroomDefinitionId is immutable after creation. Delete and recreate the assessment to change classroom context.'
+        'classroomDefinitionId is immutable after creation. Delete and recreate the assessment to change classroom context.',
       );
     }
 
@@ -499,9 +530,14 @@ export class ResultsService {
     if (data.type !== undefined) updateData.type = data.type;
     if (data.maxScore !== undefined) updateData.max_score = data.maxScore;
     if (data.weight !== undefined) updateData.weight = data.weight;
-    if (data.assessmentDate !== undefined) updateData.assessment_date = data.assessmentDate ? new Date(data.assessmentDate) : null;
-    if (data.dueDate !== undefined) updateData.due_date = data.dueDate ? new Date(data.dueDate) : null;
-    if (data.isPublished !== undefined) updateData.is_published = data.isPublished;
+    if (data.assessmentDate !== undefined)
+      updateData.assessment_date = data.assessmentDate
+        ? new Date(data.assessmentDate)
+        : null;
+    if (data.dueDate !== undefined)
+      updateData.due_date = data.dueDate ? new Date(data.dueDate) : null;
+    if (data.isPublished !== undefined)
+      updateData.is_published = data.isPublished;
 
     if (Object.keys(updateData).length === 0) {
       throw new BadRequestException('No fields to update');
@@ -509,7 +545,8 @@ export class ResultsService {
 
     // Check for duplicate assessment if name or type is being updated
     if (data.name !== undefined || data.type !== undefined) {
-      const checkName = data.name !== undefined ? data.name.trim() : assessment.name;
+      const checkName =
+        data.name !== undefined ? data.name.trim() : assessment.name;
       const checkType = data.type !== undefined ? data.type : assessment.type;
       const existing = await (this.prisma as any).assessment.findFirst({
         where: {
@@ -523,7 +560,7 @@ export class ResultsService {
       });
       if (existing) {
         throw new BadRequestException(
-          'An assessment with this name and type already exists for this subject and term'
+          'An assessment with this name and type already exists for this subject and term',
         );
       }
     }
@@ -548,7 +585,9 @@ export class ResultsService {
     });
 
     if (gradeCount > 0) {
-      throw new BadRequestException('Cannot delete assessment with existing grades');
+      throw new BadRequestException(
+        'Cannot delete assessment with existing grades',
+      );
     }
 
     return (this.prisma as any).assessment.delete({
@@ -556,7 +595,10 @@ export class ResultsService {
     });
   }
 
-  async getEnrolledStudentsForAssessment(assessmentId: string, adminUserId: string) {
+  async getEnrolledStudentsForAssessment(
+    assessmentId: string,
+    adminUserId: string,
+  ) {
     // 1. Lookup assessment
     const assessment = await (this.prisma as any).assessment.findUnique({
       where: { id: assessmentId },
@@ -583,7 +625,8 @@ export class ResultsService {
         academic_year_id: assessment.academic_year_id,
         classroom_definition_id: assessment.classroom_definition_id,
         status: 'active',
-        student_id: gradedStudentIds.length > 0 ? { notIn: gradedStudentIds } : undefined,
+        student_id:
+          gradedStudentIds.length > 0 ? { notIn: gradedStudentIds } : undefined,
       },
       include: {
         student: true,
@@ -598,7 +641,11 @@ export class ResultsService {
   // GRADE MANAGEMENT
   // ==========================================
 
-  async createGrade(schoolId: string, adminUserId: string, data: CreateGradeDto) {
+  async createGrade(
+    schoolId: string,
+    adminUserId: string,
+    data: CreateGradeDto,
+  ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     // Verify student exists and belongs to school
@@ -622,11 +669,14 @@ export class ResultsService {
     // Validate score doesn't exceed max score
     const maxScore = Number(assessment.max_score);
     if (data.score > maxScore) {
-      throw new BadRequestException(`Score cannot exceed maximum score of ${maxScore}`);
+      throw new BadRequestException(
+        `Score cannot exceed maximum score of ${maxScore}`,
+      );
     }
 
     const percentage = this.calculatePercentage(data.score, maxScore);
-    const letterGrade = data.letterGrade || this.calculateLetterGrade(percentage);
+    const letterGrade =
+      data.letterGrade || this.calculateLetterGrade(percentage);
 
     try {
       return await (this.prisma as any).grade.create({
@@ -644,13 +694,19 @@ export class ResultsService {
       });
     } catch (e: any) {
       if (e?.code === 'P2002') {
-        throw new BadRequestException('Grade already exists for this student and assessment');
+        throw new BadRequestException(
+          'Grade already exists for this student and assessment',
+        );
       }
       throw e;
     }
   }
 
-  async bulkCreateGrades(schoolId: string, adminUserId: string, data: BulkCreateGradesDto) {
+  async bulkCreateGrades(
+    schoolId: string,
+    adminUserId: string,
+    data: BulkCreateGradesDto,
+  ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     // Verify assessment exists
@@ -672,11 +728,17 @@ export class ResultsService {
     });
 
     if (students.length !== studentIds.length) {
-      throw new BadRequestException('One or more students not found or do not belong to this school');
+      throw new BadRequestException(
+        'One or more students not found or do not belong to this school',
+      );
     }
 
     const results: any[] = [];
-    const errorDetails: Array<{ studentId: string; message: string; statusCode: number }> = [];
+    const errorDetails: Array<{
+      studentId: string;
+      message: string;
+      statusCode: number;
+    }> = [];
     const maxScore = Number(assessment.max_score);
     const startTime = Date.now();
 
@@ -694,7 +756,8 @@ export class ResultsService {
         }
 
         const percentage = this.calculatePercentage(gradeData.score, maxScore);
-        const letterGrade = gradeData.letterGrade || this.calculateLetterGrade(percentage);
+        const letterGrade =
+          gradeData.letterGrade || this.calculateLetterGrade(percentage);
 
         return {
           school_id: schoolId,
@@ -738,8 +801,12 @@ export class ResultsService {
             continue;
           }
 
-          const percentage = this.calculatePercentage(gradeData.score, maxScore);
-          const letterGrade = gradeData.letterGrade || this.calculateLetterGrade(percentage);
+          const percentage = this.calculatePercentage(
+            gradeData.score,
+            maxScore,
+          );
+          const letterGrade =
+            gradeData.letterGrade || this.calculateLetterGrade(percentage);
 
           const grade = await (this.prisma as any).grade.create({
             data: {
@@ -756,7 +823,10 @@ export class ResultsService {
           });
           results.push(grade);
         } catch (innerE: any) {
-          const errorInfo = this.formatGradeErrorMessage(gradeData.studentId, innerE);
+          const errorInfo = this.formatGradeErrorMessage(
+            gradeData.studentId,
+            innerE,
+          );
           errorDetails.push(errorInfo);
           this.logger.warn(
             `Failed to create grade for student
@@ -826,7 +896,11 @@ export class ResultsService {
     return grade;
   }
 
-  async updateGrade(gradeId: string, adminUserId: string, data: UpdateGradeDto) {
+  async updateGrade(
+    gradeId: string,
+    adminUserId: string,
+    data: UpdateGradeDto,
+  ) {
     const grade = await (this.prisma as any).grade.findUnique({
       where: { id: gradeId },
       include: {
@@ -842,12 +916,16 @@ export class ResultsService {
     if (data.score !== undefined) {
       const maxScore = Number(grade.assessment.max_score);
       if (data.score > maxScore) {
-        throw new BadRequestException(`Score cannot exceed maximum score of ${maxScore}`);
+        throw new BadRequestException(
+          `Score cannot exceed maximum score of ${maxScore}`,
+        );
       }
       updateData.score = data.score;
       updateData.percentage = this.calculatePercentage(data.score, maxScore);
       if (!data.letterGrade) {
-        updateData.letter_grade = this.calculateLetterGrade(updateData.percentage);
+        updateData.letter_grade = this.calculateLetterGrade(
+          updateData.percentage,
+        );
       }
     }
 
@@ -891,7 +969,7 @@ export class ResultsService {
     adminUserId: string,
     yearId?: string,
     termItemId?: string,
-    subjectId?: string
+    subjectId?: string,
   ) {
     const student = await this.prisma.student.findUnique({
       where: { id: studentId },
@@ -900,21 +978,45 @@ export class ResultsService {
 
     await this.assertIsAdminOfSchool(student.school_id, adminUserId);
 
-    return this.getStudentGradesInternal(student, yearId, termItemId, subjectId);
+    return this.getStudentGradesInternal(
+      student,
+      yearId,
+      termItemId,
+      subjectId,
+    );
   }
 
-  async getStudentGradesForViewer(studentId: string, user: AuthenticatedUser, yearId?: string, termItemId?: string, subjectId?: string) {
+  async getStudentGradesForViewer(
+    studentId: string,
+    user: AuthenticatedUser,
+    yearId?: string,
+    termItemId?: string,
+    subjectId?: string,
+  ) {
     const student = await this.assertCanViewStudent(studentId, user);
-    return this.getStudentGradesInternal(student, yearId, termItemId, subjectId);
+    return this.getStudentGradesInternal(
+      student,
+      yearId,
+      termItemId,
+      subjectId,
+    );
   }
 
-  private async getStudentGradesInternal(student: any, yearId?: string, termItemId?: string, subjectId?: string) {
+  private async getStudentGradesInternal(
+    student: any,
+    yearId?: string,
+    termItemId?: string,
+    subjectId?: string,
+  ) {
     const where: any = {
       student_id: student.id,
       school_id: student.school_id,
     };
     if (yearId && termItemId) {
-      where.assessment = { academic_year_id: yearId, term_template_item_id: termItemId };
+      where.assessment = {
+        academic_year_id: yearId,
+        term_template_item_id: termItemId,
+      };
     }
     if (subjectId) {
       where.subject_id = subjectId;
@@ -933,13 +1035,22 @@ export class ResultsService {
 
     // Sort by assessment date descending (manual sort since nested orderBy may not work)
     return grades.sort((a: any, b: any) => {
-      const dateA = a.assessment?.assessment_date ? new Date(a.assessment.assessment_date).getTime() : 0;
-      const dateB = b.assessment?.assessment_date ? new Date(b.assessment.assessment_date).getTime() : 0;
+      const dateA = a.assessment?.assessment_date
+        ? new Date(a.assessment.assessment_date).getTime()
+        : 0;
+      const dateB = b.assessment?.assessment_date
+        ? new Date(b.assessment.assessment_date).getTime()
+        : 0;
       return dateB - dateA;
     });
   }
 
-  async getStudentAcademicSummary(studentId: string, adminUserId: string, yearId: string, termItemId: string) {
+  async getStudentAcademicSummary(
+    studentId: string,
+    adminUserId: string,
+    yearId: string,
+    termItemId: string,
+  ) {
     const student = await this.prisma.student.findUnique({
       where: { id: studentId },
     });
@@ -950,26 +1061,42 @@ export class ResultsService {
     return this.getStudentAcademicSummaryInternal(student, yearId, termItemId);
   }
 
-  async getStudentAcademicSummaryForViewer(studentId: string, user: AuthenticatedUser, yearId: string, termItemId: string) {
+  async getStudentAcademicSummaryForViewer(
+    studentId: string,
+    user: AuthenticatedUser,
+    yearId: string,
+    termItemId: string,
+  ) {
     const student = await this.assertCanViewStudent(studentId, user);
     return this.getStudentAcademicSummaryInternal(student, yearId, termItemId);
   }
 
-  private async getStudentAcademicSummaryInternal(student: any, yearId: string, termItemId: string) {
+  private async getStudentAcademicSummaryInternal(
+    student: any,
+    yearId: string,
+    termItemId: string,
+  ) {
     // Verify academic year exists
     const year = await (this.prisma as any).academicYear.findUnique({
       where: { id: yearId },
     });
     if (!year) throw new NotFoundException('Academic year not found');
     if (year.school_id !== student.school_id) {
-      throw new ForbiddenException('Academic year does not belong to this school');
+      throw new ForbiddenException(
+        'Academic year does not belong to this school',
+      );
     }
 
     // Verify term item exists and belongs to the academic year's term template
-    const termItem = await (this.prisma as any).termTemplateItem.findUnique({ where: { id: termItemId } });
-    if (!termItem) throw new NotFoundException('Term not found for given year and id');
+    const termItem = await (this.prisma as any).termTemplateItem.findUnique({
+      where: { id: termItemId },
+    });
+    if (!termItem)
+      throw new NotFoundException('Term not found for given year and id');
     if (termItem.term_template_id !== year.term_template_id) {
-      throw new NotFoundException('Term item does not belong to the academic year template');
+      throw new NotFoundException(
+        'Term item does not belong to the academic year template',
+      );
     }
 
     // Get all grades for this student in this term (using assessment academic_year_id + term_template_item_id)
@@ -991,13 +1118,16 @@ export class ResultsService {
     });
 
     // Calculate subject averages
-    const subjectAverages: Record<string, {
-      subject: any;
-      totalScore: number;
-      totalWeight: number;
-      average: number;
-      grades: any[];
-    }> = {};
+    const subjectAverages: Record<
+      string,
+      {
+        subject: any;
+        totalScore: number;
+        totalWeight: number;
+        average: number;
+        grades: any[];
+      }
+    > = {};
 
     for (const grade of grades) {
       const subjectId = grade.subject_id;
@@ -1011,7 +1141,8 @@ export class ResultsService {
         };
       }
 
-      const weightedScore = Number(grade.percentage) * Number(grade.assessment.weight);
+      const weightedScore =
+        Number(grade.percentage) * Number(grade.assessment.weight);
       subjectAverages[subjectId].totalScore += weightedScore;
       subjectAverages[subjectId].totalWeight += Number(grade.assessment.weight);
       subjectAverages[subjectId].grades.push(grade);
@@ -1024,7 +1155,8 @@ export class ResultsService {
       return {
         subject: subj.subject,
         average: roundedAvg,
-        letterGrade: subj.totalWeight > 0 ? this.calculateLetterGrade(roundedAvg) : null,
+        letterGrade:
+          subj.totalWeight > 0 ? this.calculateLetterGrade(roundedAvg) : null,
         grades: subj.grades,
       };
     });
@@ -1032,9 +1164,10 @@ export class ResultsService {
     // Calculate overall average
     const overallAverageRaw =
       subjectResults.length > 0
-        ? subjectResults.reduce((sum, subj) => sum + subj.average, 0) / subjectResults.length
+        ? subjectResults.reduce((sum, subj) => sum + subj.average, 0) /
+          subjectResults.length
         : 0;
-    console.log("subjectResults.length", subjectResults.length);
+    console.log('subjectResults.length', subjectResults.length);
     const overallAverage = Number(overallAverageRaw.toFixed(2));
 
     return {
@@ -1054,7 +1187,10 @@ export class ResultsService {
         name: year.name,
       },
       overallAverage,
-      overallLetterGrade: subjectResults.length > 0 ? this.calculateLetterGrade(overallAverage) : null,
+      overallLetterGrade:
+        subjectResults.length > 0
+          ? this.calculateLetterGrade(overallAverage)
+          : null,
       subjects: subjectResults,
       totalSubjects: subjectResults.length,
     };
@@ -1064,7 +1200,11 @@ export class ResultsService {
   // REPORT CARD GENERATION
   // ==========================================
 
-  async generateReportCard(schoolId: string, adminUserId: string, data: GenerateReportCardDto) {
+  async generateReportCard(
+    schoolId: string,
+    adminUserId: string,
+    data: GenerateReportCardDto,
+  ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     // Verify student
@@ -1082,18 +1222,30 @@ export class ResultsService {
     });
     if (!year) throw new NotFoundException('Academic year not found');
     if (year.school_id !== schoolId) {
-      throw new ForbiddenException('Academic year does not belong to this school');
+      throw new ForbiddenException(
+        'Academic year does not belong to this school',
+      );
     }
 
     // Verify term item exists and belongs to the year
-    const termItem2 = await (this.prisma as any).termTemplateItem.findUnique({ where: { id: data.termTemplateItemId } });
-    if (!termItem2) throw new NotFoundException('Term not found for given year and id');
+    const termItem2 = await (this.prisma as any).termTemplateItem.findUnique({
+      where: { id: data.termTemplateItemId },
+    });
+    if (!termItem2)
+      throw new NotFoundException('Term not found for given year and id');
     if (termItem2.term_template_id !== year.term_template_id) {
-      throw new NotFoundException('Term item does not belong to the academic year template');
+      throw new NotFoundException(
+        'Term item does not belong to the academic year template',
+      );
     }
 
     // Get academic summary
-    const summary = await this.getStudentAcademicSummary(data.studentId, adminUserId, data.academicYearId, data.termTemplateItemId);
+    const summary = await this.getStudentAcademicSummary(
+      data.studentId,
+      adminUserId,
+      data.academicYearId,
+      data.termTemplateItemId,
+    );
 
     // Calculate rank if requested
     let rank: number | null = null;
@@ -1101,20 +1253,24 @@ export class ResultsService {
 
     if (data.includeRank) {
       // Get all students in the same classroom definition for this term
-      const enrollment = await (this.prisma as any).studentEnrollment.findFirst({
-        where: {
-          student_id: data.studentId,
-          academic_year_id: data.academicYearId,
-          status: 'active',
+      const enrollment = await (this.prisma as any).studentEnrollment.findFirst(
+        {
+          where: {
+            student_id: data.studentId,
+            academic_year_id: data.academicYearId,
+            status: 'active',
+          },
+          include: {
+            classroom_definition: true,
+          },
         },
-        include: {
-          classroom_definition: true,
-        },
-      });
+      );
 
       if (enrollment) {
         // Get all active enrollments in the same classroom definition
-        const classmates = await (this.prisma as any).studentEnrollment.findMany({
+        const classmates = await (
+          this.prisma as any
+        ).studentEnrollment.findMany({
           where: {
             classroom_definition_id: enrollment.classroom_definition_id,
             academic_year_id: data.academicYearId,
@@ -1130,7 +1286,12 @@ export class ResultsService {
         // Calculate averages for all classmates
         const classAverages = await Promise.all(
           classmates.map(async (enr: any) => {
-            const classSummary = await this.getStudentAcademicSummary(enr.student_id, adminUserId, data.academicYearId, data.termTemplateItemId);
+            const classSummary = await this.getStudentAcademicSummary(
+              enr.student_id,
+              adminUserId,
+              data.academicYearId,
+              data.termTemplateItemId,
+            );
             return {
               studentId: enr.student_id,
               average: classSummary.overallAverage,
@@ -1142,10 +1303,19 @@ export class ResultsService {
         classAverages.sort((a, b) => b.average - a.average);
 
         // Find rank
-        const studentIndex = classAverages.findIndex((c) => c.studentId === data.studentId);
+        const studentIndex = classAverages.findIndex(
+          (c) => c.studentId === data.studentId,
+        );
         rank = studentIndex >= 0 ? studentIndex + 1 : null;
       }
     }
+
+    // Get school name
+    const school = await this.prisma.school.findUnique({
+      where: { id: schoolId },
+      select: { name: true },
+    });
+    if (!school) throw new NotFoundException('School not found');
 
     // Create report card record
     const reportCard = await (this.prisma as any).reportCard.create({
@@ -1165,10 +1335,74 @@ export class ResultsService {
       },
     });
 
-    return {
-      ...reportCard,
-      summary,
-    };
+    // Generate PDF report card
+    try {
+      const status: 'draft' | 'published' = data.autoPublish
+        ? 'published'
+        : 'draft';
+      const pdfData = {
+        schoolName: school.name,
+        studentName: `${student.first_name} ${student.last_name}`,
+        studentNumber: student.student_no || 'N/A',
+        academicYear: year.name,
+        term: termItem2.name,
+        termOrdinal: termItem2.ordinal || 1,
+        overallAverage: summary.overallAverage,
+        overallLetterGrade: summary.overallLetterGrade,
+        totalSubjects: summary.totalSubjects,
+        rank: rank,
+        totalStudents: totalStudents > 0 ? totalStudents : null,
+        remarks: null,
+        subjects: summary.subjects.map((s) => ({
+          name: s.subject.name,
+          code: s.subject.code,
+          average: s.average,
+          letterGrade: s.letterGrade,
+        })),
+        generatedDate: new Date(),
+        publishedDate: data.autoPublish ? new Date() : null,
+        status,
+      };
+
+      const pdfBuffer =
+        await this.pdfGenerationService.generateReportCardPDF(pdfData);
+
+      // Save PDF to file system
+      const fileName = this.pdfStorageService.generateFileName(
+        data.studentId,
+        schoolId,
+        data.termTemplateItemId,
+      );
+
+      const savedPDFInfo = await this.pdfStorageService.savePDF(
+        pdfBuffer,
+        fileName,
+        'reports',
+      );
+
+      // Update report card with PDF URL
+      const updatedReportCard = await (this.prisma as any).reportCard.update({
+        where: { id: reportCard.id },
+        data: {
+          pdf_url: savedPDFInfo.url,
+        },
+      });
+
+      return {
+        ...updatedReportCard,
+        summary,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to generate PDF for report card ${reportCard.id}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+      // Return the report card even if PDF generation fails
+      // The pdf_url will remain null, but the report card data is still created
+      return {
+        ...reportCard,
+        summary,
+      };
+    }
   }
 
   async getReportCard(reportCardId: string, adminUserId: string) {
@@ -1194,7 +1428,7 @@ export class ResultsService {
       reportCard.student_id,
       adminUserId,
       reportCard.academic_year_id,
-      reportCard.term_template_item_id
+      reportCard.term_template_item_id,
     );
 
     return {
@@ -1214,7 +1448,10 @@ export class ResultsService {
     return this.listStudentReportCardsInternal(student);
   }
 
-  async listStudentReportCardsForViewer(studentId: string, user: AuthenticatedUser) {
+  async listStudentReportCardsForViewer(
+    studentId: string,
+    user: AuthenticatedUser,
+  ) {
     const student = await this.assertCanViewStudent(studentId, user);
     return this.listStudentReportCardsInternal(student);
   }
@@ -1307,50 +1544,66 @@ export class ResultsService {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     if (!identity) {
-      throw new BadRequestException('Student identity (studentNo or regNo) is required');
+      throw new BadRequestException(
+        'Student identity (studentNo or regNo) is required',
+      );
     }
 
     // Find student by student_no OR reg_no
     const student = await this.prisma.student.findFirst({
       where: {
         school_id: schoolId,
-        OR: [
-          { student_no: identity },
-          { reg_no: identity },
-        ],
+        OR: [{ student_no: identity }, { reg_no: identity }],
       },
     });
     if (!student) throw new NotFoundException('Student not found');
 
     // Get grades for this student in the specified year and term
-    const grades = await this.getStudentGradesInternal(student, yearId, termItemId);
+    const grades = await this.getStudentGradesInternal(
+      student,
+      yearId,
+      termItemId,
+    );
 
     // Calculate subject-level weighted averages
-    const subjectAverages: Record<string, { subject: any, totalScore: number, totalWeight: number }> = {};
+    const subjectAverages: Record<
+      string,
+      { subject: any; totalScore: number; totalWeight: number }
+    > = {};
     for (const g of grades) {
       const weight = Number(g.assessment?.weight ?? 1);
       const percentage = Number(g.percentage ?? 0);
       const subjectId = g.assessment?.subject?.id ?? 'unknown';
       if (!subjectAverages[subjectId]) {
-        subjectAverages[subjectId] = { subject: g.assessment?.subject, totalScore: 0, totalWeight: 0 };
+        subjectAverages[subjectId] = {
+          subject: g.assessment?.subject,
+          totalScore: 0,
+          totalWeight: 0,
+        };
       }
       subjectAverages[subjectId].totalScore += percentage * weight;
       subjectAverages[subjectId].totalWeight += weight;
     }
-    const subjectResults = Object.entries(subjectAverages).map(([subjectId, agg]) => {
-      const avg = agg.totalWeight > 0 ? agg.totalScore / agg.totalWeight : 0;
-      return {
-        subject: agg.subject,
-        average: Number(avg.toFixed(2)),
-        letterGrade: this.calculateLetterGrade(avg),
-      };
-    });
+    const subjectResults = Object.entries(subjectAverages).map(
+      ([subjectId, agg]) => {
+        const avg = agg.totalWeight > 0 ? agg.totalScore / agg.totalWeight : 0;
+        return {
+          subject: agg.subject,
+          average: Number(avg.toFixed(2)),
+          letterGrade: this.calculateLetterGrade(avg),
+        };
+      },
+    );
     const overallAverageRaw =
       subjectResults.length > 0
-        ? subjectResults.reduce((sum, subj) => sum + subj.average, 0) / subjectResults.length
+        ? subjectResults.reduce((sum, subj) => sum + subj.average, 0) /
+          subjectResults.length
         : 0;
     const overallAverage = Number(overallAverageRaw.toFixed(2));
-    const overallLetterGrade = subjectResults.length > 0 ? this.calculateLetterGrade(overallAverage) : null;
+    const overallLetterGrade =
+      subjectResults.length > 0
+        ? this.calculateLetterGrade(overallAverage)
+        : null;
 
     return {
       student: {
@@ -1439,28 +1692,39 @@ export class ResultsService {
     const results = enrollments.map((enrollment: any) => {
       const studentGrades = gradesByStudent[enrollment.student_id] || [];
       // Group by subject
-      const subjectAverages: Record<string, { subject: any, totalScore: number, totalWeight: number }> = {};
+      const subjectAverages: Record<
+        string,
+        { subject: any; totalScore: number; totalWeight: number }
+      > = {};
       for (const g of studentGrades) {
         const weight = Number(g.assessment?.weight ?? 1);
         const percentage = Number(g.percentage ?? 0);
         const subjectId = g.assessment?.subject?.id ?? 'unknown';
         if (!subjectAverages[subjectId]) {
-          subjectAverages[subjectId] = { subject: g.assessment?.subject, totalScore: 0, totalWeight: 0 };
+          subjectAverages[subjectId] = {
+            subject: g.assessment?.subject,
+            totalScore: 0,
+            totalWeight: 0,
+          };
         }
         subjectAverages[subjectId].totalScore += percentage * weight;
         subjectAverages[subjectId].totalWeight += weight;
       }
-      const subjectResults = Object.entries(subjectAverages).map(([subjectId, agg]) => {
-        const avg = agg.totalWeight > 0 ? agg.totalScore / agg.totalWeight : 0;
-        return {
-          subject: agg.subject,
-          average: Number(avg.toFixed(2)),
-          letterGrade: this.calculateLetterGrade(avg),
-        };
-      });
+      const subjectResults = Object.entries(subjectAverages).map(
+        ([subjectId, agg]) => {
+          const avg =
+            agg.totalWeight > 0 ? agg.totalScore / agg.totalWeight : 0;
+          return {
+            subject: agg.subject,
+            average: Number(avg.toFixed(2)),
+            letterGrade: this.calculateLetterGrade(avg),
+          };
+        },
+      );
       const overallAverageRaw =
         subjectResults.length > 0
-          ? subjectResults.reduce((sum, subj) => sum + subj.average, 0) / subjectResults.length
+          ? subjectResults.reduce((sum, subj) => sum + subj.average, 0) /
+            subjectResults.length
           : 0;
       const overallAverage = Number(overallAverageRaw.toFixed(2));
       return {
@@ -1473,7 +1737,10 @@ export class ResultsService {
         },
         subjects: subjectResults,
         overallAverage,
-        overallLetterGrade: subjectResults.length > 0 ? this.calculateLetterGrade(overallAverage) : null,
+        overallLetterGrade:
+          subjectResults.length > 0
+            ? this.calculateLetterGrade(overallAverage)
+            : null,
         grades: studentGrades.map((g: any) => ({
           assessment: {
             id: g.assessment?.id,

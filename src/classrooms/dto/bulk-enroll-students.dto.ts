@@ -1,9 +1,15 @@
-import { IsArray, IsDateString, IsOptional, IsString, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsDateString,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class BulkEnrollStudentDto {
   @IsString()
-  studentId: string;
+  studentId!: string;
 
   @IsOptional()
   @IsDateString()
@@ -14,5 +20,5 @@ export class BulkEnrollStudentsDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => BulkEnrollStudentDto)
-  enrollments: BulkEnrollStudentDto[];
+  enrollments!: BulkEnrollStudentDto[];
 }

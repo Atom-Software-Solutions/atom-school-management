@@ -18,4 +18,3 @@ export class UpdateClassroomOfferingDto {
   @IsOptional()
   isActive?: boolean;
 }
-

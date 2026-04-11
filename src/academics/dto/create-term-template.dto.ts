@@ -1,4 +1,13 @@
-import { IsString, IsNotEmpty, IsArray, ValidateNested, ArrayMinSize, IsInt, Min, MinLength } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsArray,
+  ValidateNested,
+  ArrayMinSize,
+  IsInt,
+  Min,
+  MinLength,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -9,7 +18,7 @@ export class TermStructureItemDto {
   })
   @IsInt()
   @Min(1)
-  ordinal: number;
+  ordinal!: number;
 
   @ApiProperty({
     description: 'Term name',
@@ -17,8 +26,10 @@ export class TermStructureItemDto {
   })
   @IsString()
   @IsNotEmpty()
-  @MinLength(3, { message: 'Each Term Item name must be at least 3 characters' })
-  name: string;
+  @MinLength(3, {
+    message: 'Each Term Item name must be at least 3 characters',
+  })
+  name!: string;
 }
 
 export class CreateTermTemplateDto {
@@ -29,7 +40,7 @@ export class CreateTermTemplateDto {
   @IsString()
   @IsNotEmpty()
   @MinLength(3, { message: 'Template name must be at least 3 characters' })
-  name: string;
+  name!: string;
 
   @ApiProperty({
     description: 'Array of term definitions with ordinal and name',
@@ -44,5 +55,5 @@ export class CreateTermTemplateDto {
   @ArrayMinSize(1, { message: 'At least one term item must be provided' })
   @ValidateNested({ each: true })
   @Type(() => TermStructureItemDto)
-  structure: TermStructureItemDto[];
+  structure!: TermStructureItemDto[];
 }

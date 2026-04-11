@@ -1,4 +1,11 @@
-import { IsString, IsEmail, IsOptional, IsBoolean, MinLength, Matches } from 'class-validator';
+import {
+  IsString,
+  IsEmail,
+  IsOptional,
+  IsBoolean,
+  MinLength,
+  Matches,
+} from 'class-validator';
 
 export class UpdateSchoolDto {
   @IsString()
@@ -12,7 +19,9 @@ export class UpdateSchoolDto {
 
   @IsString()
   @IsOptional()
-  @Matches(/^\+?\d{10,}$/, { message: 'Phone number must be at least 10 digits and can start with +.' })
+  @Matches(/^\+?\d{10,}$/, {
+    message: 'Phone number must be at least 10 digits and can start with +.',
+  })
   phone?: string;
 
   @IsString()
@@ -39,4 +48,3 @@ export class UpdateSchoolDto {
   @IsOptional()
   isActive?: boolean;
 }
-

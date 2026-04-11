@@ -1,4 +1,10 @@
-import { IsUUID, IsNotEmpty, IsOptional, IsBoolean, IsString } from 'class-validator';
+import {
+  IsUUID,
+  IsNotEmpty,
+  IsOptional,
+  IsBoolean,
+  IsString,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
@@ -9,7 +15,7 @@ export class GenerateReportCardDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  studentId: string;
+  studentId!: string;
 
   @ApiProperty({
     description: 'Academic Year ID',
@@ -17,7 +23,7 @@ export class GenerateReportCardDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  academicYearId: string;
+  academicYearId!: string;
 
   @ApiProperty({
     description: 'Term template item ID (the specific term instance)',
@@ -25,7 +31,7 @@ export class GenerateReportCardDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  termTemplateItemId: string;
+  termTemplateItemId!: string;
 
   @ApiPropertyOptional({
     description: 'Include class rank',

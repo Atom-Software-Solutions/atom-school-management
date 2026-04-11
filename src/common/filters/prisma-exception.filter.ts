@@ -41,7 +41,9 @@ export class PrismaExceptionFilter implements ExceptionFilter {
             ? exception.meta?.target[0]
             : exception.meta?.target;
           const field = typeof target === 'string' ? target : undefined;
-          message = field ? `A record with this ${field} already exists` : 'Unique constraint violation';
+          message = field
+            ? `A record with this ${field} already exists`
+            : 'Unique constraint violation';
 
           const payload: any = {
             error: {
@@ -52,7 +54,9 @@ export class PrismaExceptionFilter implements ExceptionFilter {
           };
           if (field) payload.error.param = field;
 
-          logger.warn(`${request.method} ${request.url} -> ${status}: ${message}`);
+          logger.warn(
+            `${request.method} ${request.url} -> ${status}: ${message}`,
+          );
           return response.status(status).json(payload);
         }
 
@@ -61,7 +65,9 @@ export class PrismaExceptionFilter implements ExceptionFilter {
           type = 'not_found_error';
           message = 'Record not found';
           const payload = { error: { code: status, type, message } };
-          logger.warn(`${request.method} ${request.url} -> ${status}: ${message}`);
+          logger.warn(
+            `${request.method} ${request.url} -> ${status}: ${message}`,
+          );
           return response.status(status).json(payload);
         }
 
@@ -70,7 +76,9 @@ export class PrismaExceptionFilter implements ExceptionFilter {
           type = 'invalid_request_error';
           message = 'Invalid reference: related record does not exist';
           const payload = { error: { code: status, type, message } };
-          logger.warn(`${request.method} ${request.url} -> ${status}: ${message}`);
+          logger.warn(
+            `${request.method} ${request.url} -> ${status}: ${message}`,
+          );
           return response.status(status).json(payload);
         }
 
@@ -79,7 +87,9 @@ export class PrismaExceptionFilter implements ExceptionFilter {
           type = 'invalid_request_error';
           message = 'Invalid relation: required relation is missing';
           const payload = { error: { code: status, type, message } };
-          logger.warn(`${request.method} ${request.url} -> ${status}: ${message}`);
+          logger.warn(
+            `${request.method} ${request.url} -> ${status}: ${message}`,
+          );
           return response.status(status).json(payload);
         }
 
@@ -88,14 +98,19 @@ export class PrismaExceptionFilter implements ExceptionFilter {
           type = 'invalid_request_error';
           message = 'Database operation failed';
           const payload = { error: { code: status, type, message } };
-          logger.warn(`${request.method} ${request.url} -> ${status}: ${code} - ${message}`);
+          logger.warn(
+            `${request.method} ${request.url} -> ${status}: ${code} - ${message}`,
+          );
           return response.status(status).json(payload);
         }
       }
     }
 
     // For any other unhandled exceptions, log and return 500 in the same structured shape
-    logger.error('Unhandled exception in PrismaExceptionFilter', exception as any);
+    logger.error(
+      'Unhandled exception in PrismaExceptionFilter',
+      exception as any,
+    );
     return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       error: {
         code: HttpStatus.INTERNAL_SERVER_ERROR,
