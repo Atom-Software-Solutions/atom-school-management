@@ -1207,13 +1207,32 @@ export class ResultsService {
   ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
-    // Verify student
-    const student = await this.prisma.student.findUnique({
-      where: { id: data.studentId },
-    });
-    if (!student) throw new NotFoundException('Student not found');
-    if (student.school_id !== schoolId) {
-      throw new ForbiddenException('Student does not belong to this school');
+    // Determine target students
+    let targetStudentIds: string[] = [];
+
+    if (data.studentId) {
+      // Single student
+      targetStudentIds = [data.studentId];
+    } else if (data.studentIds) {
+      // Multiple students
+      targetStudentIds = data.studentIds;
+    } else if (data.classroomDefinitionId) {
+      // All students in classroom
+      const enrollments = await (this.prisma as any).studentEnrollment.findMany({
+        where: {
+          classroom_definition_id: data.classroomDefinitionId,
+          academic_year_id: data.academicYearId,
+          status: 'active',
+        },
+        select: {
+          student_id: true,
+        },
+      });
+      targetStudentIds = enrollments.map((e: any) => e.student_id);
+    }
+
+    if (targetStudentIds.length === 0) {
+      throw new BadRequestException('No students found for the specified criteria');
     }
 
     // Verify academic year and resolve term by name
@@ -1239,77 +1258,6 @@ export class ResultsService {
       );
     }
 
-    // Get academic summary
-    const summary = await this.getStudentAcademicSummary(
-      data.studentId,
-      adminUserId,
-      data.academicYearId,
-      data.termTemplateItemId,
-    );
-
-    // Calculate rank if requested
-    let rank: number | null = null;
-    let totalStudents = 0;
-
-    if (data.includeRank) {
-      // Get all students in the same classroom definition for this term
-      const enrollment = await (this.prisma as any).studentEnrollment.findFirst(
-        {
-          where: {
-            student_id: data.studentId,
-            academic_year_id: data.academicYearId,
-            status: 'active',
-          },
-          include: {
-            classroom_definition: true,
-          },
-        },
-      );
-
-      if (enrollment) {
-        // Get all active enrollments in the same classroom definition
-        const classmates = await (
-          this.prisma as any
-        ).studentEnrollment.findMany({
-          where: {
-            classroom_definition_id: enrollment.classroom_definition_id,
-            academic_year_id: data.academicYearId,
-            status: 'active',
-          },
-          include: {
-            student: true,
-          },
-        });
-
-        totalStudents = classmates.length;
-
-        // Calculate averages for all classmates
-        const classAverages = await Promise.all(
-          classmates.map(async (enr: any) => {
-            const classSummary = await this.getStudentAcademicSummary(
-              enr.student_id,
-              adminUserId,
-              data.academicYearId,
-              data.termTemplateItemId,
-            );
-            return {
-              studentId: enr.student_id,
-              average: classSummary.overallAverage,
-            };
-          }),
-        );
-
-        // Sort by average descending
-        classAverages.sort((a, b) => b.average - a.average);
-
-        // Find rank
-        const studentIndex = classAverages.findIndex(
-          (c) => c.studentId === data.studentId,
-        );
-        rank = studentIndex >= 0 ? studentIndex + 1 : null;
-      }
-    }
-
     // Get school name
     const school = await this.prisma.school.findUnique({
       where: { id: schoolId },
@@ -1317,92 +1265,203 @@ export class ResultsService {
     });
     if (!school) throw new NotFoundException('School not found');
 
-    // Create report card record
-    const reportCard = await (this.prisma as any).reportCard.create({
-      data: {
-        school_id: schoolId,
-        student_id: data.studentId,
-        academic_year_id: data.academicYearId,
-        term_template_item_id: data.termTemplateItemId,
-        overall_average: summary.overallAverage,
-        total_subjects: summary.totalSubjects,
-        rank: rank,
-        total_students: totalStudents,
-        remarks: null,
-        status: data.autoPublish ? 'published' : 'draft',
-        generated_by: adminUserId,
-        published_at: data.autoPublish ? new Date() : null,
-      },
-    });
+    // Generate report cards for all target students
+    const results: any[] = [];
+    const errors: Array<{ studentId: string; error: string }> = [];
 
-    // Generate PDF report card
-    try {
-      const status: 'draft' | 'published' = data.autoPublish
-        ? 'published'
-        : 'draft';
-      const pdfData = {
-        schoolName: school.name,
-        studentName: `${student.first_name} ${student.last_name}`,
-        studentNumber: student.student_no || 'N/A',
-        academicYear: year.name,
-        term: termItem2.name,
-        termOrdinal: termItem2.ordinal || 1,
-        overallAverage: summary.overallAverage,
-        overallLetterGrade: summary.overallLetterGrade,
-        totalSubjects: summary.totalSubjects,
-        rank: rank,
-        totalStudents: totalStudents > 0 ? totalStudents : null,
-        remarks: null,
-        subjects: summary.subjects.map((s) => ({
-          name: s.subject.name,
-          code: s.subject.code,
-          average: s.average,
-          letterGrade: s.letterGrade,
-        })),
-        generatedDate: new Date(),
-        publishedDate: data.autoPublish ? new Date() : null,
-        status,
-      };
+    for (const studentId of targetStudentIds) {
+      try {
+        // Verify student
+        const student = await this.prisma.student.findUnique({
+          where: { id: studentId },
+        });
+        if (!student) {
+          errors.push({
+            studentId,
+            error: 'Student not found',
+          });
+          continue;
+        }
+        if (student.school_id !== schoolId) {
+          errors.push({
+            studentId,
+            error: 'Student does not belong to this school',
+          });
+          continue;
+        }
 
-      const pdfBuffer =
-        await this.pdfGenerationService.generateReportCardPDF(pdfData);
+        // Get academic summary
+        const summary = await this.getStudentAcademicSummary(
+          studentId,
+          adminUserId,
+          data.academicYearId,
+          data.termTemplateItemId,
+        );
 
-      // Save PDF to file system
-      const fileName = this.pdfStorageService.generateFileName(
-        data.studentId,
-        schoolId,
-        data.termTemplateItemId,
-      );
+        // Calculate rank if requested
+        let rank: number | null = null;
+        let totalStudents = 0;
 
-      const savedPDFInfo = await this.pdfStorageService.savePDF(
-        pdfBuffer,
-        fileName,
-        'reports',
-      );
+        if (data.includeRank) {
+          // Get all students in the same classroom definition for this term
+          const enrollment = await (this.prisma as any).studentEnrollment.findFirst(
+            {
+              where: {
+                student_id: studentId,
+                academic_year_id: data.academicYearId,
+                status: 'active',
+              },
+              include: {
+                classroom_definition: true,
+              },
+            },
+          );
 
-      // Update report card with PDF URL
-      const updatedReportCard = await (this.prisma as any).reportCard.update({
-        where: { id: reportCard.id },
-        data: {
-          pdf_url: savedPDFInfo.url,
-        },
-      });
+          if (enrollment) {
+            // Get all active enrollments in the same classroom definition
+            const classmates = await (
+              this.prisma as any
+            ).studentEnrollment.findMany({
+              where: {
+                classroom_definition_id: enrollment.classroom_definition_id,
+                academic_year_id: data.academicYearId,
+                status: 'active',
+              },
+              include: {
+                student: true,
+              },
+            });
 
-      return {
-        ...updatedReportCard,
-        summary,
-      };
-    } catch (error) {
-      this.logger.error(
-        `Failed to generate PDF for report card ${reportCard.id}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
-      // Return the report card even if PDF generation fails
-      // The pdf_url will remain null, but the report card data is still created
-      return {
-        ...reportCard,
-        summary,
-      };
+            totalStudents = classmates.length;
+
+            // Calculate averages for all classmates
+            const classAverages = await Promise.all(
+              classmates.map(async (enr: any) => {
+                const classSummary = await this.getStudentAcademicSummary(
+                  enr.student_id,
+                  adminUserId,
+                  data.academicYearId,
+                  data.termTemplateItemId,
+                );
+                return {
+                  studentId: enr.student_id,
+                  average: classSummary.overallAverage,
+                };
+              }),
+            );
+
+            // Sort by average descending
+            classAverages.sort((a, b) => b.average - a.average);
+
+            // Find rank
+            const studentIndex = classAverages.findIndex(
+              (c) => c.studentId === studentId,
+            );
+            rank = studentIndex >= 0 ? studentIndex + 1 : null;
+          }
+        }
+
+        // Create report card record
+        const reportCard = await (this.prisma as any).reportCard.create({
+          data: {
+            school_id: schoolId,
+            student_id: studentId,
+            academic_year_id: data.academicYearId,
+            term_template_item_id: data.termTemplateItemId,
+            overall_average: summary.overallAverage,
+            total_subjects: summary.totalSubjects,
+            rank: rank,
+            total_students: totalStudents,
+            remarks: null,
+            status: data.autoPublish ? 'published' : 'draft',
+            generated_by: adminUserId,
+            published_at: data.autoPublish ? new Date() : null,
+          },
+        });
+
+        // Generate PDF report card
+        try {
+          const status: 'draft' | 'published' = data.autoPublish
+            ? 'published'
+            : 'draft';
+          const pdfData = {
+            schoolName: school.name,
+            studentName: `${student.first_name} ${student.last_name}`,
+            studentNumber: student.student_no || 'N/A',
+            academicYear: year.name,
+            term: termItem2.name,
+            termOrdinal: termItem2.ordinal || 1,
+            overallAverage: summary.overallAverage,
+            overallLetterGrade: summary.overallLetterGrade,
+            totalSubjects: summary.totalSubjects,
+            rank: rank,
+            totalStudents: totalStudents > 0 ? totalStudents : null,
+            remarks: null,
+            subjects: summary.subjects.map((s) => ({
+              name: s.subject.name,
+              code: s.subject.code,
+              average: s.average,
+              letterGrade: s.letterGrade,
+            })),
+            generatedDate: new Date(),
+            publishedDate: data.autoPublish ? new Date() : null,
+            status,
+          };
+
+          const pdfBuffer =
+            await this.pdfGenerationService.generateReportCardPDF(pdfData);
+
+          // Save PDF to file system
+          const fileName = this.pdfStorageService.generateFileName(
+            studentId,
+            schoolId,
+            data.termTemplateItemId,
+          );
+
+          const savedPDFInfo = await this.pdfStorageService.savePDF(
+            pdfBuffer,
+            fileName,
+            'reports',
+          );
+
+          // Update report card with PDF URL
+          const updatedReportCard = await (this.prisma as any).reportCard.update({
+            where: { id: reportCard.id },
+            data: {
+              pdf_url: savedPDFInfo.url,
+            },
+          });
+
+          results.push({
+            ...updatedReportCard,
+            summary,
+          });
+        } catch (pdfError) {
+          this.logger.error(
+            `Failed to generate PDF for report card ${reportCard.id}: ${pdfError instanceof Error ? pdfError.message : 'Unknown error'}`,
+          );
+          // Return the report card even if PDF generation fails
+          results.push({
+            ...reportCard,
+            summary,
+          });
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        this.logger.error(`Failed to generate report card for student ${studentId}: ${errorMessage}`);
+        errors.push({
+          studentId,
+          error: errorMessage,
+        });
+      }
     }
+
+    return {
+      generated: results.length,
+      errors: errors.length,
+      reportCards: results,
+      failed: errors,
+    };
   }
 
   async getReportCard(reportCardId: string, adminUserId: string) {

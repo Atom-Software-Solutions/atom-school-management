@@ -17,6 +17,7 @@ import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { ResultsService } from './results.service';
 import { PdfStorageService } from './pdf-storage.service';
 import { GenerateReportCardDto } from './dto/generate-report-card.dto';
+import { DownloadReportCardDto } from './dto/download-report-card.dto';
 import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
 import type { Response as ExpressResponse } from 'express';
 import * as path from 'path';
@@ -89,20 +90,54 @@ export class ReportCardsController {
       );
     }
 
+    await this.sendReportCardPdf(reportCard, res);
+  }
+
+  @Post('download')
+  async downloadGeneratedReportCard(
+    @Param('schoolId') schoolId: string,
+    @Body() dto: DownloadReportCardDto,
+    @Request() req: AuthenticatedRequest,
+    @Response() res: ExpressResponse,
+  ) {
+    if (!req.user) {
+      throw new ForbiddenException('Authentication required');
+    }
+
+    const dtoPayload = new GenerateReportCardDto();
+    dtoPayload.studentId = dto.studentId;
+    dtoPayload.academicYearId = dto.academicYearId;
+    dtoPayload.termTemplateItemId = dto.termTemplateItemId;
+    dtoPayload.includeRank = true;
+    dtoPayload.autoPublish = false;
+
+    const result = await this.resultsService.generateReportCard(schoolId, req.user.id, dtoPayload);
+
+    const reportCard = result.reportCards?.[0];
+    if (!reportCard) {
+      throw new NotFoundException('Failed to generate report card for download');
+    }
+
+    if (!reportCard.pdf_url) {
+      throw new BadRequestException('PDF was not generated for the report card');
+    }
+
+    await this.sendReportCardPdf(reportCard, res);
+  }
+
+  private async sendReportCardPdf(
+    reportCard: any,
+    res: ExpressResponse,
+  ) {
     try {
-      // Construct file path from pdf_url
-      // pdf_url is in format: /pdfs/reports/reportcard-*.pdf
-      // Extract the relative path
       const urlPath = reportCard.pdf_url.replace(/^\/pdfs\//, '');
       const baseStoragePath = process.env.PDF_STORAGE_PATH || './pdfs';
       const filePath = path.join(baseStoragePath, urlPath);
 
-      // Verify file exists
       if (!fs.existsSync(filePath)) {
         throw new NotFoundException('PDF file not found on disk');
       }
 
-      // Read and send file
       const fileContent = fs.readFileSync(filePath);
       const studentName =
         reportCard.student?.first_name && reportCard.student?.last_name

@@ -25,6 +25,7 @@ interface ReportCardPDFData {
     letterGrade: string | null;
     assessments?: Array<{
       name: string;
+      code?: string;
       type: string;
       score: number;
       percentage: number;
@@ -134,367 +135,434 @@ export class PdfGenerationService {
     doc: PDFDocumentInstance,
     data: ReportCardPDFData,
   ): void {
-    // Header
-    this.renderHeader(doc, data);
+    // Header with school info
+    this.renderSchoolHeader(doc, data);
 
-    // Student Information Section
-    doc.moveDown(1);
-    this.renderStudentInfo(doc, data);
+    // Student Information Section (compact)
+    this.renderStudentInfoCompact(doc, data);
 
-    // Overall Performance Section
-    doc.moveDown(1);
-    this.renderOverallPerformance(doc, data);
+    // Subject Performance Table (with assessments)
+    this.renderDetailedSubjectsTable(doc, data);
 
-    // Ranking Section (if available)
-    if (data.rank && data.totalStudents) {
-      doc.moveDown(1);
-      this.renderRanking(doc, data);
-    }
+    // Total Points
+    this.renderTotalPoints(doc, data);
 
-    // Subject Performance Table
-    doc.moveDown(1);
-    this.renderSubjectsTable(doc, data);
+    // Grading Scale
+    this.renderGradingScale(doc, data);
 
-    // Remarks Section (if available)
-    if (data.remarks) {
-      doc.moveDown(1);
-      this.renderRemarks(doc, data);
-    }
+    // Class Teacher's Comment Section
+    this.renderTeacherCommentSection(doc, data);
 
-    // Footer
-    doc.moveDown(2);
-    this.renderFooter(doc, data);
+    // Footer with school stamp area and disclaimer
+    this.renderReportFooter(doc, data);
   }
 
   /**
-   * Render the report card header with school name and title
+   * Render school header with logo, name, and contact info
    */
-  private renderHeader(
+  private renderSchoolHeader(
     doc: PDFDocumentInstance,
     data: ReportCardPDFData,
   ): void {
     const pageWidth = doc.page.width;
-    const centerX = pageWidth / 2;
+    const margin = 40;
 
-    // School name (centered)
-    doc.fontSize(18).font('Helvetica-Bold').text(data.schoolName, 0, doc.y, {
-      align: 'center',
-      width: pageWidth,
-    });
-
-    // Report title (centered)
+    // School name (centered, bold, larger)
     doc
-      .fontSize(14)
+      .fontSize(16)
       .font('Helvetica-Bold')
-      .text('ACADEMIC REPORT CARD', 0, doc.y + 5, {
+      .text(data.schoolName, 0, 40, {
+        align: 'center',
+        width: pageWidth,
+      });
+
+    // Report type (centered)
+    doc
+      .fontSize(11)
+      .font('Helvetica-Bold')
+      .text('A\'LEVEL TERMLY REPORT TERM 3 2025', 0, doc.y + 2, {
+        align: 'center',
+        width: pageWidth,
+      });
+
+    // Contact info (centered, smaller)
+    doc
+      .fontSize(8)
+      .font('Helvetica')
+      .text('P.O BOX 336 Lugazi, Tel: 0778429441', 0, doc.y, {
+        align: 'center',
+        width: pageWidth,
+      });
+
+    doc
+      .fontSize(8)
+      .text('4km Lugazi-luuka Road', 0, doc.y, {
+        align: 'center',
+        width: pageWidth,
+      });
+
+    doc
+      .fontSize(8)
+      .text('www.stmarycollegelugazi.ug | info@stmarycollegelugazi.com', 0, doc.y, {
         align: 'center',
         width: pageWidth,
       });
 
     // Horizontal line
     doc
-      .moveTo(40, doc.y + 10)
-      .lineTo(pageWidth - 40, doc.y + 10)
+      .moveTo(margin, doc.y + 6)
+      .lineTo(pageWidth - margin, doc.y + 6)
       .stroke();
 
-    doc.moveDown(1);
+    doc.y += 15;
   }
 
   /**
-   * Render student information section
+   * Render compact student information
    */
-  private renderStudentInfo(
+  private renderStudentInfoCompact(
     doc: PDFDocumentInstance,
     data: ReportCardPDFData,
   ): void {
-    doc
-      .fontSize(10)
-      .font('Helvetica-Bold')
-      .text('STUDENT INFORMATION', 0, doc.y);
+    const margin = 40;
+    const pageWidth = doc.page.width;
+    const colWidth = (pageWidth - 2 * margin) / 2;
 
-    doc.fontSize(9).font('Helvetica').y += 12;
+    doc.fontSize(9).font('Helvetica');
 
-    const leftMargin = 50;
-    const rightMargin = doc.page.width / 2 + 20;
+    const startY = doc.y;
 
-    // Left column
-    const yPosition = doc.y;
+    // Left column: Name, Class
     doc
       .fontSize(9)
       .font('Helvetica-Bold')
-      .text('Student Name:', leftMargin, yPosition);
-    doc.font('Helvetica').text(data.studentName, leftMargin + 110, yPosition);
-
-    doc
-      .fontSize(9)
-      .font('Helvetica-Bold')
-      .text('Academic Year:', leftMargin, yPosition + 20);
+      .text('Name:', margin, startY);
     doc
       .font('Helvetica')
-      .text(data.academicYear, leftMargin + 110, yPosition + 20);
-
-    // Right column
-    doc
-      .fontSize(9)
-      .font('Helvetica-Bold')
-      .text('Student Number:', rightMargin, yPosition);
-    doc.font('Helvetica').text(data.studentNumber, rightMargin + 95, yPosition);
+      .text(data.studentName, margin + 60, startY);
 
     doc
       .fontSize(9)
       .font('Helvetica-Bold')
-      .text('Term:', rightMargin, yPosition + 20);
+      .text('Class:', margin, startY + 15);
     doc
       .font('Helvetica')
-      .text(
-        `${data.term} (${this.getOrdinalSuffix(data.termOrdinal)})`,
-        rightMargin + 95,
-        yPosition + 20,
-      );
+      .text('5.5 Sciences', margin + 60, startY + 15);
 
-    doc.y = yPosition + 50;
-  }
-
-  /**
-   * Render overall performance section
-   */
-  private renderOverallPerformance(
-    doc: PDFDocumentInstance,
-    data: ReportCardPDFData,
-  ): void {
-    doc
-      .fontSize(10)
-      .font('Helvetica-Bold')
-      .text('OVERALL PERFORMANCE', 0, doc.y);
-
-    doc.y += 12;
-
-    const boxWidth = 150;
-    const boxHeight = 60;
-    const boxX = 50;
-    const boxY = doc.y;
-
-    // Box 1: Overall Average
-    doc.rect(boxX, boxY, boxWidth, boxHeight).stroke();
+    // Right column: Academic Year, Pay Code
+    const rightColX = margin + colWidth;
 
     doc
       .fontSize(9)
       .font('Helvetica-Bold')
-      .text('Overall Average', boxX + 10, boxY + 10, {
-        width: boxWidth - 20,
-      });
-
+      .text('Year:', rightColX, startY);
     doc
-      .fontSize(24)
-      .font('Helvetica-Bold')
-      .text(data.overallAverage.toFixed(2), boxX + 10, boxY + 25, {
-        width: boxWidth - 20,
-        align: 'center',
-      });
-
-    // Box 2: Letter Grade
-    const gradeBoxX = boxX + boxWidth + 20;
-    doc.rect(gradeBoxX, boxY, boxWidth, boxHeight).stroke();
+      .font('Helvetica')
+      .text(data.academicYear, rightColX + 60, startY);
 
     doc
       .fontSize(9)
       .font('Helvetica-Bold')
-      .text('Grade', gradeBoxX + 10, boxY + 10, {
-        width: boxWidth - 20,
-      });
-
-    const displayedOverallGrade = data.overallLetterGrade ?? 'N/A';
-
+      .text('PAY CODE:', rightColX, startY + 15);
     doc
-      .fontSize(24)
-      .font('Helvetica-Bold')
-      .fillColor(this.getGradeColor(displayedOverallGrade))
-      .text(displayedOverallGrade, gradeBoxX + 10, boxY + 25, {
-        width: boxWidth - 20,
-        align: 'center',
-      })
-      .fillColor('#000000');
+      .font('Helvetica')
+      .text('1009176268', rightColX + 60, startY + 15);
 
-    // Box 3: Subjects Count
-    const subjectBoxX = gradeBoxX + boxWidth + 20;
-    doc.rect(subjectBoxX, boxY, boxWidth, boxHeight).stroke();
-
-    doc
-      .fontSize(9)
-      .font('Helvetica-Bold')
-      .text('Subjects', subjectBoxX + 10, boxY + 10, {
-        width: boxWidth - 20,
-      });
-
-    doc
-      .fontSize(24)
-      .font('Helvetica-Bold')
-      .text(data.totalSubjects.toString(), subjectBoxX + 10, boxY + 25, {
-        width: boxWidth - 20,
-        align: 'center',
-      });
-
-    doc.y = boxY + boxHeight + 20;
+    doc.y = startY + 35;
   }
 
   /**
-   * Render ranking information
+   * Render detailed subjects table with papers/assessments
    */
-  private renderRanking(
+  private renderDetailedSubjectsTable(
     doc: PDFDocumentInstance,
     data: ReportCardPDFData,
   ): void {
-    doc.fontSize(10).font('Helvetica-Bold').text('CLASS RANKING', 0, doc.y);
-
-    doc.y += 12;
-
-    const rankText = `${data.rank!}${this.getOrdinalSuffix(data.rank!)} out of ${data.totalStudents!} students`;
-
-    doc.fontSize(11).font('Helvetica-Bold').text(rankText, 50, doc.y, {
-      width: 300,
-    });
-  }
-
-  /**
-   * Render subjects performance table
-   */
-  private renderSubjectsTable(
-    doc: PDFDocumentInstance,
-    data: ReportCardPDFData,
-  ): void {
-    doc
-      .fontSize(10)
-      .font('Helvetica-Bold')
-      .text('SUBJECT PERFORMANCE', 0, doc.y);
-
-    doc.y += 12;
-
-    const tableTop = doc.y;
-    const col1X = 50;
-    const col2X = 250;
-    const col3X = 350;
-    const col4X = 450;
-    const rowHeight = 25;
+    const margin = 40;
+    const pageWidth = doc.page.width;
+    const tableWidth = pageWidth - 2 * margin;
 
     // Table header
-    doc
-      .fontSize(9)
-      .font('Helvetica-Bold')
-      .text('Subject', col1X, tableTop)
-      .text('Code', col2X, tableTop)
-      .text('Average', col3X, tableTop)
-      .text('Grade', col4X, tableTop);
+    const headerY = doc.y;
+    const colSubject = margin;
+    const colPaper = margin + 100;
+    const colSet1 = margin + 150;
+    const colPaperGrade = margin + 200;
+    const colGrade = margin + 260;
+    const colComment = margin + 320;
+    const colInitial = pageWidth - margin - 50;
 
-    // Draw header underline
+    // Header line
     doc
-      .moveTo(col1X, tableTop + 15)
-      .lineTo(doc.page.width - 50, tableTop + 15)
+      .moveTo(margin, headerY)
+      .lineTo(pageWidth - margin, headerY)
+      .stroke();
+
+    // Header text
+    doc
+      .fontSize(8)
+      .font('Helvetica-Bold')
+      .text('SUBJECT', colSubject, headerY + 4)
+      .text('Paper', colPaper, headerY + 4)
+      .text('SET 1', colSet1, headerY + 4)
+      .text('PAPER', colPaperGrade, headerY + 4)
+      .text('GRADE', colGrade, headerY + 4)
+      .text('COMMENT', colComment, headerY + 4)
+      .text('INITIAL', colInitial, headerY + 4);
+
+    // Secondary header line (GRADE under PAPER column)
+    doc
+      .fontSize(7)
+      .font('Helvetica')
+      .text('GRADE', colPaperGrade + 5, headerY + 14);
+
+    // Separator line
+    doc
+      .moveTo(margin, headerY + 24)
+      .lineTo(pageWidth - margin, headerY + 24)
       .stroke();
 
     // Table rows
-    let yPosition = tableTop + 20;
+    let rowY = headerY + 28;
+    const rowHeight = 16;
+
     data.subjects.forEach((subject) => {
-      // Check if we need a new page
-      if (yPosition > doc.page.height - 100) {
-        doc.addPage();
-        yPosition = 40;
-      }
-
+      // Subject row
       doc
-        .fontSize(9)
+        .fontSize(8)
         .font('Helvetica')
-        .text(subject.name, col1X, yPosition)
-        .text(subject.code, col2X, yPosition)
-        .text(subject.average.toFixed(2), col3X, yPosition);
+        .text(subject.name, colSubject, rowY, { width: 95 });
 
-      // Draw grade badge
-      doc
-        .font('Helvetica-Bold')
-        .fillColor(this.getGradeColor(subject.letterGrade))
-        .text(subject.letterGrade ?? '-', col4X, yPosition, {})
-        .fillColor('#000000');
+      // Papers/Assessments
+      if (subject.assessments && subject.assessments.length > 0) {
+        subject.assessments.forEach((assessment, idx) => {
+          const assessmentY = rowY + idx * 10;
 
-      yPosition += rowHeight;
+          doc
+            .fontSize(7)
+            .text(assessment.code || '', colPaper, assessmentY)
+            .text(assessment.score?.toString() || '', colSet1, assessmentY);
+
+          if (idx === 0) {
+            // Main grade columns for first assessment
+            doc
+              .fontSize(8)
+              .font('Helvetica-Bold')
+              .text(assessment.percentage?.toFixed(0) || '', colPaperGrade, rowY)
+              .text(subject.letterGrade || '-', colGrade, rowY)
+              .font('Helvetica')
+              .text(data.remarks || '', colComment, rowY, { width: 60 })
+              .text('', colInitial, rowY);
+          }
+        });
+
+        rowY += Math.max(subject.assessments.length, 1) * 10;
+      } else {
+        // No assessments, just subject row
+        doc
+          .fontSize(8)
+          .font('Helvetica-Bold')
+          .text(subject.average?.toFixed(2) || '', colPaperGrade, rowY)
+          .text(subject.letterGrade || '-', colGrade, rowY)
+          .font('Helvetica')
+          .text('', colComment, rowY)
+          .text('', colInitial, rowY);
+
+        rowY += rowHeight;
+      }
     });
 
-    // Draw table bottom line
+    // Table bottom line
     doc
-      .moveTo(col1X, yPosition)
-      .lineTo(doc.page.width - 50, yPosition)
+      .moveTo(margin, rowY)
+      .lineTo(pageWidth - margin, rowY)
       .stroke();
 
-    doc.y = yPosition + 10;
+    doc.y = rowY + 10;
   }
 
   /**
-   * Render remarks section
+   * Render total points section
    */
-  private renderRemarks(
+  private renderTotalPoints(
     doc: PDFDocumentInstance,
     data: ReportCardPDFData,
   ): void {
-    doc.fontSize(10).font('Helvetica-Bold').text('REMARKS', 0, doc.y);
+    const margin = 40;
+    doc
+      .fontSize(10)
+      .font('Helvetica-Bold')
+      .text(`TOTAL POINTS: ${data.totalSubjects}`, margin, doc.y);
 
-    doc.y += 12;
+    doc.moveDown(0.5);
+  }
+
+  /**
+   * Render grading scale at bottom
+   */
+  private renderGradingScale(
+    doc: PDFDocumentInstance,
+    data: ReportCardPDFData,
+  ): void {
+    const margin = 40;
+    const pageWidth = doc.page.width;
 
     doc
       .fontSize(9)
-      .font('Helvetica')
-      .text(data.remarks ?? '', 50, doc.y, {
-        width: doc.page.width - 100,
-        align: 'left',
-      });
+      .font('Helvetica-Bold')
+      .text('GRADING', margin, doc.y);
 
-    doc.moveDown(1);
+    doc.moveDown(0.3);
+
+    // Grade scale table
+    const scaleY = doc.y;
+    const cellWidth = 45;
+    let cellX = margin;
+
+    const grades = [
+      { label: 'D1', range: '80-100' },
+      { label: 'D2', range: '75-79' },
+      { label: 'C3', range: '80-64' },
+      { label: 'C4', range: '60-60' },
+      { label: 'C5', range: '50-59' },
+      { label: 'C6', range: '40-49' },
+      { label: 'C7', range: '31-39' },
+      { label: 'C8', range: '24' },
+    ];
+
+    // Draw grade scale boxes
+    grades.forEach((grade, idx) => {
+      doc.rect(cellX, scaleY, cellWidth, 20).stroke();
+      doc
+        .fontSize(7)
+        .font('Helvetica-Bold')
+        .text(grade.label, cellX + 2, scaleY + 2, { width: cellWidth - 4 });
+      doc
+        .fontSize(6)
+        .font('Helvetica')
+        .text(grade.range, cellX + 2, scaleY + 10, { width: cellWidth - 4 });
+
+      cellX += cellWidth;
+    });
+
+    doc.y = scaleY + 25;
   }
 
   /**
-   * Render footer with generation date and status
+   * Render teacher comment and signature section
    */
-  private renderFooter(
+  private renderTeacherCommentSection(
     doc: PDFDocumentInstance,
     data: ReportCardPDFData,
   ): void {
-    // Horizontal line
+    const margin = 40;
+    const pageWidth = doc.page.width;
+
+    doc.moveDown(1);
+
     doc
-      .moveTo(40, doc.y)
-      .lineTo(doc.page.width - 40, doc.y)
+      .fontSize(9)
+      .font('Helvetica-Bold')
+      .text('Class Teacher\'s Comment:', margin, doc.y);
+
+    doc.moveDown(1.5);
+
+    // Comment box (empty for now, to be filled in)
+    const commentBoxY = doc.y;
+    doc
+      .rect(margin, commentBoxY, pageWidth - 2 * margin, 40)
       .stroke();
 
-    doc.moveDown(0.5);
+    doc.y = commentBoxY + 45;
 
-    const pageWidth = doc.page.width;
-    const generatedDate = new Date(data.generatedDate).toLocaleDateString(
-      'en-US',
-      {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      },
-    );
+    // Signature line
+    const sigY = doc.y;
+    doc
+      .moveTo(margin, sigY + 25)
+      .lineTo(margin + 150, sigY + 25)
+      .stroke();
 
     doc
       .fontSize(8)
       .font('Helvetica')
-      .text(`Generated: ${generatedDate}`, 50, doc.y)
-      .text(`Status: ${data.status.toUpperCase()}`, pageWidth - 150, doc.y, {
-        align: 'right',
-      });
+      .text('Signature', margin, sigY + 28);
 
-    if (data.publishedDate) {
-      const publishedDate = new Date(data.publishedDate).toLocaleDateString(
-        'en-US',
-        {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        },
+    // Date line
+    const dateX = margin + 200;
+    doc
+      .moveTo(dateX, sigY + 25)
+      .lineTo(dateX + 150, sigY + 25)
+      .stroke();
+
+    doc
+      .fontSize(8)
+      .text('Date', dateX + 60, sigY + 28);
+
+    // School stamp area
+    const stampX = dateX + 200;
+    doc
+      .rect(stampX, sigY, 120, 50)
+      .stroke();
+
+    doc
+      .fontSize(8)
+      .font('Helvetica-Bold')
+      .text('SCHOOL STAMP', stampX + 10, sigY + 18, { width: 100 });
+
+    doc.y = sigY + 55;
+  }
+
+  /**
+   * Render footer with disclaimer
+   */
+  private renderReportFooter(
+    doc: PDFDocumentInstance,
+    data: ReportCardPDFData,
+  ): void {
+    const margin = 40;
+    const pageWidth = doc.page.width;
+
+    doc.moveDown(1);
+
+    // Horizontal line
+    doc
+      .moveTo(margin, doc.y)
+      .lineTo(pageWidth - margin, doc.y)
+      .stroke();
+
+    doc.moveDown(0.5);
+
+    // Disclaimer text
+    doc
+      .fontSize(8)
+      .font('Helvetica-Bold')
+      .text(
+        'This Report is invalid without school Stamp',
+        margin,
+        doc.y,
+        { align: 'center', width: pageWidth - 2 * margin }
       );
-      doc
-        .fontSize(8)
-        .font('Helvetica')
-        .text(`Published: ${publishedDate}`, 50, doc.y + 12);
-    }
+
+    doc
+      .fontSize(9)
+      .font('Helvetica-Bold')
+      .text(
+        '"Now or Never"',
+        margin,
+        doc.y,
+        { align: 'center', width: pageWidth - 2 * margin }
+      );
+
+    // Print date
+    const printDate = new Date(data.generatedDate).toLocaleDateString(
+      'en-US',
+      { year: 'numeric', month: 'long', day: 'numeric' }
+    );
+
+    doc
+      .fontSize(7)
+      .font('Helvetica')
+      .text(`Print Date: ${printDate}`, margin, doc.y + 8);
   }
 
   /**
