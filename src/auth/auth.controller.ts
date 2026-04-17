@@ -128,7 +128,7 @@ export class AuthController {
     if (!user) {
       throw new Error('User not authenticated');
     }
-    const memberships = await this.authService.getUserMemberships(user.id);
+    const memberships = await this.authService.getUserMemberships(user.id, user.role);
     return {
       id: user.id,
       email: user.email,
