@@ -41,19 +41,6 @@ interface ReportCardPDFData {
 export class PdfGenerationService {
   private readonly pdfStoragePath = process.env.PDF_STORAGE_PATH || './pdfs';
 
-  constructor() {
-    this.ensureStorageDirectory();
-  }
-
-  /**
-   * Ensure the PDF storage directory exists
-   */
-  private ensureStorageDirectory(): void {
-    if (!fs.existsSync(this.pdfStoragePath)) {
-      fs.mkdirSync(this.pdfStoragePath, { recursive: true });
-    }
-  }
-
   /**
    * Generate a PDF report card and return as a Buffer
    */

@@ -15,13 +15,11 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { ResultsService } from './results.service';
-import { PdfStorageService } from './pdf-storage.service';
+import { PdfGenerationService } from './pdf-generation.service';
 import { GenerateReportCardDto } from './dto/generate-report-card.dto';
 import { DownloadReportCardDto } from './dto/download-report-card.dto';
 import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
 import type { Response as ExpressResponse } from 'express';
-import * as path from 'path';
-import * as fs from 'fs';
 
 @Controller('schools/:schoolId/report-cards')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -29,7 +27,7 @@ import * as fs from 'fs';
 export class ReportCardsController {
   constructor(
     private readonly resultsService: ResultsService,
-    private readonly pdfStorageService: PdfStorageService,
+    private readonly pdfGenerationService: PdfGenerationService,
   ) {}
 
   @Post()
@@ -84,12 +82,6 @@ export class ReportCardsController {
       );
     }
 
-    if (!reportCard.pdf_url) {
-      throw new BadRequestException(
-        'PDF has not been generated for this report card',
-      );
-    }
-
     await this.sendReportCardPdf(reportCard, res);
   }
 
@@ -118,10 +110,6 @@ export class ReportCardsController {
       throw new NotFoundException('Failed to generate report card for download');
     }
 
-    if (!reportCard.pdf_url) {
-      throw new BadRequestException('PDF was not generated for the report card');
-    }
-
     await this.sendReportCardPdf(reportCard, res);
   }
 
@@ -130,29 +118,54 @@ export class ReportCardsController {
     res: ExpressResponse,
   ) {
     try {
-      const urlPath = reportCard.pdf_url.replace(/^\/pdfs\//, '');
-      const baseStoragePath = process.env.PDF_STORAGE_PATH || './pdfs';
-      const filePath = path.join(baseStoragePath, urlPath);
-
-      if (!fs.existsSync(filePath)) {
-        throw new NotFoundException('PDF file not found on disk');
+      const summary = reportCard.summary;
+      if (!summary) {
+        throw new BadRequestException('Unable to generate PDF without report card summary');
       }
 
-      const fileContent = fs.readFileSync(filePath);
       const studentName =
         reportCard.student?.first_name && reportCard.student?.last_name
-          ? `${reportCard.student.first_name}_${reportCard.student.last_name}`
+          ? `${reportCard.student.first_name} ${reportCard.student.last_name}`
           : 'report';
-      const fileName = `report-card-${studentName}.pdf`;
+      const schoolName = reportCard.school?.name || 'School Report';
+
+      const pdfData = {
+        schoolName,
+        studentName,
+        studentNumber: reportCard.student?.student_no || 'N/A',
+        academicYear: summary.academicYear?.name || 'N/A',
+        term: summary.term?.name || 'N/A',
+        termOrdinal: summary.term?.ordinal || 1,
+        overallAverage: summary.overallAverage,
+        overallLetterGrade: summary.overallLetterGrade,
+        totalSubjects: summary.totalSubjects,
+        rank: reportCard.rank ?? null,
+        totalStudents: reportCard.total_students ?? null,
+        remarks: reportCard.remarks ?? null,
+        subjects: summary.subjects.map((s: any) => ({
+          name: s.subject?.name || s.name,
+          code: s.subject?.code || s.code || '',
+          average: s.average,
+          letterGrade: s.letterGrade,
+          assessments: s.assessments,
+        })),
+        generatedDate: reportCard.generated_at ? new Date(reportCard.generated_at) : new Date(),
+        publishedDate: reportCard.published_at ? new Date(reportCard.published_at) : null,
+        status: reportCard.status,
+      };
+
+      const pdfBuffer = await this.pdfGenerationService.generateReportCardPDF(pdfData);
+      const safeStudentName = studentName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_-]/g, '');
+      const fileName = `report-card-${safeStudentName}.pdf`;
 
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader(
         'Content-Disposition',
         `attachment; filename="${fileName}"`,
       );
-      res.setHeader('Content-Length', fileContent.length);
+      res.setHeader('Content-Length', pdfBuffer.length);
 
-      res.send(fileContent);
+      res.send(pdfBuffer);
     } catch (error) {
       if (
         error instanceof NotFoundException ||

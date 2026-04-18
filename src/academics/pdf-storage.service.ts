@@ -16,19 +16,6 @@ export class PdfStorageService {
   private readonly baseStoragePath = process.env.PDF_STORAGE_PATH || './pdfs';
   private readonly baseUrl = process.env.PDF_BASE_URL || '/pdfs';
 
-  constructor() {
-    this.ensureStorageDirectory();
-  }
-
-  /**
-   * Ensure the base PDF storage directory exists
-   */
-  private ensureStorageDirectory(): void {
-    if (!fs.existsSync(this.baseStoragePath)) {
-      fs.mkdirSync(this.baseStoragePath, { recursive: true });
-    }
-  }
-
   /**
    * Generate a unique file name for a report card PDF
    * Format: reportcard-<studentId>-<schoolId>-<timestamp>-<random>.pdf

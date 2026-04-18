@@ -8,7 +8,6 @@ import {
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { PrismaService } from '../prisma/prisma.service';
 import { PdfGenerationService } from './pdf-generation.service';
-import { PdfStorageService } from './pdf-storage.service';
 import { BulkCreateGradesDto } from './dto/bulk-create-grades.dto';
 import { CreateAssessmentDto } from './dto/create-assessment.dto';
 import { CreateGradeDto } from './dto/create-grade.dto';
@@ -25,7 +24,6 @@ export class ResultsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly pdfGenerationService: PdfGenerationService,
-    private readonly pdfStorageService: PdfStorageService,
   ) {}
 
   private async assertIsAdminOfSchool(schoolId: string, userId: string) {
@@ -1379,73 +1377,10 @@ export class ResultsService {
           },
         });
 
-        // Generate PDF report card
-        try {
-          const status: 'draft' | 'published' = data.autoPublish
-            ? 'published'
-            : 'draft';
-          const pdfData = {
-            schoolName: school.name,
-            studentName: `${student.first_name} ${student.last_name}`,
-            studentNumber: student.student_no || 'N/A',
-            academicYear: year.name,
-            term: termItem2.name,
-            termOrdinal: termItem2.ordinal || 1,
-            overallAverage: summary.overallAverage,
-            overallLetterGrade: summary.overallLetterGrade,
-            totalSubjects: summary.totalSubjects,
-            rank: rank,
-            totalStudents: totalStudents > 0 ? totalStudents : null,
-            remarks: null,
-            subjects: summary.subjects.map((s) => ({
-              name: s.subject.name,
-              code: s.subject.code,
-              average: s.average,
-              letterGrade: s.letterGrade,
-            })),
-            generatedDate: new Date(),
-            publishedDate: data.autoPublish ? new Date() : null,
-            status,
-          };
-
-          const pdfBuffer =
-            await this.pdfGenerationService.generateReportCardPDF(pdfData);
-
-          // Save PDF to file system
-          const fileName = this.pdfStorageService.generateFileName(
-            studentId,
-            schoolId,
-            data.termTemplateItemId,
-          );
-
-          const savedPDFInfo = await this.pdfStorageService.savePDF(
-            pdfBuffer,
-            fileName,
-            'reports',
-          );
-
-          // Update report card with PDF URL
-          const updatedReportCard = await (this.prisma as any).reportCard.update({
-            where: { id: reportCard.id },
-            data: {
-              pdf_url: savedPDFInfo.url,
-            },
-          });
-
-          results.push({
-            ...updatedReportCard,
-            summary,
-          });
-        } catch (pdfError) {
-          this.logger.error(
-            `Failed to generate PDF for report card ${reportCard.id}: ${pdfError instanceof Error ? pdfError.message : 'Unknown error'}`,
-          );
-          // Return the report card even if PDF generation fails
-          results.push({
-            ...reportCard,
-            summary,
-          });
-        }
+        results.push({
+          ...reportCard,
+          summary,
+        });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         this.logger.error(`Failed to generate report card for student ${studentId}: ${errorMessage}`);
@@ -1474,6 +1409,11 @@ export class ResultsService {
             first_name: true,
             last_name: true,
             student_no: true,
+          },
+        },
+        school: {
+          select: {
+            name: true,
           },
         },
       },
