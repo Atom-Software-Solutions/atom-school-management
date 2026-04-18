@@ -8,7 +8,9 @@ COPY package*.json ./
 COPY prisma ./prisma/
 
 # Install all dependencies (including dev dependencies for build)
-RUN npm ci && npm cache clean --force
+RUN apk add --no-cache python3 make g++ && \
+  if [ -f package-lock.json ]; then npm ci; else npm install; fi && \
+  npm cache clean --force && apk del python3 make g++
 
 # Stage 2: Build
 FROM node:20-alpine AS build
@@ -43,7 +45,7 @@ RUN apk add --no-cache python3 make g++
 
 COPY package*.json ./
 COPY prisma ./prisma/
-RUN npm ci --omit=dev && npm cache clean --force && \
+RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi && npm cache clean --force && \
     apk del python3 make g++
 
 # Copy built application and generated Prisma Client
