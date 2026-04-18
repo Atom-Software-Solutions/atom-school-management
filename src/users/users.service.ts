@@ -9,7 +9,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
-import { UserResponse, UserWithPassword } from './interfaces/user-response.interface';
+import {
+  UserResponse,
+  UserWithPassword,
+} from './interfaces/user-response.interface';
 
 @Injectable()
 export class UsersService {
@@ -109,15 +112,17 @@ export class UsersService {
 
     // If tenantId provided and user is SCHOOL_ADMIN, create SchoolAdmin relationship
     if (tenantId && createUserDto.role === 'SCHOOL_ADMIN') {
-      await this.prisma.schoolAdmin.create({
-        data: {
-          school_id: tenantId,
-          user_id: user.id,
-          is_super_admin: false,
-        },
-      }).catch(() => {
-        // Ignore if relationship already exists
-      });
+      await this.prisma.schoolAdmin
+        .create({
+          data: {
+            school_id: tenantId,
+            user_id: user.id,
+            is_super_admin: false,
+          },
+        })
+        .catch(() => {
+          // Ignore if relationship already exists
+        });
     }
 
     return user;
@@ -125,7 +130,7 @@ export class UsersService {
 
   async findAll(tenantId?: string | null): Promise<UserResponse[]> {
     const where: any = {};
-    
+
     // If tenantId is provided (not null), filter by school
     // null means SUPER_ADMIN can see all users
     if (tenantId !== undefined && tenantId !== null) {
@@ -134,17 +139,17 @@ export class UsersService {
         where: { school_id: tenantId },
         select: { user_id: true },
       });
-      const userIds = schoolAdmins.map(sa => sa.user_id);
-      
+      const userIds = schoolAdmins.map((sa) => sa.user_id);
+
       if (userIds.length === 0) {
         // No users in this school
         return [];
       }
-      
+
       where.id = { in: userIds };
     }
     // If tenantId is null (SUPER_ADMIN), no filter applied - returns all users
-    
+
     return this.prisma.user.findMany({
       where,
       select: {
@@ -163,20 +168,20 @@ export class UsersService {
 
   async findOne(id: string, tenantId?: string | null): Promise<UserResponse> {
     const where: any = { id };
-    
+
     // If tenantId is provided (not null), verify user belongs to this tenant
     if (tenantId !== undefined && tenantId !== null) {
       const schoolAdmin = await this.prisma.schoolAdmin.findFirst({
         where: { user_id: id, school_id: tenantId },
       });
-      
+
       if (!schoolAdmin) {
         // User doesn't belong to this tenant
         throw new NotFoundException(`User with ID ${id} not found`);
       }
     }
     // If tenantId is null (SUPER_ADMIN), no tenant check - can access any user
-    
+
     const user = await this.prisma.user.findUnique({
       where,
       select: {
@@ -214,7 +219,11 @@ export class UsersService {
     });
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto, tenantId?: string | null): Promise<UserResponse> {
+  async update(
+    id: string,
+    updateUserDto: UpdateUserDto,
+    tenantId?: string | null,
+  ): Promise<UserResponse> {
     await this.findOne(id, tenantId); // Check if user exists and belongs to tenant
 
     const updateData: any = {};

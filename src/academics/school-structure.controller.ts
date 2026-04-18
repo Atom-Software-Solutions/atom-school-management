@@ -1,4 +1,11 @@
-import { Controller, Get, Param, Request, UseGuards, ForbiddenException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Request,
+  UseGuards,
+  ForbiddenException,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { PrismaService } from '../prisma/prisma.service';
@@ -11,7 +18,10 @@ export class SchoolStructureController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get()
-  async getStructure(@Param('schoolId') schoolId: string, @Request() req: AuthenticatedRequest) {
+  async getStructure(
+    @Param('schoolId') schoolId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
     }
@@ -21,16 +31,20 @@ export class SchoolStructureController {
       orderBy: { name: 'asc' },
     });
     // Fetch terms for all years
-    const yearIds = years.map(y => y.id);
+    const yearIds = years.map((y) => y.id);
     const terms = await this.prisma.termTemplateItem.findMany({
-      where: { term_template: { academic_years: { some: { id: { in: yearIds } } } } },
+      where: {
+        term_template: { academic_years: { some: { id: { in: yearIds } } } },
+      },
       orderBy: { ordinal: 'asc' },
     });
     // Fetch classroom definitions and join with assessments
-    const classroomDefinitions = await this.prisma.classroomDefinition.findMany({
-      where: { school_id: schoolId },
-      orderBy: { name: 'asc' },
-    });
+    const classroomDefinitions = await this.prisma.classroomDefinition.findMany(
+      {
+        where: { school_id: schoolId },
+        orderBy: { name: 'asc' },
+      },
+    );
     // Fetch all assessments for this school
     const assessments = await this.prisma.assessment.findMany({
       where: { school_id: schoolId },
@@ -47,8 +61,10 @@ export class SchoolStructureController {
       orderBy: { name: 'asc' },
     });
     // Map classroom definitions to include their assessments
-    const classroomDefsWithAssessments = classroomDefinitions.map(def => {
-      const defAssessments = assessments.filter(a => a.classroom_definition_id === def.id);
+    const classroomDefsWithAssessments = classroomDefinitions.map((def) => {
+      const defAssessments = assessments.filter(
+        (a) => a.classroom_definition_id === def.id,
+      );
       return {
         ...def,
         assessments: defAssessments,

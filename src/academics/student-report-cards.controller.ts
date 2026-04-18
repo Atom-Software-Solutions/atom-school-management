@@ -1,4 +1,11 @@
-import { Controller, ForbiddenException, Get, Param, Request, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  ForbiddenException,
+  Get,
+  Param,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { ResultsService } from './results.service';
@@ -11,11 +18,16 @@ export class StudentReportCardsController {
   constructor(private readonly resultsService: ResultsService) {}
 
   @Get()
-  list(@Param('studentId') studentId: string, @Request() req: AuthenticatedRequest) {
+  list(
+    @Param('studentId') studentId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
     }
-    return this.resultsService.listStudentReportCardsForViewer(studentId, req.user);
+    return this.resultsService.listStudentReportCardsForViewer(
+      studentId,
+      req.user,
+    );
   }
 }
-

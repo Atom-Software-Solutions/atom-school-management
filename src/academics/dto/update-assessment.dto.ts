@@ -1,11 +1,19 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateAssessmentDto } from './create-assessment.dto';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsNumber, IsDateString, IsBoolean, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsDateString,
+  IsBoolean,
+  Min,
+  Max,
+} from 'class-validator';
 
 /**
  * DTO for updating an assessment.
- * 
+ *
  * **Important:** `yearId` and `termTemplateItemId` are immutable after creation and cannot be updated.
  * If you need to change the term context, delete the assessment and create a new one.
  */
@@ -63,4 +71,3 @@ export class UpdateAssessmentDto {
   @IsOptional()
   isPublished?: boolean;
 }
-

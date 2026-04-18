@@ -23,14 +23,18 @@ export class HttpExceptionFilter implements ExceptionFilter {
       status = exception.getStatus();
       resBody = exception.getResponse();
     } else {
-      resBody = { message: (exception as any)?.message || 'Internal server error' };
+      resBody = {
+        message: (exception as any)?.message || 'Internal server error',
+      };
     }
 
     let message = 'An error occurred';
     let errors: any = undefined;
     let param: any = undefined;
 
-    function extractValidationErrors(arr: any[]): Array<{ field: string | null; message: string }> {
+    function extractValidationErrors(
+      arr: any[],
+    ): Array<{ field: string | null; message: string }> {
       const out: Array<{ field: string | null; message: string }> = [];
 
       function recurse(node: any, parentPath?: string) {
@@ -43,14 +47,21 @@ export class HttpExceptionFilter implements ExceptionFilter {
         // ValidationError shape from class-validator
         if (node.constraints && typeof node.constraints === 'object') {
           Object.values(node.constraints).forEach((m: any) => {
-            const fieldPath = parentPath ? `${parentPath}.${node.property}` : node.property || null;
+            const fieldPath = parentPath
+              ? `${parentPath}.${node.property}`
+              : node.property || null;
             out.push({ field: fieldPath, message: String(m) });
           });
         }
 
         // If there are children, recurse into them to collect nested messages
         if (Array.isArray(node.children) && node.children.length > 0) {
-          node.children.forEach((child: any) => recurse(child, parentPath ? `${parentPath}.${node.property}` : node.property));
+          node.children.forEach((child: any) =>
+            recurse(
+              child,
+              parentPath ? `${parentPath}.${node.property}` : node.property,
+            ),
+          );
         }
 
         // If this node is an array (sometimes the top-level message is an array of strings or objects)
@@ -67,14 +78,21 @@ export class HttpExceptionFilter implements ExceptionFilter {
       message = resBody;
     } else if (resBody && typeof resBody === 'object') {
       // Check if exceptionFactory already provided structured errors
-      if (Array.isArray(resBody.errors) && resBody.errors.length > 0 && resBody.errors[0].field !== undefined) {
+      if (
+        Array.isArray(resBody.errors) &&
+        resBody.errors.length > 0 &&
+        resBody.errors[0].field !== undefined
+      ) {
         message = 'There were validation errors with your request.';
         errors = resBody.errors;
       } else if (Array.isArray(resBody.message)) {
         message = 'There were validation errors with your request.';
         errors = extractValidationErrors(resBody.message);
       } else if (resBody.message) {
-        message = typeof resBody.message === 'string' ? resBody.message : JSON.stringify(resBody.message);
+        message =
+          typeof resBody.message === 'string'
+            ? resBody.message
+            : JSON.stringify(resBody.message);
       } else if (resBody.error) {
         message = resBody.error;
       }
@@ -95,9 +113,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (errors) payload.error.errors = errors;
 
     if (status >= 500) {
-      this.logger.error(`${request.method} ${request.url} -> ${status}`, (exception as any)?.stack || JSON.stringify(exception));
+      this.logger.error(
+        `${request.method} ${request.url} -> ${status}`,
+        (exception as any)?.stack || JSON.stringify(exception),
+      );
     } else {
-      this.logger.warn(`${request.method} ${request.url} -> ${status}: ${message}`);
+      this.logger.warn(
+        `${request.method} ${request.url} -> ${status}: ${message}`,
+      );
     }
 
     response.status(status).json(payload);
@@ -107,7 +130,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (status === HttpStatus.BAD_REQUEST) {
       if (exception instanceof HttpException) {
         const res = exception.getResponse();
-        if (res && typeof res === 'object' && Array.isArray((res as any).message)) {
+        if (
+          res &&
+          typeof res === 'object' &&
+          Array.isArray((res as any).message)
+        ) {
           return 'validation_error';
         }
       }

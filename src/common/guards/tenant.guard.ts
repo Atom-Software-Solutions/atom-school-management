@@ -1,4 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+} from '@nestjs/common';
 import type { AuthenticatedRequest } from '../middleware/tenant.middleware';
 
 /**
@@ -11,26 +16,25 @@ export class TenantGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const user = request.user;
     const tenantId = request.tenantId;
-    
+
     if (!user) {
       throw new ForbiddenException('Authentication required');
     }
-    
+
     // SUPER_ADMIN can access any tenant (tenantId is null)
     if (user.role === 'SUPER_ADMIN') {
       return true;
     }
-    
+
     // For other roles, tenantId must match user's school_id
     if (tenantId === undefined) {
       throw new ForbiddenException('Tenant context not available');
     }
-    
+
     if (tenantId !== user.school_id) {
       throw new ForbiddenException('Access denied: tenant mismatch');
     }
-    
+
     return true;
   }
 }
-

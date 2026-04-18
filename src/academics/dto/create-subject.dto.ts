@@ -8,7 +8,7 @@ export class CreateSubjectDto {
   })
   @IsString()
   @IsNotEmpty()
-  name: string;
+  name!: string;
 
   @ApiPropertyOptional({
     description: 'Subject code',
@@ -35,4 +35,3 @@ export class CreateSubjectDto {
   @IsOptional()
   isActive?: boolean;
 }
-

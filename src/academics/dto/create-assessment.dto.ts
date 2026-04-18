@@ -1,4 +1,14 @@
-import { IsString, IsNotEmpty, IsOptional, IsUUID, IsNumber, IsDateString, IsBoolean, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsUUID,
+  IsNumber,
+  IsDateString,
+  IsBoolean,
+  Min,
+  Max,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateAssessmentDto {
@@ -8,7 +18,7 @@ export class CreateAssessmentDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  yearId: string;
+  yearId!: string;
 
   @ApiProperty({
     description: 'Term template item ID (the specific term instance)',
@@ -16,7 +26,7 @@ export class CreateAssessmentDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  termTemplateItemId: string;
+  termTemplateItemId!: string;
 
   @ApiProperty({
     description: 'Subject ID',
@@ -24,7 +34,7 @@ export class CreateAssessmentDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  subjectId: string;
+  subjectId!: string;
 
   @ApiProperty({
     description: 'Classroom definition ID where this assessment applies',
@@ -32,7 +42,7 @@ export class CreateAssessmentDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  classroomDefinitionId: string;
+  classroomDefinitionId!: string;
 
   @ApiProperty({
     description: 'Assessment name',
@@ -40,7 +50,7 @@ export class CreateAssessmentDto {
   })
   @IsString()
   @IsNotEmpty()
-  name: string;
+  name!: string;
 
   @ApiProperty({
     description: 'Assessment type',
@@ -49,7 +59,7 @@ export class CreateAssessmentDto {
   })
   @IsString()
   @IsNotEmpty()
-  type: string;
+  type!: string;
 
   @ApiProperty({
     description: 'Maximum possible score',
@@ -57,7 +67,7 @@ export class CreateAssessmentDto {
   })
   @IsNumber()
   @Min(0)
-  maxScore: number;
+  maxScore!: number;
 
   @ApiProperty({
     description: 'Weight for grade calculation (0-1)',
@@ -66,7 +76,7 @@ export class CreateAssessmentDto {
   @IsNumber()
   @Min(0)
   @Max(1)
-  weight: number;
+  weight!: number;
 
   @ApiPropertyOptional({
     description: 'Assessment date',
@@ -92,4 +102,3 @@ export class CreateAssessmentDto {
   @IsOptional()
   isPublished?: boolean;
 }
-

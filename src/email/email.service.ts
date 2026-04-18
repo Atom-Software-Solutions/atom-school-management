@@ -22,13 +22,17 @@ export class EmailService {
         secure: false,
         // No auth needed for test mode
       });
-      this.logger.debug('Email service initialized in test mode (no SMTP connection)');
+      this.logger.debug(
+        'Email service initialized in test mode (no SMTP connection)',
+      );
       return;
     }
 
     // Production/development mode - require credentials
     if (!emailUser || !emailPass) {
-      this.logger.warn('Email credentials not configured. Email functionality will be limited.');
+      this.logger.warn(
+        'Email credentials not configured. Email functionality will be limited.',
+      );
       this.transporter = nodemailer.createTransport({
         host: this.configService.get<string>('EMAIL_HOST', 'smtp.gmail.com'),
         port: this.configService.get<number>('EMAIL_PORT', 587),
@@ -63,7 +67,10 @@ export class EmailService {
       this.logger.log('Email server connection verified');
     } catch (error) {
       // Only log as warning, not error, to avoid cluttering test output
-      this.logger.warn('Email server connection verification failed (emails may not work):', error.message || error);
+      this.logger.warn(
+        'Email server connection verification failed (emails may not work):',
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 
@@ -73,7 +80,10 @@ export class EmailService {
   async sendEmail(sendEmailDto: SendEmailDto): Promise<void> {
     const { to, subject, html, text, from } = sendEmailDto;
 
-    const emailFrom = from || this.configService.get<string>('EMAIL_FROM') || this.configService.get<string>('EMAIL_USER', '');
+    const emailFrom =
+      from ||
+      this.configService.get<string>('EMAIL_FROM') ||
+      this.configService.get<string>('EMAIL_USER', '');
 
     try {
       const info = await this.transporter.sendMail({

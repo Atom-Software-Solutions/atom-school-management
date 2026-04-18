@@ -12,7 +12,9 @@ export class CreateStudentDto {
   email?: string;
 
   @IsOptional()
-  @Matches(/^\+?\d{10,}$/, { message: 'phone must be at least 10 digits, optionally prefixed with +' })
+  @Matches(/^\+?\d{10,}$/, {
+    message: 'phone must be at least 10 digits, optionally prefixed with +',
+  })
   phone?: string;
 
   @IsOptional()
@@ -20,7 +22,9 @@ export class CreateStudentDto {
   gender?: string;
 
   @IsString()
-  @Matches(/^(\d{2})-(\d{2})-(\d{4})$/, { message: 'dateOfBirth must be in DD-MM-YYYY format' })
+  @Matches(/^(\d{2})-(\d{2})-(\d{4})$/, {
+    message: 'dateOfBirth must be in DD-MM-YYYY format',
+  })
   dateOfBirth!: string;
 
   @IsOptional()

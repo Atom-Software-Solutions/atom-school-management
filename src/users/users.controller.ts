@@ -42,7 +42,10 @@ export class UsersController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string, @TenantId() tenantId: string | null | undefined) {
+  findOne(
+    @Param('id') id: string,
+    @TenantId() tenantId: string | null | undefined,
+  ) {
     return this.usersService.findOne(id, tenantId);
   }
 
@@ -56,7 +59,10 @@ export class UsersController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string, @TenantId() tenantId: string | null | undefined) {
+  remove(
+    @Param('id') id: string,
+    @TenantId() tenantId: string | null | undefined,
+  ) {
     return this.usersService.remove(id, tenantId);
   }
 }

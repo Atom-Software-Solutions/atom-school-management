@@ -34,4 +34,3 @@ export class UpdateSubjectDto extends PartialType(CreateSubjectDto) {
   @IsOptional()
   isActive?: boolean;
 }
-

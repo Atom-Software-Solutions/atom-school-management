@@ -8,14 +8,14 @@ export class CreateClassroomOfferingDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  classroomDefinitionId: string;
+  classroomDefinitionId!: string;
 
   @ApiPropertyOptional({
-    description: 'Display name for this offering (overrides definition name if provided)',
+    description:
+      'Display name for this offering (overrides definition name if provided)',
     example: 'Primary 1 - Section A',
   })
   @IsString()
   @IsOptional()
   displayName?: string;
 }
-

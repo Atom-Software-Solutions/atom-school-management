@@ -1,4 +1,16 @@
-import { BadRequestException, Body, Controller, ForbiddenException, Param, Patch, Delete, Post, Query, Request, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  ForbiddenException,
+  Param,
+  Patch,
+  Delete,
+  Post,
+  Query,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { ClassroomsService } from './classrooms.service';
@@ -9,12 +21,17 @@ import type { AuthenticatedRequest } from '../common/middleware/tenant.middlewar
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('SCHOOL_ADMIN')
 export class EnrollmentsController {
-  constructor(private readonly classroomsService: ClassroomsService) { }
+  constructor(private readonly classroomsService: ClassroomsService) {}
 
-  private resolveTenantSchoolId(req: AuthenticatedRequest, providedSchoolId?: string): string {
+  private resolveTenantSchoolId(
+    req: AuthenticatedRequest,
+    providedSchoolId?: string,
+  ): string {
     const tenantSchoolId = req.user?.school_id as string | undefined;
     if (!tenantSchoolId) {
-      throw new ForbiddenException('Tenant context not available for this user');
+      throw new ForbiddenException(
+        'Tenant context not available for this user',
+      );
     }
     if (providedSchoolId && providedSchoolId !== tenantSchoolId) {
       throw new ForbiddenException('Cross-tenant access is not allowed');
@@ -33,10 +50,18 @@ export class EnrollmentsController {
     const adminUserId = (req as any).user?.id as string;
     if (!yearId) throw new BadRequestException('Missing yearId');
     if (!definitionId) throw new BadRequestException('Missing definitionId');
-    if (!body?.studentId) throw new BadRequestException('Missing body.studentId');
+    if (!body?.studentId)
+      throw new BadRequestException('Missing body.studentId');
     const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
     const startDate = body.startDate ? new Date(body.startDate) : undefined;
-    return this.classroomsService.enrollStudent(yearId, definitionId, body.studentId, adminUserId, tenantSchoolId, startDate);
+    return this.classroomsService.enrollStudent(
+      yearId,
+      definitionId,
+      body.studentId,
+      adminUserId,
+      tenantSchoolId,
+      startDate,
+    );
   }
 
   @Post('years/:yearId/classroom-definitions/:definitionId/enrollments/bulk')
@@ -50,13 +75,20 @@ export class EnrollmentsController {
     const adminUserId = (req as any).user?.id as string;
     if (!yearId) throw new BadRequestException('Missing yearId');
     if (!definitionId) throw new BadRequestException('Missing definitionId');
-    if (!body?.enrollments || body.enrollments.length === 0) throw new BadRequestException('Missing or empty enrollments array');
+    if (!body?.enrollments || body.enrollments.length === 0)
+      throw new BadRequestException('Missing or empty enrollments array');
     const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
-    const enrollments = body.enrollments.map(e => ({
+    const enrollments = body.enrollments.map((e) => ({
       studentId: e.studentId,
       startDate: e.startDate ? new Date(e.startDate) : undefined,
     }));
-    return this.classroomsService.bulkEnrollStudents(yearId, definitionId, enrollments, adminUserId, tenantSchoolId);
+    return this.classroomsService.bulkEnrollStudents(
+      yearId,
+      definitionId,
+      enrollments,
+      adminUserId,
+      tenantSchoolId,
+    );
   }
 
   @Patch('enrollments/:id/complete')
@@ -70,8 +102,14 @@ export class EnrollmentsController {
     if (!id) throw new BadRequestException('Missing id');
     const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
     const endDate = body?.endDate ? new Date(body.endDate) : undefined;
-    const status = (body?.status ?? 'completed') as 'completed' | 'withdrawn';
-    return this.classroomsService.completeEnrollment(id, adminUserId, tenantSchoolId, endDate, status);
+    const status = body?.status ?? 'completed';
+    return this.classroomsService.completeEnrollment(
+      id,
+      adminUserId,
+      tenantSchoolId,
+      endDate,
+      status,
+    );
   }
 
   @Patch('enrollments/:id/status')
@@ -85,7 +123,12 @@ export class EnrollmentsController {
     if (!id) throw new BadRequestException('Missing id');
     if (!body?.status) throw new BadRequestException('Missing status');
     const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
-    return this.classroomsService.updateEnrollmentStatus(id, body.status, adminUserId, tenantSchoolId);
+    return this.classroomsService.updateEnrollmentStatus(
+      id,
+      body.status,
+      adminUserId,
+      tenantSchoolId,
+    );
   }
 
   @Delete('enrollments/:id')
@@ -98,6 +141,11 @@ export class EnrollmentsController {
     const adminUserId = (req as any).user?.id as string;
     if (!id) throw new BadRequestException('Missing id');
     const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
-    return this.classroomsService.deleteEnrollment(id, adminUserId, tenantSchoolId, reason);
+    return this.classroomsService.deleteEnrollment(
+      id,
+      adminUserId,
+      tenantSchoolId,
+      reason,
+    );
   }
 }

@@ -1,4 +1,11 @@
-import { IsString, IsEmail, IsOptional, IsNotEmpty, Matches, MinLength } from 'class-validator';
+import {
+  IsString,
+  IsEmail,
+  IsOptional,
+  IsNotEmpty,
+  Matches,
+  MinLength,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -10,7 +17,7 @@ export class CreateSchoolDto {
   @IsString()
   @IsNotEmpty()
   @MinLength(3, { message: 'Code must be at least 3 characters' })
-  code: string;
+  code!: string;
 
   @ApiProperty({
     description: 'School name',
@@ -19,7 +26,7 @@ export class CreateSchoolDto {
   @IsString()
   @IsNotEmpty()
   @MinLength(3, { message: 'Name must be at least 3 characters' })
-  name: string;
+  name!: string;
 
   @ApiProperty({
     description: 'School domain (lowercase, alphanumeric with hyphens allowed)',
@@ -31,19 +38,19 @@ export class CreateSchoolDto {
   @Transform(({ value }) =>
     typeof value === 'string'
       ? value
-        .toString()
-        .trim()
-        .toLowerCase()
-        // Replace spaces with '-'
-        .replace(/\s+/g, '-')
-        // Collapse multiple '-' into a single '-'
-        .replace(/-+/g, '-')
+          .toString()
+          .trim()
+          .toLowerCase()
+          // Replace spaces with '-'
+          .replace(/\s+/g, '-')
+          // Collapse multiple '-' into a single '-'
+          .replace(/-+/g, '-')
       : value,
   )
   @Matches(/^(?!.*--)[a-z0-9-]+$/, {
-    message: "domain can only contain lowercase letters, numbers and hyphens",
+    message: 'domain can only contain lowercase letters, numbers and hyphens',
   })
-  domain: string;
+  domain!: string;
 
   @ApiProperty({
     description: 'School email address',
@@ -51,7 +58,7 @@ export class CreateSchoolDto {
   })
   @IsEmail({}, { message: 'Invalid email address' })
   @IsNotEmpty()
-  email: string;
+  email!: string;
 
   @ApiProperty({
     description: 'School phone number',
@@ -59,9 +66,13 @@ export class CreateSchoolDto {
   })
   @IsString()
   @IsNotEmpty()
-  @Transform(({ value }) => typeof value === 'string' ? value.replace(/\s+/g, '') : value)
-  @Matches(/^\+?\d{10,}$/, { message: 'Phone number must be at least 10 digits and can start with +.' })
-  phone: string;
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.replace(/\s+/g, '') : value,
+  )
+  @Matches(/^\+?\d{10,}$/, {
+    message: 'Phone number must be at least 10 digits and can start with +.',
+  })
+  phone!: string;
 
   @ApiPropertyOptional({
     description: 'School address',
@@ -69,7 +80,7 @@ export class CreateSchoolDto {
   })
   @IsString()
   @IsOptional()
-  @Transform(({ value }) => value === '' ? undefined : value)
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @MinLength(3, { message: 'Address must be at least 3 characters' })
   address?: string | undefined;
 
@@ -79,7 +90,7 @@ export class CreateSchoolDto {
   })
   @IsString()
   @IsOptional()
-  @Transform(({ value }) => value === '' ? undefined : value)
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @MinLength(3, { message: 'Logo URL must be at least 3 characters' })
   logoUrl?: string | undefined;
 
@@ -89,7 +100,7 @@ export class CreateSchoolDto {
   })
   @IsString()
   @IsOptional()
-  @Transform(({ value }) => value === '' ? undefined : value)
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @MinLength(3, { message: 'Currency must be at least 3 characters' })
   currency?: string | undefined;
 
@@ -99,7 +110,7 @@ export class CreateSchoolDto {
   })
   @IsString()
   @IsOptional()
-  @Transform(({ value }) => value === '' ? undefined : value)
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @MinLength(3, { message: 'Time zone must be at least 3 characters' })
   timeZone?: string | undefined;
 }

@@ -41,7 +41,8 @@ export class SchoolsController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Bad request - validation error (e.g., missing required fields such as name, code, or email)',
+    description:
+      'Bad request - validation error (e.g., missing required fields such as name, code, or email)',
   })
   @ApiResponse({
     status: 401,
@@ -51,21 +52,27 @@ export class SchoolsController {
     status: 403,
     description: 'Forbidden - only SCHOOL_ADMIN users can create schools',
   })
-  create(@Body() createSchoolDto: CreateSchoolDto, @Request() req: AuthenticatedRequest) {
+  create(
+    @Body() createSchoolDto: CreateSchoolDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
     if (!req.user) {
       // This is an extra safety net; normally JwtAuthGuard will already reject the request.
-      throw new ForbiddenException('Authentication required to create a school. Please provide a valid Bearer token.');
+      throw new ForbiddenException(
+        'Authentication required to create a school. Please provide a valid Bearer token.',
+      );
     }
     if (req.user.role !== 'SCHOOL_ADMIN') {
-      throw new ForbiddenException('Only SCHOOL_ADMIN users can create schools');
+      throw new ForbiddenException(
+        'Only SCHOOL_ADMIN users can create schools',
+      );
     }
 
-    const creatorUserId = req.user.id as string;
+    const creatorUserId = req.user.id;
     return this.schoolsService.create(createSchoolDto, creatorUserId);
   }
 
   @Get()
-
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPER_ADMIN')
   @ApiBearerAuth('JWT-auth')
@@ -90,7 +97,10 @@ export class SchoolsController {
     description: 'School details retrieved successfully',
   })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - insufficient permissions' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - insufficient permissions',
+  })
   @ApiResponse({ status: 404, description: 'School not found' })
   findOne(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     if (!req.user) {
@@ -103,7 +113,9 @@ export class SchoolsController {
     if (userRole === 'SCHOOL_ADMIN') {
       return this.schoolsService.findIfAdmin(id, req.user.id);
     }
-    throw new ForbiddenException('Insufficient permissions to view this school');
+    throw new ForbiddenException(
+      'Insufficient permissions to view this school',
+    );
   }
 
   @Patch(':id')
@@ -121,17 +133,20 @@ export class SchoolsController {
       return this.schoolsService.update(id, updateSchoolDto);
     }
     if (userRole === 'SCHOOL_ADMIN') {
-      return this.schoolsService.updateIfAdmin(id, req.user.id, updateSchoolDto);
+      return this.schoolsService.updateIfAdmin(
+        id,
+        req.user.id,
+        updateSchoolDto,
+      );
     }
-    throw new ForbiddenException('Insufficient permissions to update this school');
+    throw new ForbiddenException(
+      'Insufficient permissions to update this school',
+    );
   }
 
   @Get(':id/settings')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  getSettings(
-    @Param('id') id: string,
-    @Request() req: AuthenticatedRequest,
-  ) {
+  getSettings(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
     }
@@ -162,7 +177,11 @@ export class SchoolsController {
       return this.schoolsService.updateSettings(id, updateSettingsDto);
     }
     if (userRole === 'SCHOOL_ADMIN') {
-      return this.schoolsService.updateSettingsIfAdmin(id, req.user.id, updateSettingsDto);
+      return this.schoolsService.updateSettingsIfAdmin(
+        id,
+        req.user.id,
+        updateSettingsDto,
+      );
     }
     throw new ForbiddenException(
       'Insufficient permissions to update school settings',

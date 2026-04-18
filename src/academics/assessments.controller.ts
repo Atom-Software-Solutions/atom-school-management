@@ -1,4 +1,17 @@
-import { Body, Controller, Delete, BadRequestException, ForbiddenException, Get, Param, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  BadRequestException,
+  ForbiddenException,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { ResultsService } from './results.service';
@@ -30,13 +43,28 @@ export class AssessmentsController {
     }
 
     if (definitionId) {
-      return this.resultsService.listAssessmentsByDefinition(schoolId, req.user.id, yearId, termItemId, definitionId);
+      return this.resultsService.listAssessmentsByDefinition(
+        schoolId,
+        req.user.id,
+        yearId,
+        termItemId,
+        definitionId,
+      );
     }
-    return this.resultsService.listAssessments(schoolId, req.user.id, yearId, termItemId);
+    return this.resultsService.listAssessments(
+      schoolId,
+      req.user.id,
+      yearId,
+      termItemId,
+    );
   }
 
   @Post()
-  create(@Param('schoolId') schoolId: string, @Body() dto: CreateAssessmentDto, @Request() req: AuthenticatedRequest) {
+  create(
+    @Param('schoolId') schoolId: string,
+    @Body() dto: CreateAssessmentDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
     }
@@ -54,16 +82,23 @@ export class AssessmentsController {
   @Get(':id/enrolled-students')
   async getEnrolledStudents(
     @Param('id') id: string,
-    @Request() req: AuthenticatedRequest
+    @Request() req: AuthenticatedRequest,
   ) {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
     }
-    return this.resultsService.getEnrolledStudentsForAssessment(id, req.user.id);
+    return this.resultsService.getEnrolledStudentsForAssessment(
+      id,
+      req.user.id,
+    );
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateAssessmentDto, @Request() req: AuthenticatedRequest) {
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateAssessmentDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
     }
@@ -78,4 +113,3 @@ export class AssessmentsController {
     return this.resultsService.deleteAssessment(id, req.user.id);
   }
 }
-

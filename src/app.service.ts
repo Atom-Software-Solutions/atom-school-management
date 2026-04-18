@@ -6,12 +6,17 @@ export class AppService {
     return 'Hello World!';
   }
 
-  getHealth(): { status: string; timestamp: string; uptime: number; test: string } {
+  getHealth(): {
+    status: string;
+    timestamp: string;
+    uptime: number;
+    test: string;
+  } {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
-      test: "test",
+      test: 'test',
     };
   }
 }

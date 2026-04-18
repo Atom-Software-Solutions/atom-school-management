@@ -11,4 +11,3 @@ import { RolesGuard } from '../auth/guards/roles.guard';
   exports: [SchoolsService],
 })
 export class SchoolsModule {}
-

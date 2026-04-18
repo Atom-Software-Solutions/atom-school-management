@@ -1,15 +1,48 @@
-import { IsUUID, IsNotEmpty, IsOptional, IsBoolean, IsString } from 'class-validator';
+import {
+  IsUUID,
+  IsNotEmpty,
+  IsOptional,
+  IsBoolean,
+  IsString,
+  IsArray,
+  ArrayNotEmpty,
+  ValidateIf,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
 export class GenerateReportCardDto {
-  @ApiProperty({
-    description: 'Student ID',
+  @ApiPropertyOptional({
+    description: 'Single student ID (use either this or studentIds/classroomDefinitionId)',
     example: 'uuid-of-student',
   })
   @IsUUID()
-  @IsNotEmpty()
-  studentId: string;
+  @IsOptional()
+  studentId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Multiple student IDs for bulk generation',
+    example: ['uuid-of-student-1', 'uuid-of-student-2'],
+  })
+  @IsArray()
+  @IsUUID(undefined, { each: true })
+  @IsOptional()
+  @ArrayNotEmpty()
+  studentIds?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Classroom definition ID to generate for all enrolled students',
+    example: 'uuid-of-classroom-definition',
+  })
+  @IsUUID()
+  @IsOptional()
+  classroomDefinitionId?: string;
+
+  @ValidateIf((o) => !o.studentId && !o.studentIds && !o.classroomDefinitionId)
+  @IsNotEmpty({ message: 'Either studentId, studentIds, or classroomDefinitionId must be provided' })
+  validateTarget() {
+    return this.studentId || this.studentIds || this.classroomDefinitionId;
+  }
 
   @ApiProperty({
     description: 'Academic Year ID',
@@ -17,7 +50,7 @@ export class GenerateReportCardDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  academicYearId: string;
+  academicYearId!: string;
 
   @ApiProperty({
     description: 'Term template item ID (the specific term instance)',
@@ -25,7 +58,7 @@ export class GenerateReportCardDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  termTemplateItemId: string;
+  termTemplateItemId!: string;
 
   @ApiPropertyOptional({
     description: 'Include class rank',

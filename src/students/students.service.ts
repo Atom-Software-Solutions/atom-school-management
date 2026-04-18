@@ -1,11 +1,19 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import * as XLSX from 'xlsx';
 import { PrismaService } from '../prisma/prisma.service';
 
 // File validation constants
 const MAX_FILE_SIZE = parseInt(process.env.MAX_IMPORT_FILE_SIZE || '5242880'); // 5MB default
-const ALLOWED_MIME_TYPES = ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'];
+const ALLOWED_MIME_TYPES = [
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel',
+];
 const ALLOWED_EXTENSIONS = ['.xlsx'];
 
 // File validation helper
@@ -20,18 +28,29 @@ function validateFileSize(buffer: Buffer): FileValidationResult {
   }
   if (buffer.length > MAX_FILE_SIZE) {
     const maxSizeMB = Math.round(MAX_FILE_SIZE / 1024 / 1024);
-    return { valid: false, error: `File size exceeds maximum of ${maxSizeMB}MB` };
+    return {
+      valid: false,
+      error: `File size exceeds maximum of ${maxSizeMB}MB`,
+    };
   }
   return { valid: true };
 }
 
-function validateFileType(mimeType: string | undefined, originalName: string | undefined): FileValidationResult {
+function validateFileType(
+  mimeType: string | undefined,
+  originalName: string | undefined,
+): FileValidationResult {
   if (!originalName) {
     return { valid: false, error: 'File name is required' };
   }
-  const extension = originalName.toLowerCase().substring(originalName.lastIndexOf('.'));
+  const extension = originalName
+    .toLowerCase()
+    .substring(originalName.lastIndexOf('.'));
   if (!ALLOWED_EXTENSIONS.includes(extension)) {
-    return { valid: false, error: `Invalid file extension. Only .xlsx files are allowed` };
+    return {
+      valid: false,
+      error: `Invalid file extension. Only .xlsx files are allowed`,
+    };
   }
   if (mimeType && !ALLOWED_MIME_TYPES.includes(mimeType)) {
     return { valid: false, error: `Invalid file type. Must be Excel (.xlsx)` };
@@ -47,7 +66,11 @@ function parseDateDDMMYYYY(dateStr: string): Date | null {
   const d = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
   if (isNaN(d.getTime())) return null;
   // Validate that input matches parsed date (prevent invalid dates like 31-02-2020)
-  if (d.getDate() !== parseInt(day) || d.getMonth() !== parseInt(month) - 1 || d.getFullYear() !== parseInt(year)) {
+  if (
+    d.getDate() !== parseInt(day) ||
+    d.getMonth() !== parseInt(month) - 1 ||
+    d.getFullYear() !== parseInt(year)
+  ) {
     return null;
   }
   return d;
@@ -55,7 +78,7 @@ function parseDateDDMMYYYY(dateStr: string): Date | null {
 
 @Injectable()
 export class StudentsService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
   async verifyAdminOfSchool(schoolId: string, userId: string) {
     await this.assertIsAdminOfSchool(schoolId, userId);
   }
@@ -186,20 +209,28 @@ export class StudentsService {
             continue;
           }
           if (target.includes('email')) {
-            throw new BadRequestException('A student with this email already exists');
+            throw new BadRequestException(
+              'A student with this email already exists',
+            );
           }
           if (target.includes('phone')) {
-            throw new BadRequestException('A student with this phone already exists');
+            throw new BadRequestException(
+              'A student with this phone already exists',
+            );
           }
         }
         throw e;
       }
     }
-    throw new BadRequestException('Failed to generate unique student identifiers. Please retry.');
+    throw new BadRequestException(
+      'Failed to generate unique student identifiers. Please retry.',
+    );
   }
 
   private async findOwned(studentId: string, adminUserId: string) {
-    const student = await this.prisma.student.findUnique({ where: { id: studentId } });
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+    });
     if (!student || student.deleted_at) {
       throw new NotFoundException('Student not found');
     }
@@ -247,22 +278,33 @@ export class StudentsService {
       updateData.date_of_birth = raw ? new Date(raw) : null;
     }
     try {
-      return await this.prisma.student.update({ where: { id: student.id }, data: updateData });
+      return await this.prisma.student.update({
+        where: { id: student.id },
+        data: updateData,
+      });
     } catch (e: any) {
       if (e?.code === 'P2002' && Array.isArray(e?.meta?.target)) {
         const target = e.meta.target as string[];
         if (target.includes('email')) {
-          throw new BadRequestException('A student with this email already exists');
+          throw new BadRequestException(
+            'A student with this email already exists',
+          );
         }
         if (target.includes('phone')) {
-          throw new BadRequestException('A student with this phone already exists');
+          throw new BadRequestException(
+            'A student with this phone already exists',
+          );
         }
       }
       throw e;
     }
   }
 
-  async updateIdentifiers(studentId: string, adminUserId: string, data: { studentNo?: string; regNo?: string }) {
+  async updateIdentifiers(
+    studentId: string,
+    adminUserId: string,
+    data: { studentNo?: string; regNo?: string },
+  ) {
     const student = await this.findOwned(studentId, adminUserId);
     const updateData: any = {};
     if (data.studentNo !== undefined) updateData.student_no = data.studentNo;
@@ -271,15 +313,22 @@ export class StudentsService {
       throw new BadRequestException('Provide studentNo and/or regNo');
     }
     try {
-      return await this.prisma.student.update({ where: { id: student.id }, data: updateData });
+      return await this.prisma.student.update({
+        where: { id: student.id },
+        data: updateData,
+      });
     } catch (e: any) {
       if (e?.code === 'P2002' && Array.isArray(e?.meta?.target)) {
         const target = e.meta.target as string[];
         if (target.includes('student_no')) {
-          throw new BadRequestException('A student with this studentNo already exists in this school');
+          throw new BadRequestException(
+            'A student with this studentNo already exists in this school',
+          );
         }
         if (target.includes('reg_no')) {
-          throw new BadRequestException('A student with this regNo already exists in this school');
+          throw new BadRequestException(
+            'A student with this regNo already exists in this school',
+          );
         }
       }
       throw e;
@@ -288,7 +337,10 @@ export class StudentsService {
 
   async remove(studentId: string, adminUserId: string) {
     const student = await this.findOwned(studentId, adminUserId);
-    await this.prisma.student.update({ where: { id: student.id }, data: { is_active: false, deleted_at: new Date() } });
+    await this.prisma.student.update({
+      where: { id: student.id },
+      data: { is_active: false, deleted_at: new Date() },
+    });
     return { message: 'Student archived successfully' };
   }
 
@@ -304,7 +356,17 @@ export class StudentsService {
     return [];
   }
 
-  async addGuardian(studentId: string, adminUserId: string, data: { firstName: string; lastName: string; email?: string; phone?: string; relation?: string }) {
+  async addGuardian(
+    studentId: string,
+    adminUserId: string,
+    data: {
+      firstName: string;
+      lastName: string;
+      email?: string;
+      phone?: string;
+      relation?: string;
+    },
+  ) {
     const student = await this.findOwned(studentId, adminUserId);
     const guardian = await this.prisma.guardian.create({
       data: {
@@ -316,14 +378,27 @@ export class StudentsService {
       },
     });
     await this.prisma.studentGuardian.create({
-      data: { student_id: student.id, guardian_id: guardian.id, relation: data.relation },
+      data: {
+        student_id: student.id,
+        guardian_id: guardian.id,
+        relation: data.relation,
+      },
     });
     return guardian;
   }
 
   generateImportTemplate(): Buffer {
     const worksheet = XLSX.utils.aoa_to_sheet([
-      ['First Name', 'Last Name', 'Email', 'Phone', 'Gender (M/F)', 'Date Of Birth (DD-MM-YYYY)', 'Religion', 'Address'],
+      [
+        'First Name',
+        'Last Name',
+        'Email',
+        'Phone',
+        'Gender (M/F)',
+        'Date Of Birth (DD-MM-YYYY)',
+        'Religion',
+        'Address',
+      ],
     ]);
     // Freeze header row
     (worksheet as any)['!freeze'] = { xSplit: 0, ySplit: 1 };
@@ -348,7 +423,11 @@ export class StudentsService {
       }
     }
     (worksheet as any)['!ref'] = `A1:H${maxRows + 1}`;
-    (worksheet as any)['!protect'] = { password: 'upload', selectLockedCells: true, selectUnlockedCells: true } as any;
+    (worksheet as any)['!protect'] = {
+      password: 'upload',
+      selectLockedCells: true,
+      selectUnlockedCells: true,
+    } as any;
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Students');
     return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
@@ -358,33 +437,67 @@ export class StudentsService {
     return 'firstName,lastName,email,phone,gender (M/F),dateOfBirth,religion,address,className\n';
   }
 
-  private parseCsv(buffer: Buffer): Array<{ firstName: string; lastName: string; email?: string; phone?: string; gender?: string; status?: string; dateOfBirth?: string; religion?: string; address?: string }> {
+  private parseCsv(buffer: Buffer): Array<{
+    firstName: string;
+    lastName: string;
+    email?: string;
+    phone?: string;
+    gender?: string;
+    status?: string;
+    dateOfBirth?: string;
+    religion?: string;
+    address?: string;
+  }> {
     const text = buffer.toString('utf-8');
-    const lines = text.split('\n').filter(line => line.trim() !== '');
+    const lines = text.split('\n').filter((line) => line.trim() !== '');
     if (lines.length === 0) return [];
 
     // Parse header
-    const header = lines[0].split(',').map(h => h.trim());
+    const header = lines[0].split(',').map((h) => h.trim());
     const headerMap: Record<string, number> = {};
     header.forEach((h, idx) => {
       headerMap[h.toLowerCase()] = idx;
     });
 
     // Parse data rows
-    const rows: Array<{ firstName: string; lastName: string; email?: string; phone?: string; gender?: string; status?: string; dateOfBirth?: string; religion?: string; address?: string }> = [];
+    const rows: Array<{
+      firstName: string;
+      lastName: string;
+      email?: string;
+      phone?: string;
+      gender?: string;
+      status?: string;
+      dateOfBirth?: string;
+      religion?: string;
+      address?: string;
+    }> = [];
     for (let i = 1; i < lines.length; i++) {
       const values = this.parseCsvLine(lines[i]);
       const row: any = {};
-      const genderIdx = headerMap['gender'] !== undefined ? headerMap['gender'] : headerMap['gender (m/f)'];
-      if (headerMap['firstname'] !== undefined) row.firstName = (values[headerMap['firstname']] || '').trim();
-      if (headerMap['lastname'] !== undefined) row.lastName = (values[headerMap['lastname']] || '').trim();
-      if (headerMap['email'] !== undefined) row.email = (values[headerMap['email']] || '').trim() || undefined;
-      if (headerMap['phone'] !== undefined) row.phone = (values[headerMap['phone']] || '').trim() || undefined;
-      if (genderIdx !== undefined) row.gender = (values[genderIdx] || '').trim() || undefined;
-      if (headerMap['status'] !== undefined) row.status = (values[headerMap['status']] || '').trim() || undefined;
-      if (headerMap['dateofbirth'] !== undefined) row.dateOfBirth = (values[headerMap['dateofbirth']] || '').trim() || undefined;
-      if (headerMap['religion'] !== undefined) row.religion = (values[headerMap['religion']] || '').trim() || undefined;
-      if (headerMap['address'] !== undefined) row.address = (values[headerMap['address']] || '').trim() || undefined;
+      const genderIdx =
+        headerMap['gender'] !== undefined
+          ? headerMap['gender']
+          : headerMap['gender (m/f)'];
+      if (headerMap['firstname'] !== undefined)
+        row.firstName = (values[headerMap['firstname']] || '').trim();
+      if (headerMap['lastname'] !== undefined)
+        row.lastName = (values[headerMap['lastname']] || '').trim();
+      if (headerMap['email'] !== undefined)
+        row.email = (values[headerMap['email']] || '').trim() || undefined;
+      if (headerMap['phone'] !== undefined)
+        row.phone = (values[headerMap['phone']] || '').trim() || undefined;
+      if (genderIdx !== undefined)
+        row.gender = (values[genderIdx] || '').trim() || undefined;
+      if (headerMap['status'] !== undefined)
+        row.status = (values[headerMap['status']] || '').trim() || undefined;
+      if (headerMap['dateofbirth'] !== undefined)
+        row.dateOfBirth =
+          (values[headerMap['dateofbirth']] || '').trim() || undefined;
+      if (headerMap['religion'] !== undefined)
+        row.religion =
+          (values[headerMap['religion']] || '').trim() || undefined;
+      if (headerMap['address'] !== undefined)
+        row.address = (values[headerMap['address']] || '').trim() || undefined;
       rows.push(row);
     }
     return rows;
@@ -415,24 +528,52 @@ export class StudentsService {
     return result;
   }
 
-  private parseWorkbook(buffer: Buffer): Array<{ firstName: string; lastName: string; email?: string; phone?: string; gender?: string; status?: string; dateOfBirth?: string; religion?: string; address?: string }> {
+  private parseWorkbook(buffer: Buffer): Array<{
+    firstName: string;
+    lastName: string;
+    email?: string;
+    phone?: string;
+    gender?: string;
+    status?: string;
+    dateOfBirth?: string;
+    religion?: string;
+    address?: string;
+  }> {
     const wb = XLSX.read(buffer, { type: 'buffer' });
     const sheetName = wb.SheetNames[0];
     const ws = wb.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json(ws, { defval: '', raw: true }) as any[];
-    return rows.map((r) => {
-      const firstName = String(r['First Name'] || r.firstName || r['firstName'] || '').trim();
-      const lastName = String(r['Last Name'] || r.lastName || r['lastName'] || '').trim();
-      const email = String(r['Email'] || r.email || r['email'] || '').trim() || undefined;
-      const phone = String(r['Phone'] || r.phone || r['phone'] || '').trim() || undefined;
-      const rawGender = String(r['Gender (M/F)'] || r['Gender'] || r.gender || r['gender'] || '').trim();
-      const gender = rawGender ? (rawGender.charAt(0).toUpperCase()) : undefined;
-      const status = String(r['Status'] || r.status || r['status'] || '').trim() || undefined;
-      const religion = String(r['Religion'] || r.religion || r['religion'] || '').trim() || undefined;
-      const address = String(r['Address'] || r.address || r['address'] || '').trim() || undefined;
+    const rows = XLSX.utils.sheet_to_json(ws, {
+      defval: '',
+      raw: true,
+    });
+    return rows.map((r: any) => {
+      const firstName = String(
+        r['First Name'] || r.firstName || r['firstName'] || '',
+      ).trim();
+      const lastName = String(
+        r['Last Name'] || r.lastName || r['lastName'] || '',
+      ).trim();
+      const email =
+        String(r['Email'] || r.email || r['email'] || '').trim() || undefined;
+      const phone =
+        String(r['Phone'] || r.phone || r['phone'] || '').trim() || undefined;
+      const rawGender = String(
+        r['Gender (M/F)'] || r['Gender'] || r.gender || r['gender'] || '',
+      ).trim();
+      const gender = rawGender ? rawGender.charAt(0).toUpperCase() : undefined;
+      const status =
+        String(r['Status'] || r.status || r['status'] || '').trim() ||
+        undefined;
+      const religion =
+        String(r['Religion'] || r.religion || r['religion'] || '').trim() ||
+        undefined;
+      const address =
+        String(r['Address'] || r.address || r['address'] || '').trim() ||
+        undefined;
 
       // Normalize Excel date serials, Date objects, or strings into DD-MM-YYYY
-      const dateCell = r['Date Of Birth (DD-MM-YYYY)'] || r.dateOfBirth || r['dateOfBirth'];
+      const dateCell =
+        r['Date Of Birth (DD-MM-YYYY)'] || r.dateOfBirth || r['dateOfBirth'];
       let dateOfBirth: string | undefined = undefined;
       if (dateCell !== undefined && dateCell !== null && dateCell !== '') {
         if (typeof dateCell === 'number') {
@@ -473,7 +614,11 @@ export class StudentsService {
     });
   }
 
-  async validateImportFile(schoolId: string, adminUserId: string, buffer: Buffer) {
+  async validateImportFile(
+    schoolId: string,
+    adminUserId: string,
+    buffer: Buffer,
+  ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
     if (!buffer || buffer.length === 0) {
       return { valid: false, errors: ['No file uploaded'], total: 0 };
@@ -481,19 +626,40 @@ export class StudentsService {
     let rows;
     try {
       rows = this.parseWorkbook(buffer);
-      console.log("xxx1 importValidation", rows)
+      console.log('xxx1 importValidation', rows);
     } catch (e: any) {
-      return { valid: false, errors: [`File parsing error: ${e?.message || 'Failed to parse file'}`], total: 0 };
+      return {
+        valid: false,
+        errors: [`File parsing error: ${e?.message || 'Failed to parse file'}`],
+        total: 0,
+      };
     }
     const errors: string[] = [];
     // Load existing values in this school for uniqueness checks
     const existing = await this.prisma.student.findMany({
       where: { school_id: schoolId },
-      select: { email: true, phone: true, first_name: true, last_name: true, date_of_birth: true },
+      select: {
+        email: true,
+        phone: true,
+        first_name: true,
+        last_name: true,
+        date_of_birth: true,
+      },
     });
-    const existingEmails = new Set<string>(existing.map(e => (e.email || '').toLowerCase()).filter(v => v));
-    const existingPhones = new Set<string>(existing.map(e => e.phone!).filter(Boolean) as string[]);
-    const existingNames = new Set<string>(existing.map(e => `${e.first_name}|${e.last_name}|${e.date_of_birth?.toISOString().split('T')[0]}`).filter(v => v !== '||'));
+    const existingEmails = new Set<string>(
+      existing.map((e) => (e.email || '').toLowerCase()).filter((v) => v),
+    );
+    const existingPhones = new Set<string>(
+      existing.map((e) => e.phone!).filter(Boolean),
+    );
+    const existingNames = new Set<string>(
+      existing
+        .map(
+          (e) =>
+            `${e.first_name}|${e.last_name}|${e.date_of_birth?.toISOString().split('T')[0]}`,
+        )
+        .filter((v) => v !== '||'),
+    );
 
     // Track duplicates inside the file
     const fileEmails = new Set<string>();
@@ -512,29 +678,44 @@ export class StudentsService {
           errors.push(`Row ${line}: dateOfBirth must be in DD-MM-YYYY format`);
         }
       }
-      if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) errors.push(`Row ${line}: email is invalid`);
-      if (row.phone && !/^\+?\d{10,}$/.test(row.phone)) errors.push(`Row ${line}: phone must be at least 10 digits, optionally prefixed with +`);
-      if (row.gender && !/^[MF]$/i.test(row.gender)) errors.push(`Row ${line}: gender must be 'M' or 'F'`);
+      if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email))
+        errors.push(`Row ${line}: email is invalid`);
+      if (row.phone && !/^\+?\d{10,}$/.test(row.phone))
+        errors.push(
+          `Row ${line}: phone must be at least 10 digits, optionally prefixed with +`,
+        );
+      if (row.gender && !/^[MF]$/i.test(row.gender))
+        errors.push(`Row ${line}: gender must be 'M' or 'F'`);
 
       // Check firstName+lastName+dateOfBirth uniqueness
       const dob = row.dateOfBirth ? parseDateDDMMYYYY(row.dateOfBirth) : null;
       if (row.firstName && row.lastName && dob) {
         const nameKey = `${row.firstName}|${row.lastName}|${dob.toISOString().split('T')[0]}`;
-        if (fileNames.has(nameKey)) errors.push(`Row ${line}: duplicate firstName+lastName+dateOfBirth in file`);
+        if (fileNames.has(nameKey))
+          errors.push(
+            `Row ${line}: duplicate firstName+lastName+dateOfBirth in file`,
+          );
         else fileNames.add(nameKey);
-        if (existingNames.has(nameKey)) errors.push(`Row ${line}: firstName+lastName+dateOfBirth already exists`);
+        if (existingNames.has(nameKey))
+          errors.push(
+            `Row ${line}: firstName+lastName+dateOfBirth already exists`,
+          );
       }
 
       if (row.email) {
         const ekey = row.email.toLowerCase();
-        if (fileEmails.has(ekey)) errors.push(`Row ${line}: duplicate email in file`);
+        if (fileEmails.has(ekey))
+          errors.push(`Row ${line}: duplicate email in file`);
         else fileEmails.add(ekey);
-        if (existingEmails.has(ekey)) errors.push(`Row ${line}: email already exists`);
+        if (existingEmails.has(ekey))
+          errors.push(`Row ${line}: email already exists`);
       }
       if (row.phone) {
-        if (filePhones.has(row.phone)) errors.push(`Row ${line}: duplicate phone in file`);
+        if (filePhones.has(row.phone))
+          errors.push(`Row ${line}: duplicate phone in file`);
         else filePhones.add(row.phone);
-        if (existingPhones.has(row.phone)) errors.push(`Row ${line}: phone already exists for this school`);
+        if (existingPhones.has(row.phone))
+          errors.push(`Row ${line}: phone already exists for this school`);
       }
     });
     return {
@@ -555,18 +736,40 @@ export class StudentsService {
     try {
       rows = this.parseWorkbook(buffer);
     } catch (e: any) {
-      return { imported: 0, failed: 0, errors: [`File parsing error: ${e?.message || 'Failed to parse file'}`], total: 0 };
+      return {
+        imported: 0,
+        failed: 0,
+        errors: [`File parsing error: ${e?.message || 'Failed to parse file'}`],
+        total: 0,
+      };
     }
     const errors: string[] = [];
     let imported = 0;
     // Load existing values for school-wide uniqueness, and update as we import
     const existing = await this.prisma.student.findMany({
       where: { school_id: schoolId },
-      select: { email: true, phone: true, first_name: true, last_name: true, date_of_birth: true },
+      select: {
+        email: true,
+        phone: true,
+        first_name: true,
+        last_name: true,
+        date_of_birth: true,
+      },
     });
-    const emails = new Set<string>(existing.map(e => (e.email || '').toLowerCase()).filter(v => v));
-    const phones = new Set<string>(existing.map(e => e.phone!).filter(Boolean) as string[]);
-    const names = new Set<string>(existing.map(e => `${e.first_name}|${e.last_name}|${e.date_of_birth?.toISOString().split('T')[0]}`).filter(v => v !== '||'));
+    const emails = new Set<string>(
+      existing.map((e) => (e.email || '').toLowerCase()).filter((v) => v),
+    );
+    const phones = new Set<string>(
+      existing.map((e) => e.phone!).filter(Boolean),
+    );
+    const names = new Set<string>(
+      existing
+        .map(
+          (e) =>
+            `${e.first_name}|${e.last_name}|${e.date_of_birth?.toISOString().split('T')[0]}`,
+        )
+        .filter((v) => v !== '||'),
+    );
 
     for (let i = 0; i < rows.length; i += 1) {
       const row = rows[i];
@@ -589,14 +792,18 @@ export class StudentsService {
         continue;
       }
       if (row.phone && !/^\+?\d{10,}$/.test(row.phone)) {
-        errors.push(`Row ${line}: phone must be at least 10 digits, optionally prefixed with +`);
+        errors.push(
+          `Row ${line}: phone must be at least 10 digits, optionally prefixed with +`,
+        );
         continue;
       }
 
       // Check firstName+lastName+dateOfBirth uniqueness
       const nameKey = `${row.firstName}|${row.lastName}|${dateOfBirth.toISOString().split('T')[0]}`;
       if (names.has(nameKey)) {
-        errors.push(`Row ${line}: firstName+lastName+dateOfBirth already exists`);
+        errors.push(
+          `Row ${line}: firstName+lastName+dateOfBirth already exists`,
+        );
         continue;
       }
 
@@ -630,7 +837,11 @@ export class StudentsService {
                 last_name: row.lastName,
                 email: row.email,
                 phone: row.phone,
-                gender: row.gender ? (row.gender.toUpperCase() === 'M' ? 'Male' : 'Female') : undefined,
+                gender: row.gender
+                  ? row.gender.toUpperCase() === 'M'
+                    ? 'Male'
+                    : 'Female'
+                  : undefined,
                 status: 'active',
                 date_of_birth: dateOfBirth,
                 religion: row.religion,
@@ -659,8 +870,14 @@ export class StudentsService {
                 errors.push(`Row ${line}: phone already exists`);
                 break;
               }
-              if (['first_name', 'last_name', 'date_of_birth'].every(k => target.includes(k))) {
-                errors.push(`Row ${line}: firstName+lastName+dateOfBirth already exists`);
+              if (
+                ['first_name', 'last_name', 'date_of_birth'].every((k) =>
+                  target.includes(k),
+                )
+              ) {
+                errors.push(
+                  `Row ${line}: firstName+lastName+dateOfBirth already exists`,
+                );
                 break;
               }
             }
@@ -710,44 +927,80 @@ export class StudentsService {
     studentId: string,
     adminUserId: string,
     schoolId: string,
-    params: { fromEnrollmentId: string; toYearId: string; toDefinitionId: string; actionDate?: Date; narration?: string },
+    params: {
+      fromEnrollmentId: string;
+      toYearId: string;
+      toDefinitionId: string;
+      actionDate?: Date;
+      narration?: string;
+    },
   ) {
     const student = await this.findOwned(studentId, adminUserId);
-    if (student.school_id !== schoolId) throw new ForbiddenException('Student not accessible');
+    if (student.school_id !== schoolId)
+      throw new ForbiddenException('Student not accessible');
     const actionDate = params.actionDate ?? new Date();
     return this.prisma.$transaction(async (tx) => {
       const from = await (tx as any).studentEnrollment.findUnique({
         where: { id: params.fromEnrollmentId },
         include: { academic_year: true },
       });
-      if (!from || from.student_id !== student.id) throw new BadRequestException('Invalid fromEnrollmentId');
-      if (from.end_date) throw new BadRequestException('Enrollment already closed');
+      if (!from || from.student_id !== student.id)
+        throw new BadRequestException('Invalid fromEnrollmentId');
+      if (from.end_date)
+        throw new BadRequestException('Enrollment already closed');
 
-      const toYear = await (tx as any).academicYear.findUnique({ where: { id: params.toYearId } });
-      if (!toYear || toYear.school_id !== schoolId) throw new ForbiddenException('Target academic year not accessible');
+      const toYear = await (tx as any).academicYear.findUnique({
+        where: { id: params.toYearId },
+      });
+      if (!toYear || toYear.school_id !== schoolId)
+        throw new ForbiddenException('Target academic year not accessible');
 
-      const toDefinition = await (tx as any).classroomDefinition.findUnique({ where: { id: params.toDefinitionId } });
-      if (!toDefinition || toDefinition.school_id !== schoolId) throw new ForbiddenException('Target classroom definition not accessible');
+      const toDefinition = await (tx as any).classroomDefinition.findUnique({
+        where: { id: params.toDefinitionId },
+      });
+      if (!toDefinition || toDefinition.school_id !== schoolId)
+        throw new ForbiddenException(
+          'Target classroom definition not accessible',
+        );
 
       // Ensure next-year (by date)
       if (!(toYear.start_date > from.academic_year.start_date)) {
-        throw new BadRequestException('Target academic year must be in a later year');
+        throw new BadRequestException(
+          'Target academic year must be in a later year',
+        );
       }
       // Disallow same classroom definition in later year
       if (params.toDefinitionId === from.classroom_definition_id) {
-        throw new BadRequestException('Cannot promote to the same classroom definition');
+        throw new BadRequestException(
+          'Cannot promote to the same classroom definition',
+        );
       }
       // Ensure no active enrollment in target year
-      const overlap = await (tx as any).studentEnrollment.findFirst({ where: { student_id: student.id, academic_year_id: params.toYearId, end_date: null } });
-      if (overlap) throw new BadRequestException('Student already has an active enrollment in target academic year');
+      const overlap = await (tx as any).studentEnrollment.findFirst({
+        where: {
+          student_id: student.id,
+          academic_year_id: params.toYearId,
+          end_date: null,
+        },
+      });
+      if (overlap)
+        throw new BadRequestException(
+          'Student already has an active enrollment in target academic year',
+        );
       if (from.start_date && actionDate < from.start_date) {
-        throw new BadRequestException('Promotion date cannot precede enrollment startDate');
+        throw new BadRequestException(
+          'Promotion date cannot precede enrollment startDate',
+        );
       }
       if (toYear.start_date && actionDate < toYear.start_date) {
-        throw new BadRequestException('Promotion date must be within target academic year');
+        throw new BadRequestException(
+          'Promotion date must be within target academic year',
+        );
       }
       if (toYear.end_date && actionDate > toYear.end_date) {
-        throw new BadRequestException('Promotion date must be within target academic year');
+        throw new BadRequestException(
+          'Promotion date must be within target academic year',
+        );
       }
       const closed = await (tx as any).studentEnrollment.update({
         where: { id: from.id },
@@ -771,43 +1024,80 @@ export class StudentsService {
     studentId: string,
     adminUserId: string,
     schoolId: string,
-    params: { fromEnrollmentId: string; toYearId: string; toDefinitionId: string; actionDate?: Date; narration?: string; reason?: string },
+    params: {
+      fromEnrollmentId: string;
+      toYearId: string;
+      toDefinitionId: string;
+      actionDate?: Date;
+      narration?: string;
+      reason?: string;
+    },
   ) {
     const student = await this.findOwned(studentId, adminUserId);
-    if (student.school_id !== schoolId) throw new ForbiddenException('Student not accessible');
+    if (student.school_id !== schoolId)
+      throw new ForbiddenException('Student not accessible');
     const actionDate = params.actionDate ?? new Date();
     return this.prisma.$transaction(async (tx) => {
       const from = await (tx as any).studentEnrollment.findUnique({
         where: { id: params.fromEnrollmentId },
         include: { academic_year: true },
       });
-      if (!from || from.student_id !== student.id) throw new BadRequestException('Invalid fromEnrollmentId');
-      if (from.end_date) throw new BadRequestException('Enrollment already closed');
+      if (!from || from.student_id !== student.id)
+        throw new BadRequestException('Invalid fromEnrollmentId');
+      if (from.end_date)
+        throw new BadRequestException('Enrollment already closed');
 
-      const toYear = await (tx as any).academicYear.findUnique({ where: { id: params.toYearId } });
-      if (!toYear || toYear.school_id !== schoolId) throw new ForbiddenException('Target academic year not accessible');
+      const toYear = await (tx as any).academicYear.findUnique({
+        where: { id: params.toYearId },
+      });
+      if (!toYear || toYear.school_id !== schoolId)
+        throw new ForbiddenException('Target academic year not accessible');
 
-      const toDefinition = await (tx as any).classroomDefinition.findUnique({ where: { id: params.toDefinitionId } });
-      if (!toDefinition || toDefinition.school_id !== schoolId) throw new ForbiddenException('Target classroom definition not accessible');
+      const toDefinition = await (tx as any).classroomDefinition.findUnique({
+        where: { id: params.toDefinitionId },
+      });
+      if (!toDefinition || toDefinition.school_id !== schoolId)
+        throw new ForbiddenException(
+          'Target classroom definition not accessible',
+        );
 
       // Retention is also next academic year
       if (!(toYear.start_date > from.academic_year.start_date)) {
-        throw new BadRequestException('Target academic year must be in a later academic year');
+        throw new BadRequestException(
+          'Target academic year must be in a later academic year',
+        );
       }
       // Do not allow returning to the exact same classroom definition
       if (params.toDefinitionId === from.classroom_definition_id) {
-        throw new BadRequestException('Cannot retain into the same classroom definition');
+        throw new BadRequestException(
+          'Cannot retain into the same classroom definition',
+        );
       }
-      const overlap = await (tx as any).studentEnrollment.findFirst({ where: { student_id: student.id, academic_year_id: params.toYearId, end_date: null } });
-      if (overlap) throw new BadRequestException('Student already has an active enrollment in target academic year');
+      const overlap = await (tx as any).studentEnrollment.findFirst({
+        where: {
+          student_id: student.id,
+          academic_year_id: params.toYearId,
+          end_date: null,
+        },
+      });
+      if (overlap)
+        throw new BadRequestException(
+          'Student already has an active enrollment in target academic year',
+        );
       if (from.start_date && actionDate < from.start_date) {
-        throw new BadRequestException('Retention date cannot precede enrollment startDate');
+        throw new BadRequestException(
+          'Retention date cannot precede enrollment startDate',
+        );
       }
       if (toYear.start_date && actionDate < toYear.start_date) {
-        throw new BadRequestException('Retention date must be within target academic year');
+        throw new BadRequestException(
+          'Retention date must be within target academic year',
+        );
       }
       if (toYear.end_date && actionDate > toYear.end_date) {
-        throw new BadRequestException('Retention date must be within target academic year');
+        throw new BadRequestException(
+          'Retention date must be within target academic year',
+        );
       }
       const closed = await (tx as any).studentEnrollment.update({
         where: { id: from.id },
@@ -834,7 +1124,8 @@ export class StudentsService {
     options: { yearId?: string; includeInactive?: boolean },
   ) {
     const student = await this.findOwned(studentId, adminUserId);
-    if (student.school_id !== schoolId) throw new ForbiddenException('Student not accessible');
+    if (student.school_id !== schoolId)
+      throw new ForbiddenException('Student not accessible');
     const where: any = { student_id: studentId };
     if (options?.yearId) {
       where.academic_year_id = options.yearId;
@@ -845,14 +1136,28 @@ export class StudentsService {
     return (this.prisma as any).studentEnrollment.findMany({
       where,
       include: {
-        classroom_definition: { select: { id: true, name: true, level: true, is_archived: true } },
-        academic_year: { select: { id: true, name: true, start_date: true, end_date: true, school_id: true } },
+        classroom_definition: {
+          select: { id: true, name: true, level: true, is_archived: true },
+        },
+        academic_year: {
+          select: {
+            id: true,
+            name: true,
+            start_date: true,
+            end_date: true,
+            school_id: true,
+          },
+        },
       },
       orderBy: [{ start_date: 'asc' }],
     });
   }
 
-  async getEnrolledStudentsByClassroom(schoolId: string, academicYearId: string, adminUserId: string) {
+  async getEnrolledStudentsByClassroom(
+    schoolId: string,
+    academicYearId: string,
+    adminUserId: string,
+  ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     // Verify academic year belongs to school
@@ -863,7 +1168,9 @@ export class StudentsService {
       throw new NotFoundException('Academic year not found');
     }
     if (academicYear.school_id !== schoolId) {
-      throw new ForbiddenException('Academic year does not belong to this school');
+      throw new ForbiddenException(
+        'Academic year does not belong to this school',
+      );
     }
 
     // Get all enrollments for this academic year
@@ -907,30 +1214,33 @@ export class StudentsService {
     });
 
     // Group by classroom definition
-    const grouped: Record<string, {
-      classroomDefinition: {
-        id: string;
-        name: string;
-        level: string | null;
-        isArchived: boolean;
-      };
-      students: Array<{
-        enrollmentId: string;
-        startDate: Date;
-        student: {
+    const grouped: Record<
+      string,
+      {
+        classroomDefinition: {
           id: string;
-          studentNo: string | null;
-          regNo: string | null;
-          firstName: string;
-          lastName: string;
-          email: string | null;
-          phone: string | null;
-          gender: string | null;
-          dateOfBirth: Date | null;
-          status: string | null;
+          name: string;
+          level: string | null;
+          isArchived: boolean;
         };
-      }>;
-    }> = {};
+        students: Array<{
+          enrollmentId: string;
+          startDate: Date;
+          student: {
+            id: string;
+            studentNo: string | null;
+            regNo: string | null;
+            firstName: string;
+            lastName: string;
+            email: string | null;
+            phone: string | null;
+            gender: string | null;
+            dateOfBirth: Date | null;
+            status: string | null;
+          };
+        }>;
+      }
+    > = {};
 
     for (const enrollment of enrollments) {
       const definitionId = enrollment.classroom_definition_id;
@@ -981,39 +1291,50 @@ export class StudentsService {
     };
   }
 
-  async getByIdentity(identity: string, schoolId: string, user: AuthenticatedUser) {
+  async getByIdentity(
+    identity: string,
+    schoolId: string,
+    user: AuthenticatedUser,
+  ) {
     await this.assertIsAdminOfSchool(schoolId, user.id);
 
     const student = await this.prisma.student.findFirst({
       where: {
         school_id: schoolId,
-        OR: [
-          { student_no: identity },
-          { reg_no: identity }
-        ]
-      }
+        OR: [{ student_no: identity }, { reg_no: identity }],
+      },
     });
     if (!student) throw new NotFoundException('Student not found');
 
     // Fetch guardians via join table
     const studentGuardians = await this.prisma.studentGuardian.findMany({
       where: { student_id: student.id },
-      select: { guardian_id: true, relation: true }
+      select: { guardian_id: true, relation: true },
     });
-    const guardianIds = studentGuardians.map(sg => sg.guardian_id);
-      let guardians: Array<{ relation: string | null; email: string | null; phone: string | null; id: string; school_id: string; created_at: Date; first_name: string; last_name: string; updated_at: Date; }> = [];
+    const guardianIds = studentGuardians.map((sg) => sg.guardian_id);
+    const guardians: Array<{
+      relation: string | null;
+      email: string | null;
+      phone: string | null;
+      id: string;
+      school_id: string;
+      created_at: Date;
+      first_name: string;
+      last_name: string;
+      updated_at: Date;
+    }> = [];
     if (guardianIds.length > 0) {
       const guardianRecords = await this.prisma.guardian.findMany({
-        where: { id: { in: guardianIds } }
+        where: { id: { in: guardianIds } },
       });
       // Attach relation to each guardian using push
-      guardianRecords.forEach(g => {
-        const sg = studentGuardians.find(sg => sg.guardian_id === g.id);
-        
+      guardianRecords.forEach((g) => {
+        const sg = studentGuardians.find((sg) => sg.guardian_id === g.id);
+
         if (sg) guardians.push({ ...g, relation: sg.relation });
       });
     }
-      (student as any).guardians = guardians;
+    (student as any).guardians = guardians;
     return student;
   }
 }

@@ -1,4 +1,16 @@
-import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { ResultsService } from './results.service';
@@ -21,11 +33,19 @@ export class SubjectsController {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
     }
-    return this.resultsService.listSubjects(schoolId, req.user.id, includeInactive === 'true');
+    return this.resultsService.listSubjects(
+      schoolId,
+      req.user.id,
+      includeInactive === 'true',
+    );
   }
 
   @Post()
-  create(@Param('schoolId') schoolId: string, @Body() dto: CreateSubjectDto | CreateSubjectDto[], @Request() req: AuthenticatedRequest) {
+  create(
+    @Param('schoolId') schoolId: string,
+    @Body() dto: CreateSubjectDto | CreateSubjectDto[],
+    @Request() req: AuthenticatedRequest,
+  ) {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
     }
@@ -45,7 +65,11 @@ export class SubjectsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateSubjectDto, @Request() req: AuthenticatedRequest) {
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateSubjectDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
     }

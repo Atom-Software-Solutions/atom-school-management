@@ -28,4 +28,3 @@ export class UpdateGradeDto extends PartialType(CreateGradeDto) {
   @IsOptional()
   remarks?: string;
 }
-
