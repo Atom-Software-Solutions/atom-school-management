@@ -27,7 +27,7 @@ export class ResultsService {
   ) {}
 
   private async assertIsAdminOfSchool(schoolId: string, userId: string) {
-    const rel = await this.prisma.schoolAdmin.findUnique({
+    const rel = await (this.prisma as any).schoolAdmin.findUnique({
       where: { school_id_user_id: { school_id: schoolId, user_id: userId } },
     });
     if (!rel)
@@ -38,7 +38,7 @@ export class ResultsService {
     studentId: string,
     user: AuthenticatedUser,
   ) {
-    const student = await this.prisma.student.findUnique({
+    const student = await (this.prisma as any).student.findUnique({
       where: { id: studentId },
     });
     if (!student) {
@@ -647,7 +647,7 @@ export class ResultsService {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     // Verify student exists and belongs to school
-    const student = await this.prisma.student.findUnique({
+    const student = await (this.prisma as any).student.findUnique({
       where: { id: data.studentId },
     });
     if (!student) throw new NotFoundException('Student not found');
@@ -718,7 +718,7 @@ export class ResultsService {
 
     // Verify all students belong to school
     const studentIds = data.grades.map((g) => g.studentId);
-    const students = await this.prisma.student.findMany({
+    const students = await (this.prisma as any).student.findMany({
       where: {
         id: { in: studentIds },
         school_id: schoolId,
@@ -969,7 +969,7 @@ export class ResultsService {
     termItemId?: string,
     subjectId?: string,
   ) {
-    const student = await this.prisma.student.findUnique({
+    const student = await (this.prisma as any).student.findUnique({
       where: { id: studentId },
     });
     if (!student) throw new NotFoundException('Student not found');
@@ -1049,7 +1049,7 @@ export class ResultsService {
     yearId: string,
     termItemId: string,
   ) {
-    const student = await this.prisma.student.findUnique({
+    const student = await (this.prisma as any).student.findUnique({
       where: { id: studentId },
     });
     if (!student) throw new NotFoundException('Student not found');
@@ -1257,7 +1257,7 @@ export class ResultsService {
     }
 
     // Get school name
-    const school = await this.prisma.school.findUnique({
+    const school = await (this.prisma as any).school.findUnique({
       where: { id: schoolId },
       select: { name: true },
     });
@@ -1270,7 +1270,7 @@ export class ResultsService {
     for (const studentId of targetStudentIds) {
       try {
         // Verify student
-        const student = await this.prisma.student.findUnique({
+        const student = await (this.prisma as any).student.findUnique({
           where: { id: studentId },
         });
         if (!student) {
@@ -1437,7 +1437,7 @@ export class ResultsService {
   }
 
   async listStudentReportCards(studentId: string, adminUserId: string) {
-    const student = await this.prisma.student.findUnique({
+    const student = await (this.prisma as any).student.findUnique({
       where: { id: studentId },
     });
     if (!student) throw new NotFoundException('Student not found');
@@ -1549,7 +1549,7 @@ export class ResultsService {
     }
 
     // Find student by student_no OR reg_no
-    const student = await this.prisma.student.findFirst({
+    const student = await (this.prisma as any).student.findFirst({
       where: {
         school_id: schoolId,
         OR: [{ student_no: identity }, { reg_no: identity }],

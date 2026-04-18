@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
+import { CreateUserDto } from '../users/dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -37,10 +38,10 @@ export class AuthService {
       firstName: registerDto.firstName,
       lastName: registerDto.lastName,
       role: 'SCHOOL_ADMIN' as const,
-      phone: registerDto.phone,
-      schoolId: registerDto.schoolId,
       verificationToken: verificationToken,
-    };
+      ...(registerDto.phone && { phone: registerDto.phone }),
+      ...(registerDto.schoolId && { schoolId: registerDto.schoolId }),
+    } as CreateUserDto;
 
     const user = await this.usersService.create(createUserDto);
 
@@ -82,7 +83,7 @@ export class AuthService {
   }
 
   async verifyEmail(token: string) {
-    const user = await this.prisma.user.findUnique({
+    const user = await (this.prisma as any).user.findUnique({
       where: { verification_token: token },
     });
 
@@ -98,7 +99,7 @@ export class AuthService {
     }
 
     // Update user as verified
-    await this.prisma.user.update({
+    await (this.prisma as any).user.update({
       where: { id: user.id },
       data: {
         email_verified: true,
@@ -164,7 +165,7 @@ export class AuthService {
     }
 
     // For other roles, get their school_id from SchoolAdmin relationship
-    const schoolAdmin = await this.prisma.schoolAdmin.findFirst({
+    const schoolAdmin = await (this.prisma as any).schoolAdmin.findFirst({
       where: { user_id: userId },
       select: { school_id: true },
     });
@@ -176,7 +177,7 @@ export class AuthService {
   async getUserMemberships(
     userId: string,
   ): Promise<Array<{ schoolId: string; schoolName: string; role: string }>> {
-    const rels = await this.prisma.schoolAdmin.findMany({
+    const rels = await (this.prisma as any).schoolAdmin.findMany({
       where: { user_id: userId },
       include: { school: { select: { id: true, name: true } } },
     });
@@ -210,7 +211,7 @@ export class AuthService {
       ? new Date(expSeconds * 1000)
       : new Date(Date.now() + 7 * 24 * 3600 * 1000);
 
-    await this.prisma.session.create({
+    await (this.prisma as any).session.create({
       data: {
         user_id: user.id,
         jti,
@@ -246,7 +247,7 @@ export class AuthService {
     const token = this.jwtService.sign(refreshPayload, { expiresIn: '30d' });
 
     // Store refresh token in session
-    await this.prisma.session.create({
+    await (this.prisma as any).session.create({
       data: {
         user_id: user.id,
         jti,
@@ -269,7 +270,7 @@ export class AuthService {
       }
 
       // Check if session is still active
-      const session = await this.prisma.session.findUnique({
+      const session = await (this.prisma as any).session.findUnique({
         where: { jti: payload.jti },
       });
 
@@ -321,7 +322,7 @@ export class AuthService {
     const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
     // Store reset token in user record
-    await this.prisma.user.update({
+    await (this.prisma as any).user.update({
       where: { id: user.id },
       data: {
         password_reset_token: resetToken,
@@ -349,7 +350,7 @@ export class AuthService {
 
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
     // Find user by reset token
-    const user = await this.prisma.user.findUnique({
+    const user = await (this.prisma as any).user.findUnique({
       where: { password_reset_token: resetPasswordDto.token },
     });
 
@@ -369,7 +370,7 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(resetPasswordDto.newPassword, 10);
 
     // Update password and clear reset token
-    await this.prisma.user.update({
+    await (this.prisma as any).user.update({
       where: { id: user.id },
       data: {
         password_hash: passwordHash,
@@ -379,7 +380,7 @@ export class AuthService {
     });
 
     // Revoke all existing sessions for security
-    await this.prisma.session.updateMany({
+    await (this.prisma as any).session.updateMany({
       where: { user_id: user.id, is_active: true },
       data: { is_active: false, revoked_at: new Date() },
     });
@@ -391,7 +392,7 @@ export class AuthService {
 
   async revokeSessionByJti(jti?: string) {
     if (!jti) return;
-    await this.prisma.session
+    await (this.prisma as any).session
       .update({
         where: { jti },
         data: { is_active: false, revoked_at: new Date() },
@@ -414,7 +415,7 @@ export class AuthService {
     const verificationToken = randomUUID();
 
     // Update user with new verification token
-    await this.prisma.user.update({
+    await (this.prisma as any).user.update({
       where: { id: userId },
       data: { verification_token: verificationToken },
     });
