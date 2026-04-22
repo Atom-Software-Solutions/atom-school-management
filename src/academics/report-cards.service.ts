@@ -1,11 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 // Import your SchoolsService (adjust the path as needed)
 import { SchoolsService } from '../schools/schools.service';
+import { AcademicsService } from './academics.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class ReportCardsService {
   constructor(
     private readonly schoolsService: SchoolsService,
+    private readonly academicsService: AcademicsService,
   ) {}
 
   async getReportCardByIdentity(
@@ -21,6 +24,31 @@ export class ReportCardsService {
       throw new NotFoundException('School not found');
     }
 
+    // Fetch the academic year
+    const year = await this.academicsService.getYear(yearId, userId);
+    if (year.school_id !== schoolId) {
+      throw new NotFoundException('Year does not belong to the specified school');
+    }
+
+    // Find the term in the year's terms
+    const term = year.terms.find(t => t.id === termId);
+    if (!term) {
+      throw new NotFoundException('Term not found in the specified year');
+    }
+
+    // Format dates
+    const startDate = new Date(year.start_date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    const endDate = new Date(year.end_date).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    const dates = `${startDate} – ${endDate}`;
+
     // Map to the structure expected by the frontend
     return {
       school: {
@@ -29,9 +57,9 @@ export class ReportCardsService {
         motto: school.motto,
       },
       term: {
-        name: "Term II",
-        year: "2025",
-        dates: "May 10 – Aug 15, 2025",
+        name: term.name,
+        year: year.name,
+        dates: dates,
       },
       student: {
         name: "Jane Doe",

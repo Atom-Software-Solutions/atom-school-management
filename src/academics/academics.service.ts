@@ -418,6 +418,7 @@ export class AcademicsService {
     // Attach terms derived from the template items for backward-compatible API shape
     const items = year.term_template?.term_template_items || [];
     const mapped = items.map((it: any) => ({
+      id: it.id,
       ordinal: it.ordinal,
       name: it.name,
       startDate: it.start_date,
@@ -448,6 +449,33 @@ export class AcademicsService {
       startDate: it.start_date,
       endDate: it.end_date,
     }));
+  }
+
+  async getTerm(termId: string, adminUserId: string) {
+    const term = await (this.prisma as any).termTemplateItem.findUnique({
+      where: { id: termId },
+      include: {
+        term_template: {
+          include: {
+            academic_years: {
+              where: { status: 'active' }, // or whatever logic to find the year
+            },
+          },
+        },
+      },
+    });
+    if (!term) throw new NotFoundException('Term not found');
+
+    // Assert admin of school - need to get school_id from term_template
+    await this.assertIsAdminOfSchool(term.term_template.school_id, adminUserId);
+
+    return {
+      id: term.id,
+      ordinal: term.ordinal,
+      name: term.name,
+      startDate: term.start_date,
+      endDate: term.end_date,
+    };
   }
 
   async updateYearStatus(
