@@ -4,9 +4,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
 import * as XLSX from 'xlsx';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 
 // File validation constants
 const MAX_FILE_SIZE = parseInt(process.env.MAX_IMPORT_FILE_SIZE || '5242880'); // 5MB default
@@ -1133,7 +1133,7 @@ export class StudentsService {
     if (!options?.includeInactive) {
       where.OR = [{ end_date: null }, { status: 'active' }];
     }
-    return (this.prisma as any).studentEnrollment.findMany({
+    return this.prisma.studentEnrollment.findMany({
       where,
       include: {
         classroom_definition: {
@@ -1161,7 +1161,7 @@ export class StudentsService {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     // Verify academic year belongs to school
-    const academicYear = await (this.prisma as any).academicYear.findUnique({
+    const academicYear = await this.prisma.academicYear.findUnique({
       where: { id: academicYearId },
     });
     if (!academicYear) {
@@ -1174,7 +1174,7 @@ export class StudentsService {
     }
 
     // Get all enrollments for this academic year
-    const enrollments = await (this.prisma as any).studentEnrollment.findMany({
+    const enrollments = await this.prisma.studentEnrollment.findMany({
       where: {
         academic_year_id: academicYearId,
         end_date: null, // Only active enrollments

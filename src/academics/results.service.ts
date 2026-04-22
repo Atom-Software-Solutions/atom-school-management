@@ -27,7 +27,7 @@ export class ResultsService {
   ) {}
 
   private async assertIsAdminOfSchool(schoolId: string, userId: string) {
-    const rel = await (this.prisma as any).schoolAdmin.findUnique({
+    const rel = await this.prisma.schoolAdmin.findUnique({
       where: { school_id_user_id: { school_id: schoolId, user_id: userId } },
     });
     if (!rel)
@@ -38,7 +38,7 @@ export class ResultsService {
     studentId: string,
     user: AuthenticatedUser,
   ) {
-    const student = await (this.prisma as any).student.findUnique({
+    const student = await this.prisma.student.findUnique({
       where: { id: studentId },
     });
     if (!student) {
@@ -59,7 +59,7 @@ export class ResultsService {
         );
       }
 
-      const guardians = await (this.prisma as any).guardian.findMany({
+      const guardians = await this.prisma.guardian.findMany({
         where: {
           school_id: student.school_id,
           email: user.email,
@@ -110,7 +110,7 @@ export class ResultsService {
     includeInactive = false,
   ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
-    return (this.prisma as any).subject.findMany({
+    return this.prisma.subject.findMany({
       where: {
         school_id: schoolId,
         ...(includeInactive ? {} : { is_active: true }),
@@ -127,7 +127,7 @@ export class ResultsService {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     // Check for existing subject with same name or code (active)
-    const existing = await (this.prisma as any).subject.findFirst({
+    const existing = await this.prisma.subject.findFirst({
       where: {
         school_id: schoolId,
         OR: [{ name: data.name.trim() }, { code: data.code?.trim() || null }],
@@ -141,7 +141,7 @@ export class ResultsService {
     }
 
     try {
-      return await (this.prisma as any).subject.create({
+      return await this.prisma.subject.create({
         data: {
           school_id: schoolId,
           name: data.name.trim(),
@@ -172,7 +172,7 @@ export class ResultsService {
     for (let i = 0; i < dataArray.length; i++) {
       const data = dataArray[i];
       // Check for existing subject with same name or code (active)
-      const existing = await (this.prisma as any).subject.findFirst({
+      const existing = await this.prisma.subject.findFirst({
         where: {
           school_id: schoolId,
           OR: [{ name: data.name.trim() }, { code: data.code?.trim() || null }],
@@ -186,7 +186,7 @@ export class ResultsService {
         continue;
       }
       try {
-        const subject = await (this.prisma as any).subject.create({
+        const subject = await this.prisma.subject.create({
           data: {
             school_id: schoolId,
             name: data.name.trim(),
@@ -212,7 +212,7 @@ export class ResultsService {
   }
 
   async getSubject(subjectId: string, adminUserId: string) {
-    const subject = await (this.prisma as any).subject.findUnique({
+    const subject = await this.prisma.subject.findUnique({
       where: { id: subjectId },
     });
     if (!subject) throw new NotFoundException('Subject not found');
@@ -226,7 +226,7 @@ export class ResultsService {
     adminUserId: string,
     data: UpdateSubjectDto,
   ) {
-    const subject = await (this.prisma as any).subject.findUnique({
+    const subject = await this.prisma.subject.findUnique({
       where: { id: subjectId },
     });
     if (!subject) throw new NotFoundException('Subject not found');
@@ -245,7 +245,7 @@ export class ResultsService {
     }
 
     try {
-      return await (this.prisma as any).subject.update({
+      return await this.prisma.subject.update({
         where: { id: subjectId },
         data: updateData,
       });
@@ -260,7 +260,7 @@ export class ResultsService {
   }
 
   async deleteSubject(subjectId: string, adminUserId: string) {
-    const subject = await (this.prisma as any).subject.findUnique({
+    const subject = await this.prisma.subject.findUnique({
       where: { id: subjectId },
     });
     if (!subject) throw new NotFoundException('Subject not found');
@@ -268,7 +268,7 @@ export class ResultsService {
     await this.assertIsAdminOfSchool(subject.school_id, adminUserId);
 
     // Check if there are assessments for this subject
-    const assessmentCount = await (this.prisma as any).assessment.count({
+    const assessmentCount = await this.prisma.assessment.count({
       where: { subject_id: subjectId },
     });
 
@@ -278,7 +278,7 @@ export class ResultsService {
       );
     }
 
-    return (this.prisma as any).subject.delete({
+    return this.prisma.subject.delete({
       where: { id: subjectId },
     });
   }
@@ -301,7 +301,7 @@ export class ResultsService {
       term_template_item_id: termItemId,
     };
 
-    const assessments = await (this.prisma as any).assessment.findMany({
+    const assessments = await this.prisma.assessment.findMany({
       where,
       include: {
         subject: {
@@ -355,7 +355,7 @@ export class ResultsService {
       classroom_definition_id: definitionId,
     };
 
-    const assessments = await (this.prisma as any).assessment.findMany({
+    const assessments = await this.prisma.assessment.findMany({
       where,
       include: {
         subject: {
@@ -401,7 +401,7 @@ export class ResultsService {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     // Verify academic year exists and belongs to school
-    const year = await (this.prisma as any).academicYear.findUnique({
+    const year = await this.prisma.academicYear.findUnique({
       where: { id: data.yearId },
     });
     if (!year) throw new NotFoundException('Academic year not found');
@@ -412,7 +412,7 @@ export class ResultsService {
     }
 
     // Verify term item exists and belongs to the academic year's term template
-    const termItem = await (this.prisma as any).termTemplateItem.findUnique({
+    const termItem = await this.prisma.termTemplateItem.findUnique({
       where: { id: (data as any).termTemplateItemId },
     });
     if (!termItem) throw new NotFoundException('Term template item not found');
@@ -423,7 +423,7 @@ export class ResultsService {
     }
 
     // Verify subject exists and belongs to school
-    const subject = await (this.prisma as any).subject.findUnique({
+    const subject = await this.prisma.subject.findUnique({
       where: { id: data.subjectId },
     });
     if (!subject) throw new NotFoundException('Subject not found');
@@ -446,7 +446,7 @@ export class ResultsService {
     }
 
     // Check for duplicate assessment (same year, term item, subject, classroom, name, and type)
-    const existing = await (this.prisma as any).assessment.findFirst({
+    const existing = await this.prisma.assessment.findFirst({
       where: {
         academic_year_id: data.yearId,
         term_template_item_id: (data as any).termTemplateItemId,
@@ -461,7 +461,7 @@ export class ResultsService {
         'An assessment with this name and type already exists for this subject and term',
       );
     }
-    return (this.prisma as any).assessment.create({
+    return this.prisma.assessment.create({
       data: {
         school_id: schoolId,
         academic_year_id: data.yearId,
@@ -482,7 +482,7 @@ export class ResultsService {
   }
 
   async getAssessment(assessmentId: string, adminUserId: string) {
-    const assessment = await (this.prisma as any).assessment.findUnique({
+    const assessment = await this.prisma.assessment.findUnique({
       where: { id: assessmentId },
       include: {
         subject: true,
@@ -499,7 +499,7 @@ export class ResultsService {
     adminUserId: string,
     data: UpdateAssessmentDto,
   ) {
-    const assessment = await (this.prisma as any).assessment.findUnique({
+    const assessment = await this.prisma.assessment.findUnique({
       where: { id: assessmentId },
     });
     if (!assessment) throw new NotFoundException('Assessment not found');
@@ -546,7 +546,7 @@ export class ResultsService {
       const checkName =
         data.name !== undefined ? data.name.trim() : assessment.name;
       const checkType = data.type !== undefined ? data.type : assessment.type;
-      const existing = await (this.prisma as any).assessment.findFirst({
+      const existing = await this.prisma.assessment.findFirst({
         where: {
           academic_year_id: assessment.academic_year_id,
           term_template_item_id: assessment.term_template_item_id,
@@ -563,14 +563,14 @@ export class ResultsService {
       }
     }
 
-    return (this.prisma as any).assessment.update({
+    return this.prisma.assessment.update({
       where: { id: assessmentId },
       data: updateData,
     });
   }
 
   async deleteAssessment(assessmentId: string, adminUserId: string) {
-    const assessment = await (this.prisma as any).assessment.findUnique({
+    const assessment = await this.prisma.assessment.findUnique({
       where: { id: assessmentId },
     });
     if (!assessment) throw new NotFoundException('Assessment not found');
@@ -578,7 +578,7 @@ export class ResultsService {
     await this.assertIsAdminOfSchool(assessment.school_id, adminUserId);
 
     // Check if there are grades for this assessment
-    const gradeCount = await (this.prisma as any).grade.count({
+    const gradeCount = await this.prisma.grade.count({
       where: { assessment_id: assessmentId },
     });
 
@@ -588,7 +588,7 @@ export class ResultsService {
       );
     }
 
-    return (this.prisma as any).assessment.delete({
+    return this.prisma.assessment.delete({
       where: { id: assessmentId },
     });
   }
@@ -598,7 +598,7 @@ export class ResultsService {
     adminUserId: string,
   ) {
     // 1. Lookup assessment
-    const assessment = await (this.prisma as any).assessment.findUnique({
+    const assessment = await this.prisma.assessment.findUnique({
       where: { id: assessmentId },
       select: {
         academic_year_id: true,
@@ -611,14 +611,14 @@ export class ResultsService {
 
     // 2. Get all students already graded for this assessment
     const gradedStudentIds = (
-      await (this.prisma as any).grade.findMany({
+      await this.prisma.grade.findMany({
         where: { assessment_id: assessmentId },
         select: { student_id: true },
       })
     ).map((g: any) => g.student_id);
 
     // 3. Query enrollments for that year and classroom, filter out graded students
-    const enrollments = await (this.prisma as any).studentEnrollment.findMany({
+    const enrollments = await this.prisma.studentEnrollment.findMany({
       where: {
         academic_year_id: assessment.academic_year_id,
         classroom_definition_id: assessment.classroom_definition_id,
@@ -647,7 +647,7 @@ export class ResultsService {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     // Verify student exists and belongs to school
-    const student = await (this.prisma as any).student.findUnique({
+    const student = await this.prisma.student.findUnique({
       where: { id: data.studentId },
     });
     if (!student) throw new NotFoundException('Student not found');
@@ -656,7 +656,7 @@ export class ResultsService {
     }
 
     // Verify assessment exists and belongs to school
-    const assessment = await (this.prisma as any).assessment.findUnique({
+    const assessment = await this.prisma.assessment.findUnique({
       where: { id: data.assessmentId },
     });
     if (!assessment) throw new NotFoundException('Assessment not found');
@@ -677,7 +677,7 @@ export class ResultsService {
       data.letterGrade || this.calculateLetterGrade(percentage);
 
     try {
-      return await (this.prisma as any).grade.create({
+      return await this.prisma.grade.create({
         data: {
           school_id: schoolId,
           student_id: data.studentId,
@@ -708,7 +708,7 @@ export class ResultsService {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     // Verify assessment exists
-    const assessment = await (this.prisma as any).assessment.findUnique({
+    const assessment = await this.prisma.assessment.findUnique({
       where: { id: data.assessmentId },
     });
     if (!assessment) throw new NotFoundException('Assessment not found');
@@ -718,7 +718,7 @@ export class ResultsService {
 
     // Verify all students belong to school
     const studentIds = data.grades.map((g) => g.studentId);
-    const students = await (this.prisma as any).student.findMany({
+    const students = await this.prisma.student.findMany({
       where: {
         id: { in: studentIds },
         school_id: schoolId,
@@ -771,9 +771,9 @@ export class ResultsService {
       });
 
       // Use transaction for atomic operations
-      const createdGrades = await (this.prisma as any).$transaction(
+      const createdGrades = await this.prisma.$transaction(
         gradesToCreate.map((gradeData) =>
-          (this.prisma as any).grade.create({ data: gradeData }),
+          this.prisma.grade.create({ data: gradeData }),
         ),
       );
 
@@ -806,7 +806,7 @@ export class ResultsService {
           const letterGrade =
             gradeData.letterGrade || this.calculateLetterGrade(percentage);
 
-          const grade = await (this.prisma as any).grade.create({
+          const grade = await this.prisma.grade.create({
             data: {
               school_id: schoolId,
               student_id: gradeData.studentId,
@@ -878,7 +878,7 @@ export class ResultsService {
   }
 
   async getGrade(gradeId: string, adminUserId: string) {
-    const grade = await (this.prisma as any).grade.findUnique({
+    const grade = await this.prisma.grade.findUnique({
       where: { id: gradeId },
       include: {
         assessment: {
@@ -899,7 +899,7 @@ export class ResultsService {
     adminUserId: string,
     data: UpdateGradeDto,
   ) {
-    const grade = await (this.prisma as any).grade.findUnique({
+    const grade = await this.prisma.grade.findUnique({
       where: { id: gradeId },
       include: {
         assessment: true,
@@ -939,21 +939,21 @@ export class ResultsService {
       throw new BadRequestException('No fields to update');
     }
 
-    return (this.prisma as any).grade.update({
+    return this.prisma.grade.update({
       where: { id: gradeId },
       data: updateData,
     });
   }
 
   async deleteGrade(gradeId: string, adminUserId: string) {
-    const grade = await (this.prisma as any).grade.findUnique({
+    const grade = await this.prisma.grade.findUnique({
       where: { id: gradeId },
     });
     if (!grade) throw new NotFoundException('Grade not found');
 
     await this.assertIsAdminOfSchool(grade.school_id, adminUserId);
 
-    return (this.prisma as any).grade.delete({
+    return this.prisma.grade.delete({
       where: { id: gradeId },
     });
   }
@@ -969,7 +969,7 @@ export class ResultsService {
     termItemId?: string,
     subjectId?: string,
   ) {
-    const student = await (this.prisma as any).student.findUnique({
+    const student = await this.prisma.student.findUnique({
       where: { id: studentId },
     });
     if (!student) throw new NotFoundException('Student not found');
@@ -1020,7 +1020,7 @@ export class ResultsService {
       where.subject_id = subjectId;
     }
 
-    const grades = await (this.prisma as any).grade.findMany({
+    const grades = await this.prisma.grade.findMany({
       where,
       include: {
         assessment: {
@@ -1049,7 +1049,7 @@ export class ResultsService {
     yearId: string,
     termItemId: string,
   ) {
-    const student = await (this.prisma as any).student.findUnique({
+    const student = await this.prisma.student.findUnique({
       where: { id: studentId },
     });
     if (!student) throw new NotFoundException('Student not found');
@@ -1075,7 +1075,7 @@ export class ResultsService {
     termItemId: string,
   ) {
     // Verify academic year exists
-    const year = await (this.prisma as any).academicYear.findUnique({
+    const year = await this.prisma.academicYear.findUnique({
       where: { id: yearId },
     });
     if (!year) throw new NotFoundException('Academic year not found');
@@ -1086,7 +1086,7 @@ export class ResultsService {
     }
 
     // Verify term item exists and belongs to the academic year's term template
-    const termItem = await (this.prisma as any).termTemplateItem.findUnique({
+    const termItem = await this.prisma.termTemplateItem.findUnique({
       where: { id: termItemId },
     });
     if (!termItem)
@@ -1098,7 +1098,7 @@ export class ResultsService {
     }
 
     // Get all grades for this student in this term (using assessment academic_year_id + term_template_item_id)
-    const grades = await (this.prisma as any).grade.findMany({
+    const grades = await this.prisma.grade.findMany({
       where: {
         student_id: student.id,
         assessment: {
@@ -1216,7 +1216,7 @@ export class ResultsService {
       targetStudentIds = data.studentIds;
     } else if (data.classroomDefinitionId) {
       // All students in classroom
-      const enrollments = await (this.prisma as any).studentEnrollment.findMany({
+      const enrollments = await this.prisma.studentEnrollment.findMany({
         where: {
           classroom_definition_id: data.classroomDefinitionId,
           academic_year_id: data.academicYearId,
@@ -1234,7 +1234,7 @@ export class ResultsService {
     }
 
     // Verify academic year and resolve term by name
-    const year = await (this.prisma as any).academicYear.findUnique({
+    const year = await this.prisma.academicYear.findUnique({
       where: { id: data.academicYearId },
     });
     if (!year) throw new NotFoundException('Academic year not found');
@@ -1245,7 +1245,7 @@ export class ResultsService {
     }
 
     // Verify term item exists and belongs to the year
-    const termItem2 = await (this.prisma as any).termTemplateItem.findUnique({
+    const termItem2 = await this.prisma.termTemplateItem.findUnique({
       where: { id: data.termTemplateItemId },
     });
     if (!termItem2)
@@ -1257,7 +1257,7 @@ export class ResultsService {
     }
 
     // Get school name
-    const school = await (this.prisma as any).school.findUnique({
+    const school = await this.prisma.school.findUnique({
       where: { id: schoolId },
       select: { name: true },
     });
@@ -1270,7 +1270,7 @@ export class ResultsService {
     for (const studentId of targetStudentIds) {
       try {
         // Verify student
-        const student = await (this.prisma as any).student.findUnique({
+        const student = await this.prisma.student.findUnique({
           where: { id: studentId },
         });
         if (!student) {
@@ -1302,7 +1302,7 @@ export class ResultsService {
 
         if (data.includeRank) {
           // Get all students in the same classroom definition for this term
-          const enrollment = await (this.prisma as any).studentEnrollment.findFirst(
+          const enrollment = await this.prisma.studentEnrollment.findFirst(
             {
               where: {
                 student_id: studentId,
@@ -1360,7 +1360,7 @@ export class ResultsService {
         }
 
         // Create report card record
-        const reportCard = await (this.prisma as any).reportCard.create({
+        const reportCard = await this.prisma.reportCard.create({
           data: {
             school_id: schoolId,
             student_id: studentId,
@@ -1400,7 +1400,7 @@ export class ResultsService {
   }
 
   async getReportCard(reportCardId: string, adminUserId: string) {
-    const reportCard = await (this.prisma as any).reportCard.findUnique({
+    const reportCard = await this.prisma.reportCard.findUnique({
       where: { id: reportCardId },
       include: {
         student: {
@@ -1437,7 +1437,7 @@ export class ResultsService {
   }
 
   async listStudentReportCards(studentId: string, adminUserId: string) {
-    const student = await (this.prisma as any).student.findUnique({
+    const student = await this.prisma.student.findUnique({
       where: { id: studentId },
     });
     if (!student) throw new NotFoundException('Student not found');
@@ -1456,7 +1456,7 @@ export class ResultsService {
   }
 
   private async listStudentReportCardsInternal(student: any) {
-    return (this.prisma as any).reportCard.findMany({
+    return this.prisma.reportCard.findMany({
       where: {
         student_id: student.id,
         school_id: student.school_id,
@@ -1468,14 +1468,14 @@ export class ResultsService {
   }
 
   async publishReportCard(reportCardId: string, adminUserId: string) {
-    const reportCard = await (this.prisma as any).reportCard.findUnique({
+    const reportCard = await this.prisma.reportCard.findUnique({
       where: { id: reportCardId },
     });
     if (!reportCard) throw new NotFoundException('Report card not found');
 
     await this.assertIsAdminOfSchool(reportCard.school_id, adminUserId);
 
-    return (this.prisma as any).reportCard.update({
+    return this.prisma.reportCard.update({
       where: { id: reportCardId },
       data: {
         status: 'published',
@@ -1493,7 +1493,7 @@ export class ResultsService {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     // Find grades for the assessment and classroom
-    return (this.prisma as any).grade.findMany({
+    return this.prisma.grade.findMany({
       where: {
         school_id: schoolId,
         assessment_id: assessmentId,
@@ -1520,7 +1520,7 @@ export class ResultsService {
     assessmentId: string,
   ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
-    return (this.prisma as any).grade.findMany({
+    return this.prisma.grade.findMany({
       where: {
         school_id: schoolId,
         assessment_id: assessmentId,
@@ -1549,7 +1549,7 @@ export class ResultsService {
     }
 
     // Find student by student_no OR reg_no
-    const student = await (this.prisma as any).student.findFirst({
+    const student = await this.prisma.student.findFirst({
       where: {
         school_id: schoolId,
         OR: [{ student_no: identity }, { reg_no: identity }],
@@ -1643,7 +1643,7 @@ export class ResultsService {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     // 1. Find all active enrollments for the classroom in the given year
-    const enrollments = await (this.prisma as any).studentEnrollment.findMany({
+    const enrollments = await this.prisma.studentEnrollment.findMany({
       where: {
         academic_year_id: yearId,
         classroom_definition_id: definitionId,
@@ -1657,7 +1657,7 @@ export class ResultsService {
     const studentIds = enrollments.map((e: any) => e.student_id);
 
     // 2. Get all grades for these students in the specified term/classroom
-    const grades = await (this.prisma as any).grade.findMany({
+    const grades = await this.prisma.grade.findMany({
       where: {
         school_id: schoolId,
         student_id: { in: studentIds },
@@ -1757,7 +1757,7 @@ export class ResultsService {
     });
 
     // 5. Get all assessments for this classroom/year/term
-    const assessments = await (this.prisma as any).assessment.findMany({
+    const assessments = await this.prisma.assessment.findMany({
       where: {
         school_id: schoolId,
         academic_year_id: yearId,
