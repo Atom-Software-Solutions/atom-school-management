@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
+import { CreateUserDto } from '../users/dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -37,10 +38,10 @@ export class AuthService {
       firstName: registerDto.firstName,
       lastName: registerDto.lastName,
       role: 'SCHOOL_ADMIN' as const,
-      phone: registerDto.phone,
-      schoolId: registerDto.schoolId,
       verificationToken: verificationToken,
-    };
+      ...(registerDto.phone && { phone: registerDto.phone }),
+      ...(registerDto.schoolId && { schoolId: registerDto.schoolId }),
+    } as CreateUserDto;
 
     const user = await this.usersService.create(createUserDto);
 

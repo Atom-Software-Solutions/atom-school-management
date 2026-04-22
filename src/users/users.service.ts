@@ -16,7 +16,7 @@ import {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   private async assertIsAdminOfSchool(schoolId: string, userId: string) {
     const rel = await this.prisma.schoolAdmin.findUnique({
@@ -93,18 +93,18 @@ export class UsersService {
         },
       });
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
-        const target = Array.isArray(error.meta?.target)
-          ? error.meta?.target[0]
-          : undefined;
-        if (target === 'phone') {
-          throw new ConflictException('User with this phone already exists');
-        }
-        if (target === 'email') {
-          throw new ConflictException('User with this email already exists');
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        const prismaError = error as Prisma.PrismaClientKnownRequestError;
+        if (prismaError.code === 'P2002') {
+          const target = Array.isArray(prismaError.meta?.target)
+            ? (prismaError.meta.target as string[])[0]
+            : undefined;
+          if (target === 'phone') {
+            throw new ConflictException('User with this phone already exists');
+          }
+          if (target === 'email') {
+            throw new ConflictException('User with this email already exists');
+          }
         }
       }
       throw error;
@@ -150,7 +150,7 @@ export class UsersService {
     }
     // If tenantId is null (SUPER_ADMIN), no filter applied - returns all users
 
-    return this.prisma.user.findMany({
+    return await this.prisma.user.findMany({
       where,
       select: {
         id: true,
@@ -208,13 +208,13 @@ export class UsersService {
 
   // Return full user record (including verification fields) by id
   async findById(id: string): Promise<UserWithPassword | null> {
-    return this.prisma.user.findUnique({
+    return await this.prisma.user.findUnique({
       where: { id },
     });
   }
 
   async findByEmail(email: string): Promise<UserWithPassword | null> {
-    return this.prisma.user.findUnique({
+    return await this.prisma.user.findUnique({
       where: { email },
     });
   }
@@ -227,18 +227,16 @@ export class UsersService {
     await this.findOne(id, tenantId); // Check if user exists and belongs to tenant
 
     const updateData: any = {};
-    if (updateUserDto.firstName)
-      updateData.first_name = updateUserDto.firstName;
-    if (updateUserDto.lastName) updateData.last_name = updateUserDto.lastName;
-    if (updateUserDto.phone !== undefined)
-      updateData.phone = updateUserDto.phone;
-    if (updateUserDto.password) {
-      updateData.password_hash = await bcrypt.hash(updateUserDto.password, 10);
-    }
+    const dto = updateUserDto as any;
+
+    if (dto.firstName) updateData.first_name = dto.firstName;
+    if (dto.lastName) updateData.last_name = dto.lastName;
+    if (dto.phone !== undefined) updateData.phone = dto.phone;
+    if (dto.password) updateData.password_hash = await bcrypt.hash(dto.password, 10);
 
     // If no data to update, just update the last_login timestamp
     if (Object.keys(updateData).length === 0) {
-      return this.prisma.user.update({
+      return await this.prisma.user.update({
         where: { id },
         data: { last_login: new Date() },
         select: {
@@ -255,7 +253,7 @@ export class UsersService {
       });
     }
 
-    return this.prisma.user.update({
+    return await this.prisma.user.update({
       where: { id },
       data: updateData,
       select: {
