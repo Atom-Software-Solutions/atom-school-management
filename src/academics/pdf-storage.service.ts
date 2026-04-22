@@ -13,8 +13,6 @@ export interface StoredPDFInfo {
 
 @Injectable()
 export class PdfStorageService {
-  private readonly baseStoragePath = process.env.PDF_STORAGE_PATH || './pdfs';
-  private readonly baseUrl = process.env.PDF_BASE_URL || '/pdfs';
 
   /**
    * Generate a unique file name for a report card PDF
@@ -31,51 +29,6 @@ export class PdfStorageService {
     const sanitizedStudentId = studentId.substring(0, 8);
     const sanitizedTermId = termId.substring(0, 8);
     return `reportcard-${sanitizedStudentId}-${sanitizedTermId}-${timestamp}-${randomHash}.pdf`;
-  }
-
-  /**
-   * Save a PDF file to storage
-   */
-  async savePDF(
-    pdfBuffer: Buffer,
-    fileName: string,
-    subDirectory: string = 'reports',
-  ): Promise<StoredPDFInfo> {
-    try {
-      const dirPath = path.join(this.baseStoragePath, subDirectory);
-
-      // Create directory if it doesn't exist
-      if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true });
-      }
-
-      const filePath = path.join(dirPath, fileName);
-
-      // Write file
-      fs.writeFileSync(filePath, pdfBuffer);
-
-      // Get file stats
-      const stats = fs.statSync(filePath);
-
-      return {
-        fileName,
-        filePath,
-        url: this.getFileUrl(subDirectory, fileName),
-        size: stats.size,
-        createdAt: stats.birthtime,
-      };
-    } catch (error) {
-      throw new BadRequestException(
-        `Failed to save PDF file: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
-    }
-  }
-
-  /**
-   * Get the full URL for a stored PDF file
-   */
-  getFileUrl(subDirectory: string, fileName: string): string {
-    return `${this.baseUrl}/${subDirectory}/${fileName}`;
   }
 
   /**
@@ -136,53 +89,6 @@ export class PdfStorageService {
       }
       throw new BadRequestException(
         `Failed to get file size: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
-    }
-  }
-
-  /**
-   * Get storage directory path for a subdirectory
-   */
-  getStoragePath(subDirectory: string = 'reports'): string {
-    return path.join(this.baseStoragePath, subDirectory);
-  }
-
-  /**
-   * Get base storage path
-   */
-  getBaseStoragePath(): string {
-    return this.baseStoragePath;
-  }
-
-  /**
-   * Clean up old PDF files (older than specified days)
-   * Useful for maintenance
-   */
-  async cleanupOldFiles(olderThanDays: number = 30): Promise<number> {
-    try {
-      const cutoffTime = Date.now() - olderThanDays * 24 * 60 * 60 * 1000;
-      let deletedCount = 0;
-
-      const reportsDir = this.getStoragePath('reports');
-      if (!fs.existsSync(reportsDir)) {
-        return 0;
-      }
-
-      const files = fs.readdirSync(reportsDir);
-      for (const file of files) {
-        const filePath = path.join(reportsDir, file);
-        const stats = fs.statSync(filePath);
-
-        if (stats.mtimeMs < cutoffTime) {
-          fs.unlinkSync(filePath);
-          deletedCount++;
-        }
-      }
-
-      return deletedCount;
-    } catch (error) {
-      throw new BadRequestException(
-        `Failed to cleanup old files: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
     }
   }
