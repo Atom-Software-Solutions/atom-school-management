@@ -88,7 +88,7 @@ export class ClassroomsService {
   // Definitions
   async listDefinitions(schoolId: string, adminUserId: string) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
-    return (this.prisma as any).classroomDefinition.findMany({
+    return this.prisma.classroomDefinition.findMany({
       where: { school_id: schoolId, is_archived: false },
       orderBy: [{ ordinal: 'asc' }, { name: 'asc' }],
     });
@@ -112,7 +112,7 @@ export class ClassroomsService {
       );
     }
     try {
-      return await (this.prisma as any).classroomDefinition.create({
+      return await this.prisma.classroomDefinition.create({
         data: {
           school_id: schoolId,
           name: data.name.trim(),
@@ -137,7 +137,7 @@ export class ClassroomsService {
         });
         if (existing && existing.is_archived) {
           // Unarchive and update fields
-          return await (this.prisma as any).classroomDefinition.update({
+          return await this.prisma.classroomDefinition.update({
             where: { id: existing.id },
             data: {
               is_archived: false,
@@ -236,7 +236,7 @@ export class ClassroomsService {
     }
 
     try {
-      return await (this.prisma as any).classroomDefinition.update({
+      return await this.prisma.classroomDefinition.update({
         where: { id },
         data: updateData,
       });
@@ -257,7 +257,7 @@ export class ClassroomsService {
     if (definition.is_archived)
       throw new BadRequestException('Classroom definition already deleted');
 
-    return (this.prisma as any).classroomDefinition.update({
+    return this.prisma.classroomDefinition.update({
       where: { id },
       data: { is_archived: true },
     });
@@ -282,7 +282,7 @@ export class ClassroomsService {
       throw new ForbiddenException('Student not accessible for this school');
     }
 
-    const year = await (this.prisma as any).academicYear.findUnique({
+    const year = await this.prisma.academicYear.findUnique({
       where: { id: yearId },
     });
     if (!year) throw new NotFoundException('Academic year not found');
@@ -311,7 +311,7 @@ export class ClassroomsService {
     }
 
     // Ensure no active enrollment for this student in this academic year
-    const existing = await (this.prisma as any).studentEnrollment.findFirst({
+    const existing = await this.prisma.studentEnrollment.findFirst({
       where: {
         student_id: studentId,
         academic_year_id: yearId,
@@ -341,7 +341,7 @@ export class ClassroomsService {
         'Student cannot return to the same classroom in a later academic year',
       );
 
-    return (this.prisma as any).studentEnrollment.create({
+    return this.prisma.studentEnrollment.create({
       data: {
         student_id: studentId,
         classroom_definition_id: definitionId,
@@ -360,7 +360,7 @@ export class ClassroomsService {
     status: 'completed' | 'withdrawn' = 'completed',
   ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
-    const enr = await (this.prisma as any).studentEnrollment.findUnique({
+    const enr = await this.prisma.studentEnrollment.findUnique({
       where: { id: enrollmentId },
       include: { academic_year: true },
     });
@@ -372,7 +372,7 @@ export class ClassroomsService {
     if (enr.start_date && effectiveEndDate < enr.start_date) {
       throw new BadRequestException('endDate cannot be before startDate');
     }
-    return (this.prisma as any).studentEnrollment.update({
+    return this.prisma.studentEnrollment.update({
       where: { id: enrollmentId },
       data: { end_date: effectiveEndDate, status },
     });
@@ -385,13 +385,13 @@ export class ClassroomsService {
     schoolId: string,
   ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
-    const enr = await (this.prisma as any).studentEnrollment.findUnique({
+    const enr = await this.prisma.studentEnrollment.findUnique({
       where: { id: enrollmentId },
       include: { academic_year: true },
     });
     if (!enr || enr.academic_year.school_id !== schoolId)
       throw new ForbiddenException('Enrollment not accessible');
-    return (this.prisma as any).studentEnrollment.update({
+    return this.prisma.studentEnrollment.update({
       where: { id: enrollmentId },
       data: { status },
     });
@@ -404,7 +404,7 @@ export class ClassroomsService {
     reason?: string,
   ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
-    const enr = await (this.prisma as any).studentEnrollment.findUnique({
+    const enr = await this.prisma.studentEnrollment.findUnique({
       where: { id: enrollmentId },
       include: { academic_year: true },
     });
@@ -413,7 +413,7 @@ export class ClassroomsService {
     if (enr.deleted_at)
       throw new BadRequestException('Enrollment already deleted');
     const now = new Date();
-    return (this.prisma as any).studentEnrollment.update({
+    return this.prisma.studentEnrollment.update({
       where: { id: enrollmentId },
       data: {
         deleted_at: now,
@@ -438,7 +438,7 @@ export class ClassroomsService {
     }
 
     // Validate year and definition
-    const year = await (this.prisma as any).academicYear.findUnique({
+    const year = await this.prisma.academicYear.findUnique({
       where: { id: yearId },
     });
     if (!year) throw new NotFoundException('Academic year not found');
