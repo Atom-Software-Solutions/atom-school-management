@@ -47,4 +47,9 @@ export class UpdateSchoolDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @IsString()
+  @IsOptional()
+  @MinLength(3, { message: 'Motto must be at least 3 characters' })
+  motto?: string;
 }
