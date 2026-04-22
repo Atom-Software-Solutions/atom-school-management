@@ -76,6 +76,17 @@ export class ReportCardsService {
     });
     const dates = `${startDate} – ${endDate}`;
 
+    // Fetch actual subjects data for this student
+    const subjectsData = await this.fetchStudentSubjectsWithGrades(
+      student.id,
+      enrollment.classroom_definition_id,
+      yearId,
+      termId,
+    );
+
+    // Calculate summary statistics
+    const summary = this.calculateSummary(subjectsData);
+
     // Map to the structure expected by the frontend
     return {
       school: {
@@ -94,20 +105,8 @@ export class ReportCardsService {
         class: classroomName,
         stream: classroomName,
       },
-      subjects: [
-        { name: "Mathematics", score: 85, grade: "A", credits: 4, remarks: "Excellent" },
-        { name: "English", score: 78, grade: "B+", credits: 3, remarks: "Very Good" },
-        { name: "Biology", score: 65, grade: "C", credits: 3, remarks: "Good" },
-        { name: "History", score: 90, grade: "A+", credits: 2, remarks: "Outstanding" },
-      ],
-      summary: {
-        totalMarks: 318,
-        totalCredits: 12,
-        average: 79.5,
-        gpa: 4.2,
-        division: "I",
-        rank: 3,
-      },
+      subjects: subjectsData,
+      summary,
       attendance: { present: 85, absent: 5 },
       conduct: "Excellent",
       activities: "Football, Debate Club",
@@ -127,6 +126,174 @@ export class ReportCardsService {
         { label: "Div 3", range: "Aggregate 46–58", description: "Third Division" },
         { label: "Div 4", range: "Aggregate 59–72", description: "Fourth Division" },
       ],
+    };
+  }
+
+  /**
+   * Fetch all subjects with student grades for a specific classroom, year, and term
+   */
+  private async fetchStudentSubjectsWithGrades(
+    studentId: string,
+    classroomDefinitionId: string,
+    yearId: string,
+    termId: string,
+  ) {
+    // Get all assessments for this classroom, year, and term
+    const assessments = await (this.prisma as any).assessment.findMany({
+      where: {
+        classroom_definition_id: classroomDefinitionId,
+        academic_year_id: yearId,
+        term_template_item_id: termId,
+      },
+      include: {
+        subject: true,
+      },
+    });
+
+    if (!assessments || assessments.length === 0) {
+      return [];
+    }
+
+    // Group assessments by subject
+    const subjectMap = new Map<string, any>();
+    for (const assessment of assessments) {
+      const subjectId = assessment.subject_id;
+      if (!subjectMap.has(subjectId)) {
+        subjectMap.set(subjectId, {
+          subject: assessment.subject,
+          assessments: [],
+        });
+      }
+      subjectMap.get(subjectId).assessments.push(assessment);
+    }
+
+    // For each subject, fetch student grades and calculate weighted average
+    const subjects: any[] = [];
+    for (const [subjectId, data] of subjectMap) {
+      const subjectGrades = await (this.prisma as any).grade.findMany({
+        where: {
+          student_id: studentId,
+          subject_id: subjectId,
+          assessment: {
+            academic_year_id: yearId,
+            term_template_item_id: termId,
+          },
+        },
+        include: {
+          assessment: true,
+        },
+      });
+
+      if (subjectGrades.length > 0) {
+        // Calculate weighted average
+        const { weightedScore, totalWeight } = this.calculateWeightedAverage(
+          subjectGrades,
+        );
+        const average = totalWeight > 0 ? weightedScore / totalWeight : 0;
+        const roundedAverage = Math.round(average * 100) / 100;
+
+        subjects.push({
+          name: data.subject.name,
+          score: roundedAverage,
+          grade: this.calculateLetterGrade(roundedAverage),
+          credits: subjectGrades.length, // Number of assessments
+          remarks: this.getRemarkForScore(roundedAverage),
+        });
+      }
+    }
+
+    return subjects;
+  }
+
+  /**
+   * Calculate weighted average from grades
+   */
+  private calculateWeightedAverage(grades: any[]) {
+    let totalScore = 0;
+    let totalWeight = 0;
+
+    for (const grade of grades) {
+      const percentage = Number(grade.percentage) || 0;
+      const weight = Number(grade.assessment.weight) || 0;
+      totalScore += percentage * weight;
+      totalWeight += weight;
+    }
+
+    return { weightedScore: totalScore, totalWeight };
+  }
+
+  /**
+   * Calculate letter grade from percentage
+   */
+  private calculateLetterGrade(percentage: number): string {
+    if (percentage >= 90) return 'A+';
+    if (percentage >= 85) return 'A';
+    if (percentage >= 75) return 'B+';
+    if (percentage >= 70) return 'B';
+    if (percentage >= 60) return 'C';
+    if (percentage >= 50) return 'D';
+    return 'F';
+  }
+
+  /**
+   * Get remark based on score
+   */
+  private getRemarkForScore(score: number): string {
+    if (score >= 90) return 'Outstanding';
+    if (score >= 80) return 'Excellent';
+    if (score >= 75) return 'Very Good';
+    if (score >= 70) return 'Good';
+    if (score >= 60) return 'Credit';
+    if (score >= 50) return 'Pass';
+    return 'Fail';
+  }
+
+  /**
+   * Calculate summary statistics from subjects data
+   */
+  private calculateSummary(subjectsData: any[]) {
+    if (subjectsData.length === 0) {
+      return {
+        totalMarks: 0,
+        totalCredits: 0,
+        average: 0,
+        gpa: 0,
+        division: 'N/A',
+        rank: 0,
+      };
+    }
+
+    const totalMarks = subjectsData.reduce((sum, s) => sum + s.score, 0);
+    const average = totalMarks / subjectsData.length;
+    const totalCredits = subjectsData.reduce((sum, s) => sum + s.credits, 0);
+
+    // Calculate GPA (assuming 4-point scale: A+ = 4.0, A = 3.9, etc.)
+    const gpaValue = subjectsData.reduce((sum, s) => {
+      const gradePoints = {
+        'A+': 4.0,
+        'A': 3.9,
+        'B+': 3.7,
+        'B': 3.5,
+        'C': 3.0,
+        'D': 2.0,
+        'F': 0.0,
+      };
+      return sum + (gradePoints[s.grade] || 0);
+    }, 0) / subjectsData.length;
+
+    // Determine division based on average
+    let division = 'IV';
+    if (average >= 75) division = 'I';
+    else if (average >= 65) division = 'II';
+    else if (average >= 55) division = 'III';
+
+    return {
+      totalMarks: Math.round(totalMarks * 100) / 100,
+      totalCredits,
+      average: Math.round(average * 100) / 100,
+      gpa: Math.round(gpaValue * 100) / 100,
+      division,
+      rank: 'N/A', // Rank calculation requires comparing with all classmates
     };
   }
 }
