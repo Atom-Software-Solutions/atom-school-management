@@ -8,5 +8,6 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 @Module({
   controllers: [StudentsController],
   providers: [StudentsService, PrismaService, JwtAuthGuard, RolesGuard],
+  exports: [StudentsService],
 })
-export class StudentsModule {}
+export class StudentsModule { }

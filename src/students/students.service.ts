@@ -78,7 +78,7 @@ function parseDateDDMMYYYY(dateStr: string): Date | null {
 
 @Injectable()
 export class StudentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
   async verifyAdminOfSchool(schoolId: string, userId: string) {
     await this.assertIsAdminOfSchool(schoolId, userId);
   }
@@ -1335,6 +1335,20 @@ export class StudentsService {
       });
     }
     (student as any).guardians = guardians;
+    return student;
+  }
+
+  async findByIdentity(schoolId: string, identity: string, userId: string) {
+    await this.assertIsAdminOfSchool(schoolId, userId);
+
+    const student = await this.prisma.student.findFirst({
+      where: {
+        school_id: schoolId,
+        OR: [{ student_no: identity }, { reg_no: identity }],
+      },
+    });
+    if (!student) throw new NotFoundException('Student not found');
+
     return student;
   }
 }

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 // Import your SchoolsService (adjust the path as needed)
 import { SchoolsService } from '../schools/schools.service';
 import { AcademicsService } from './academics.service';
+import { StudentsService } from '../students/students.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -9,7 +10,9 @@ export class ReportCardsService {
   constructor(
     private readonly schoolsService: SchoolsService,
     private readonly academicsService: AcademicsService,
-  ) {}
+    private readonly studentsService: StudentsService,
+    private readonly prisma: PrismaService,
+  ) { }
 
   async getReportCardByIdentity(
     schoolId: string,
@@ -35,6 +38,30 @@ export class ReportCardsService {
     if (!term) {
       throw new NotFoundException('Term not found in the specified year');
     }
+
+    // Fetch the student
+    const student = await this.studentsService.findByIdentity(schoolId, identity, userId);
+    if (!student) {
+      throw new NotFoundException('Student not found');
+    }
+
+    // Fetch the student's enrollment for the year
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: {
+        student_id: student.id,
+        academic_year_id: yearId,
+        deleted_at: null,
+      },
+      include: {
+        classroom_definition: true,
+      },
+    });
+    if (!enrollment) {
+      throw new NotFoundException('Student not enrolled in the specified year');
+    }
+
+    // Parse class and stream from classroom name (assuming format "Class Stream")
+    const classroomName = enrollment.classroom_definition.name;
 
     // Format dates
     const startDate = new Date(year.start_date).toLocaleDateString('en-US', {
@@ -62,10 +89,10 @@ export class ReportCardsService {
         dates: dates,
       },
       student: {
-        name: "Jane Doe",
-        regNo: identity,
-        class: "S.2",
-        stream: "East",
+        name: `${student.first_name} ${student.last_name}`,
+        regNo: student.reg_no || identity,
+        class: classroomName,
+        stream: classroomName,
       },
       subjects: [
         { name: "Mathematics", score: 85, grade: "A", credits: 4, remarks: "Excellent" },

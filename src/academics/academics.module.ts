@@ -19,9 +19,10 @@ import { PdfGenerationService } from './pdf-generation.service';
 import { PdfStorageService } from './pdf-storage.service';
 import { ReportCardsService } from './report-cards.service';
 import { SchoolsModule } from '../schools/schools.module';
+import { StudentsModule } from '../students/students.module';
 
 @Module({
-  imports: [SchoolsModule],
+  imports: [SchoolsModule, StudentsModule],
   controllers: [
     TermTemplatesController,
     TermTemplatesLockController,
@@ -46,4 +47,4 @@ import { SchoolsModule } from '../schools/schools.module';
     ReportCardsService,
   ],
 })
-export class AcademicsModule {}
+export class AcademicsModule { }
