@@ -178,26 +178,48 @@ Core student information model.
 
 ---
 
-### GuardianStudent
-Many-to-many relationship between guardians and students.
+### Guardian
+Stores guardian (parent) information.
 
-| Field | Type | Constraints | Description |
-|-------|------|-------------|-------------|
-| guardian_id | UUID | Primary Key, Foreign Key → User.id | Guardian reference |
-| student_id | UUID | Primary Key, Foreign Key → Student.id | Student reference |
-| relationship | String | Optional | e.g., "Father", "Mother", "Guardian" |
-| is_primary | Boolean | Default: false | Primary guardian flag |
-| can_view_payments | Boolean | Default: true | Permission to view payment history |
-| can_make_payments | Boolean | Default: true | Permission to make payments |
-| created_at | DateTime | Auto | Record creation timestamp |
+| Field      | Type    | Constraints                | Description                  |
+|------------|---------|---------------------------|------------------------------|
+| id         | UUID    | Primary Key               | Unique identifier            |
+| first_name | String  | Required                  | Guardian's first name        |
+| last_name  | String  | Required                  | Guardian's last name         |
+| email      | String  | Unique, Optional          | Email address                |
+| phone      | String  | Unique, Optional          | Phone number                 |
+| created_at | DateTime| Auto                      | Record creation timestamp    |
+| updated_at | DateTime| Auto                      | Record update timestamp      |
+| school_id  | String  | Foreign Key → School.id   | Tenant link                  |
 
 **Indexes:**
-- `guardian_id`
-- `student_id`
-- `guardian_id + student_id` (composite primary key)
+- `school_id`
+- `email` (unique, partial)
+- `phone` (unique, partial)
 
 **Relations:**
-- Belongs to: User (guardian), Student
+- Has many: StudentGuardian (links to students)
+
+---
+
+### StudentGuardian
+Many-to-many relationship between guardians and students.
+
+| Field        | Type    | Constraints                        | Description                       |
+|--------------|---------|-------------------------------------|-----------------------------------|
+| id           | UUID    | Primary Key                        | Unique identifier                 |
+| student_id   | UUID    | Foreign Key → Student.id           | Student reference                 |
+| guardian_id  | UUID    | Foreign Key → Guardian.id          | Guardian reference                |
+| relation     | String  | Optional                           | e.g., "Father", "Mother", etc.    |
+| created_at   | DateTime| Auto                               | Record creation timestamp         |
+
+**Indexes:**
+- `student_id`
+- `guardian_id`
+- `student_id + guardian_id` (unique composite)
+
+**Relations:**
+- Belongs to: Student, Guardian
 
 ---
 
@@ -509,6 +531,10 @@ School (1) ──∞ (0..*) Notification
 School (1) ──∞ (0..*) AuditLog
 User (1) ──∞ (0..*) Notification
 User (1) ──∞ (0..*) AuditLog
+School (1) ──∞ (0..*) Guardian
+Guardian (1) ──∞ (0..*) StudentGuardian ∞── (1) Student
+Guardian (1) ──∞ (0..*) GuardianMessage
+Student (1) ──∞ (0..*) GuardianMessage
 ```
 
 ### Cascade Rules
@@ -517,6 +543,7 @@ User (1) ──∞ (0..*) AuditLog
 - Deleting Invoice → Cascade delete related Payments
 - Deleting Payment → Cascade delete Receipt
 - Deleting User → Set null on school_id where applicable
+- Deleting Guardian → Cascade delete related StudentGuardian and optionally GuardianMessage records
 
 ### Data Integrity Rules
 1. All tenant-scoped entities must have valid `school_id`
@@ -524,4 +551,6 @@ User (1) ──∞ (0..*) AuditLog
 3. Invoice status must be recalculated when payment is created/updated
 4. Receipt can only be generated for successful payments
 5. FeeStructure amount must be positive
+6. Every Guardian must be linked to at least one Student via StudentGuardian.
+7. GuardianMessage must reference a valid Guardian and School.
 

@@ -55,11 +55,46 @@ Legend:
 - [x] `DELETE /students/:id` - Archive student (soft delete) (School Admin only, tenant-scoped)
 - [x] `GET /students/:id/invoices` - Get student invoices (School Admin only, tenant-scoped)
 - [x] `GET /students/:id/payments` - Get student payment history (School Admin only, tenant-scoped)
-- [x] `POST /students/:id/guardians` - Add guardian to student (School Admin only, tenant-scoped)
 - [x] `GET /students/import/template` - Download .xlsx template (School Admin only)
 - [x] `POST /students/import/validate?schoolId=:schoolId` - Validate .xlsx data (School Admin only, tenant-scoped)
 
 ---
+
+## Guardian Management
+
+- [x] `POST /students/:id/guardians` - Add guardian to student (School Admin only, tenant-scoped)
+- [ ] `GET /students/:id/guardians` - List all guardians for a student
+- [ ] `DELETE /students/:id/guardians/:guardianId` - Remove guardian from student
+- [ ] `PATCH /students/:id/guardians/:guardianId` - Update guardian details for a student
+- [ ] `GET /guardians` - List all guardians (school-wide)
+- [ ] `GET /guardians/:id` - Get guardian profile/details
+- [ ] `POST /guardians` - Create a new guardian and link to students (payload must include a non-empty `students` array)
+  - Payload example:
+    ```json
+    {
+      "firstName": "string",
+      "lastName": "string",
+      "email": "string",
+      "phone": "string",
+      "students": ["studentId1", "studentId2"] // must be non-empty
+    }
+    ```
+- [ ] `PATCH /guardians/:id` - Update guardian profile
+- [ ] `DELETE /guardians/:id` - Archive/deactivate guardian
+
+---
+
+## Guardian Messaging & Notifications
+
+- [ ] `POST /guardians/:id/messages` - Send message (email/SMS/WhatsApp) to guardian
+- [ ] `POST /students/:id/guardians/messages` - Send message to all guardians of a student
+- [ ] `POST /guardians/bulk-messages` - Send message to multiple guardians (by filter or list)
+- [ ] `GET /guardians/:id/messages` - List all messages sent to a guardian
+- [ ] `GET /guardians/:id/messages/:messageId` - Get details/status of a specific message to guardian
+
+  - Messages can be academic (results, attendance, etc.) or general (fee reminders, announcements, etc.)
+  - Support for multiple channels: Email, SMS, WhatsApp (future)
+
 
 ## Academic Calendar
 
