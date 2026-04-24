@@ -60,6 +60,7 @@ export class SchoolsService {
         logo_url: createSchoolDto.logoUrl,
         currency: createSchoolDto.currency || 'UGX',
         time_zone: createSchoolDto.timeZone || 'Africa/Kampala',
+        motto: createSchoolDto.motto, // <-- Add this line
       },
     });
 
@@ -181,6 +182,8 @@ export class SchoolsService {
       updateData.time_zone = updateSchoolDto.timeZone;
     if (updateSchoolDto.isActive !== undefined)
       updateData.is_active = updateSchoolDto.isActive;
+    if (updateSchoolDto.motto !== undefined)
+      updateData.motto = updateSchoolDto.motto; // <-- Add this line
 
     return this.prisma.school.update({
       where: { id },

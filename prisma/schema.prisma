@@ -24,6 +24,7 @@ model School {
   settings   Json?
   deleted_at DateTime?
   domain     String
+  motto      String?
   admins     SchoolAdmin[]
   reportCards ReportCard[]
 

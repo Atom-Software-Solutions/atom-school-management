@@ -28,7 +28,7 @@ export class ReportCardsController {
   constructor(
     private readonly resultsService: ResultsService,
     private readonly pdfGenerationService: PdfGenerationService,
-  ) {}
+  ) { }
 
   @Post()
   generate(
@@ -130,28 +130,45 @@ export class ReportCardsController {
       const schoolName = reportCard.school?.name || 'School Report';
 
       const pdfData = {
-        schoolName,
-        studentName,
-        studentNumber: reportCard.student?.student_no || 'N/A',
-        academicYear: summary.academicYear?.name || 'N/A',
-        term: summary.term?.name || 'N/A',
-        termOrdinal: summary.term?.ordinal || 1,
-        overallAverage: summary.overallAverage,
-        overallLetterGrade: summary.overallLetterGrade,
-        totalSubjects: summary.totalSubjects,
-        rank: reportCard.rank ?? null,
-        totalStudents: reportCard.total_students ?? null,
-        remarks: reportCard.remarks ?? null,
+        school: {
+          name: schoolName,
+          contact: reportCard.school?.contact || '',
+          motto: reportCard.school?.motto || '',
+        },
+        term: {
+          name: summary.term?.name || 'N/A',
+          year: summary.academicYear?.name || 'N/A',
+          dates: summary.term?.dates || '',
+        },
+        student: {
+          name: studentName,
+          regNo: reportCard.student?.student_no || 'N/A',
+          class: reportCard.student?.class?.name || '',
+          stream: reportCard.student?.stream?.name || '',
+        },
         subjects: summary.subjects.map((s: any) => ({
           name: s.subject?.name || s.name,
-          code: s.subject?.code || s.code || '',
-          average: s.average,
-          letterGrade: s.letterGrade,
-          assessments: s.assessments,
+          score: s.average,
+          grade: s.letterGrade,
+          credits: s.credits,
+          remarks: s.remarks || '',
         })),
-        generatedDate: reportCard.generated_at ? new Date(reportCard.generated_at) : new Date(),
-        publishedDate: reportCard.published_at ? new Date(reportCard.published_at) : null,
-        status: reportCard.status,
+        summary: {
+          totalMarks: summary.totalMarks || 0,
+          totalCredits: summary.totalCredits,
+          average: summary.overallAverage,
+          gpa: summary.gpa,
+          division: summary.division,
+          rank: reportCard.rank,
+        },
+        attendance: reportCard.attendance,
+        conduct: reportCard.conduct,
+        activities: reportCard.activities,
+        comments: {
+          teacher: reportCard.remarks || '',
+          head: reportCard.head_remarks || '',
+        },
+        grading: summary.grading || [],
       };
 
       const pdfBuffer = await this.pdfGenerationService.generateReportCardPDF(pdfData);

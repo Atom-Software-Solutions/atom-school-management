@@ -113,4 +113,14 @@ export class CreateSchoolDto {
   @Transform(({ value }) => (value === '' ? undefined : value))
   @MinLength(3, { message: 'Time zone must be at least 3 characters' })
   timeZone?: string | undefined;
+
+  @ApiPropertyOptional({
+    description: 'School motto',
+    example: 'Knowledge is Power',
+  })
+  @IsString()
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @MinLength(3, { message: 'Motto must be at least 3 characters' })
+  motto?: string | undefined;
 }

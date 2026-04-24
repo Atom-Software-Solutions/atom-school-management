@@ -16,9 +16,12 @@ import { TermTemplatesLockController } from './term-templates-lock.controller';
 import { TermTemplatesController } from './term-templates.controller';
 import { YearsController } from './years.controller';
 import { PdfGenerationService } from './pdf-generation.service';
-import { PdfStorageService } from './pdf-storage.service';
+import { ReportCardsService } from './report-cards.service';
+import { SchoolsModule } from '../schools/schools.module';
+import { StudentsModule } from '../students/students.module';
 
 @Module({
+  imports: [SchoolsModule, StudentsModule],
   controllers: [
     TermTemplatesController,
     TermTemplatesLockController,
@@ -39,7 +42,7 @@ import { PdfStorageService } from './pdf-storage.service';
     JwtAuthGuard,
     RolesGuard,
     PdfGenerationService,
-    PdfStorageService,
+    ReportCardsService,
   ],
 })
-export class AcademicsModule {}
+export class AcademicsModule { }

@@ -3,16 +3,17 @@
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "resolvePackageJsonExports": true,
-    "target": "ES2023",
-    "outDir": "./dist",
-    "sourceMap": true,
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
+    "isolatedModules": true,
     "declaration": true,
     "removeComments": true,
-    "isolatedModules": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2023",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": true,
@@ -20,10 +21,13 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
-    "types": ["node", "jest"],
+    "jsx": "react",
     "paths": {
+      "@prisma/client": ["./generated/prisma"],
+      "@generated/prisma": ["./generated/prisma"],
       "@generated/*": ["./generated/*"]
-    }
+    },
+    "types": ["node", "jest"]
   },
   "include": ["src/**/*", "generated/**/*", "scripts/**/*"]
 }
