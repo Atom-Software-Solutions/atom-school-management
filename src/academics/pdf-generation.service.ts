@@ -1,8 +1,12 @@
+const isServerless = !!process.env.AWS_EXECUTION_ENV || !!process.env.VERCEL;
+const puppeteer = isServerless
+  ? require('puppeteer-core')
+  : require('puppeteer');
 import { Injectable } from '@nestjs/common';
-import * as puppeteer from 'puppeteer';
+import chromium from '@sparticuz/chromium';
 import * as React from 'react';
 import { renderToString } from 'react-dom/server';
-import ReportCard, { ReportCardData, ReportCardConfig } from './report-card.component';
+import ReportCard, { ReportCardConfig, ReportCardData } from './report-card.component';
 
 @Injectable()
 export class PdfGenerationService {
@@ -48,28 +52,34 @@ export class PdfGenerationService {
       </html>
     `;
 
-    // Launch Puppeteer and generate PDF
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    const launchOptions = isServerless
+      ? {
+        args: chromium.args,
+        defaultViewport: { width: 1280, height: 800 },
+        executablePath: await chromium.executablePath(),
+        headless: true,
+      }
+      : {
+        defaultViewport: { width: 1280, height: 800 },
+        headless: true,
+      };
+
+    const browser = await puppeteer.launch(launchOptions);
+
+    const page = await browser.newPage();
+    await page.setContent(fullHtml, { waitUntil: 'networkidle0' });
+    const pdfBuffer = await page.pdf({
+      printBackground: true,
+      preferCSSPageSize: true,
+      margin: {
+        top: '0',
+        right: '0',
+        bottom: '0',
+        left: '0',
+      },
     });
 
-    try {
-      const page = await browser.newPage();
-      await page.setContent(fullHtml, { waitUntil: 'networkidle0' });
-      const pdfBuffer = await page.pdf({
-        printBackground: true,
-        preferCSSPageSize: true,
-        margin: {
-          top: '0',
-          right: '0',
-          bottom: '0',
-          left: '0',
-        },
-      });
-      return Buffer.from(pdfBuffer);
-    } finally {
-      await browser.close();
-    }
+    await browser.close();
+    return Buffer.from(pdfBuffer);
   }
 }
