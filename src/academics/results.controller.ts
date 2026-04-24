@@ -5,15 +5,14 @@ import {
   Param,
   Query,
   Req,
-  UseGuards,
-  Response,
+  StreamableFile,
+  UseGuards
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
-import { ResultsService } from './results.service';
-import { ReportCardsService } from './report-cards.service';
 import { PdfGenerationService } from './pdf-generation.service';
-import type { Response as ExpressResponse } from 'express';
+import { ReportCardsService } from './report-cards.service';
+import { ResultsService } from './results.service';
 
 @Controller('schools/:schoolId/results')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -92,7 +91,6 @@ export class ResultsController {
     @Query('yearId') yearId: string,
     @Query('termId') termId: string,
     @Req() req: any,
-    @Response() res: ExpressResponse,
   ) {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
@@ -117,11 +115,11 @@ export class ResultsController {
     const safeStudentName = reportCardData.student.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_-]/g, '');
     const fileName = `report-card-${safeStudentName}.pdf`;
 
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    res.setHeader('Content-Length', pdfBuffer.length);
-
-    res.send(pdfBuffer);
+    return new StreamableFile(pdfBuffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+      length: pdfBuffer.length,
+    });
   }
 
   /**
