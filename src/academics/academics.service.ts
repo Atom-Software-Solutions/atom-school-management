@@ -8,7 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class AcademicsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   private async assertIsAdminOfSchool(schoolId: string, userId: string) {
     const rel = await this.prisma.schoolAdmin.findUnique({
@@ -197,9 +197,7 @@ export class AcademicsService {
       this.validateTermStructure(data.structure);
 
       // Load existing items to validate against (locked templates must preserve ordinals)
-      const existingItems = await (
-        this.prisma as any
-      ).termTemplateItem.findMany({
+      const existingItems = await this.prisma.termTemplateItem.findMany({
         where: { term_template_id: tpl.id },
         orderBy: { ordinal: 'asc' },
       });
@@ -452,7 +450,7 @@ export class AcademicsService {
   }
 
   async getTerm(termId: string, adminUserId: string) {
-    const term = await (this.prisma as any).termTemplateItem.findUnique({
+    const term = await this.prisma.termTemplateItem.findUnique({
       where: { id: termId },
       include: {
         term_template: {

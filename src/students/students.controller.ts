@@ -99,7 +99,7 @@ function parseDateDDMMYYYY(dateStr: string): Date | null {
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('SCHOOL_ADMIN')
 export class StudentsController {
-  constructor(private readonly studentsService: StudentsService) {}
+  constructor(private readonly studentsService: StudentsService) { }
 
   private resolveTenantSchoolId(
     req: AuthenticatedRequest,
@@ -122,7 +122,7 @@ export class StudentsController {
     @Query('schoolId') schoolId: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    const adminUserId = (req as any).user?.id as string;
+    const adminUserId = req.user?.id as string;
     if (!schoolId || typeof schoolId !== 'string' || schoolId.trim() === '') {
       throw new BadRequestException(
         'Missing required query parameter: schoolId',
@@ -136,7 +136,7 @@ export class StudentsController {
     @Query('schoolId') schoolId: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    const adminUserId = (req as any).user?.id as string;
+    const adminUserId = req.user?.id as string;
     if (!schoolId || typeof schoolId !== 'string' || schoolId.trim() === '') {
       throw new BadRequestException(
         'Missing required query parameter: schoolId',
@@ -158,7 +158,7 @@ export class StudentsController {
     @Body() body: CreateStudentDto,
     @Request() req: AuthenticatedRequest,
   ) {
-    const adminUserId = (req as any).user?.id as string;
+    const adminUserId = req.user?.id as string;
     if (!schoolId || schoolId.trim() === '') {
       throw new BadRequestException(
         'Missing required query parameter: schoolId',
@@ -218,7 +218,7 @@ export class StudentsController {
 
   @Get(':id')
   getOne(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
-    const adminUserId = (req as any).user?.id as string;
+    const adminUserId = req.user?.id as string;
     return this.studentsService.getOne(id, adminUserId);
   }
 
@@ -235,7 +235,7 @@ export class StudentsController {
     @Body() body: UpdateStudentDto,
     @Request() req: AuthenticatedRequest,
   ) {
-    const adminUserId = (req as any).user?.id as string;
+    const adminUserId = req.user?.id as string;
     if (body?.phone !== undefined && body.phone !== null) {
       const phone = body.phone.toString().trim();
       if (phone !== '' && !/^\+?\d{10,}$/.test(phone)) {
@@ -270,7 +270,7 @@ export class StudentsController {
     @Body() body: { studentNo?: string; regNo?: string },
     @Request() req: AuthenticatedRequest,
   ) {
-    const adminUserId = (req as any).user?.id as string;
+    const adminUserId = req.user?.id as string;
     const studentNo = body?.studentNo?.toString().trim();
     const regNo = body?.regNo?.toString().trim();
     if (!studentNo && !regNo) {
@@ -284,19 +284,19 @@ export class StudentsController {
 
   @Delete(':id')
   remove(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
-    const adminUserId = (req as any).user?.id as string;
+    const adminUserId = req.user?.id as string;
     return this.studentsService.remove(id, adminUserId);
   }
 
   @Get(':id/invoices')
   listInvoices(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
-    const adminUserId = (req as any).user?.id as string;
+    const adminUserId = req.user?.id as string;
     return this.studentsService.listInvoices(id, adminUserId);
   }
 
   @Get(':id/payments')
   listPayments(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
-    const adminUserId = (req as any).user?.id as string;
+    const adminUserId = req.user?.id as string;
     return this.studentsService.listPayments(id, adminUserId);
   }
 
@@ -313,7 +313,7 @@ export class StudentsController {
     },
     @Request() req: AuthenticatedRequest,
   ) {
-    const adminUserId = (req as any).user?.id as string;
+    const adminUserId = req.user?.id as string;
     return this.studentsService.addGuardian(id, adminUserId, body);
   }
 
@@ -338,7 +338,7 @@ export class StudentsController {
     @UploadedFile() file: any,
     @Request() req: AuthenticatedRequest,
   ) {
-    const adminUserId = (req as any).user?.id as string;
+    const adminUserId = req.user?.id as string;
     if (!schoolId || schoolId.trim() === '') {
       throw new BadRequestException(
         'Missing required query parameter: schoolId',
@@ -386,7 +386,7 @@ export class StudentsController {
   }
 
   @Post(':id/promote')
-  promote(
+  async promote(
     @Param('id') id: string,
     @Query('schoolId') schoolId: string,
     @Body()
@@ -399,13 +399,14 @@ export class StudentsController {
     },
     @Request() req: AuthenticatedRequest,
   ) {
-    const adminUserId = (req as any).user?.id as string;
+    const adminUserId = req.user?.id as string;
     const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
     if (!body?.fromEnrollmentId || !body?.toYearId || !body?.toDefinitionId)
       throw new BadRequestException(
         'Missing fromEnrollmentId/toYearId/toDefinitionId',
       );
-    return this.studentsService.promoteStudent(
+    // Move ordinal check to service layer
+    return this.studentsService.promoteStudentWithOrdinalCheck(
       id,
       adminUserId,
       tenantSchoolId,
@@ -434,7 +435,7 @@ export class StudentsController {
     },
     @Request() req: AuthenticatedRequest,
   ) {
-    const adminUserId = (req as any).user?.id as string;
+    const adminUserId = req.user?.id as string;
     const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
     if (!body?.fromEnrollmentId || !body?.toYearId || !body?.toDefinitionId)
       throw new BadRequestException(
@@ -458,7 +459,7 @@ export class StudentsController {
     @Query('includeInactive') includeInactive: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    const adminUserId = (req as any).user?.id as string;
+    const adminUserId = req.user?.id as string;
     const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
     const includeInactiveBool = includeInactive === 'true';
     return this.studentsService.getEnrollmentHistory(
@@ -478,7 +479,7 @@ export class StudentsController {
     @Query('academicYearId') academicYearId: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    const adminUserId = (req as any).user?.id as string;
+    const adminUserId = req.user?.id as string;
     const tenantSchoolId = this.resolveTenantSchoolId(req, schoolId);
     if (!academicYearId || academicYearId.trim() === '') {
       throw new BadRequestException(

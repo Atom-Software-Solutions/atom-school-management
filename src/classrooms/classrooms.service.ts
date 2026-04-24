@@ -1,9 +1,9 @@
 import {
-  Injectable,
-  ForbiddenException,
   BadRequestException,
-  NotFoundException,
+  ForbiddenException,
+  Injectable,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -11,7 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 export class ClassroomsService {
   private readonly logger = new Logger(ClassroomsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   private async assertIsAdminOfSchool(schoolId: string, userId: string) {
     let normalizedSchoolId = (schoolId ?? '').trim();
@@ -101,9 +101,7 @@ export class ClassroomsService {
   ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
     // Ensure ordinal is unique within the school (ignore archived definitions)
-    const existingOrdinal = await (
-      this.prisma as any
-    ).classroomDefinition.findFirst({
+    const existingOrdinal = await this.prisma.classroomDefinition.findFirst({
       where: { school_id: schoolId, ordinal: data.ordinal, is_archived: false },
     });
     if (existingOrdinal) {
@@ -128,9 +126,7 @@ export class ClassroomsService {
         e.meta.target.includes('name')
       ) {
         // Find the existing definition by name
-        const existing = await (
-          this.prisma as any
-        ).classroomDefinition.findUnique({
+        const existing = await this.prisma.classroomDefinition.findUnique({
           where: {
             school_id_name: { school_id: schoolId, name: data.name.trim() },
           },
@@ -152,9 +148,7 @@ export class ClassroomsService {
   }
 
   async getDefinitionById(id: string, adminUserId: string) {
-    const definition = await (
-      this.prisma as any
-    ).classroomDefinition.findUnique({ where: { id } });
+    const definition = await this.prisma.classroomDefinition.findUnique({ where: { id } });
     if (!definition)
       throw new NotFoundException('Classroom definition not found');
 
@@ -173,9 +167,7 @@ export class ClassroomsService {
       ordinal?: number;
     },
   ) {
-    const definition = await (
-      this.prisma as any
-    ).classroomDefinition.findUnique({ where: { id } });
+    const definition = await this.prisma.classroomDefinition.findUnique({ where: { id } });
     if (!definition)
       throw new NotFoundException('Classroom definition not found');
 
@@ -185,9 +177,7 @@ export class ClassroomsService {
     if (data.name !== undefined) {
       // Check for duplicate name if name is changing
       if (data.name.trim() !== definition.name) {
-        const existing = await (
-          this.prisma as any
-        ).classroomDefinition.findUnique({
+        const existing = await this.prisma.classroomDefinition.findUnique({
           where: {
             school_id_name: {
               school_id: definition.school_id,
@@ -209,9 +199,7 @@ export class ClassroomsService {
     if (data.ordinal !== undefined) {
       // If ordinal is changing, ensure no other (non-archived) definition in the same school uses it
       if (data.ordinal !== definition.ordinal) {
-        const conflict = await (
-          this.prisma as any
-        ).classroomDefinition.findFirst({
+        const conflict = await this.prisma.classroomDefinition.findFirst({
           where: {
             school_id: definition.school_id,
             ordinal: data.ordinal,
@@ -246,9 +234,7 @@ export class ClassroomsService {
   }
 
   async deleteDefinitionById(id: string, adminUserId: string) {
-    const definition = await (
-      this.prisma as any
-    ).classroomDefinition.findUnique({ where: { id } });
+    const definition = await this.prisma.classroomDefinition.findUnique({ where: { id } });
     if (!definition)
       throw new NotFoundException('Classroom definition not found');
 
@@ -289,9 +275,7 @@ export class ClassroomsService {
     if (year.school_id !== schoolId)
       throw new ForbiddenException('Academic year not accessible');
 
-    const definition = await (
-      this.prisma as any
-    ).classroomDefinition.findUnique({ where: { id: definitionId } });
+    const definition = await this.prisma.classroomDefinition.findUnique({ where: { id: definitionId } });
     if (!definition || definition.school_id !== year.school_id)
       throw new ForbiddenException('Classroom definition not accessible');
     if (definition.is_archived)
@@ -325,9 +309,7 @@ export class ClassroomsService {
       );
 
     // Disallow returning to same classroom definition in later years
-    const priorSameClass = await (
-      this.prisma as any
-    ).studentEnrollment.findFirst({
+    const priorSameClass = await this.prisma.studentEnrollment.findFirst({
       where: {
         student_id: studentId,
         status: { in: ['completed'] },
@@ -445,9 +427,7 @@ export class ClassroomsService {
     if (year.school_id !== schoolId)
       throw new ForbiddenException('Academic year not accessible');
 
-    const definition = await (
-      this.prisma as any
-    ).classroomDefinition.findUnique({ where: { id: definitionId } });
+    const definition = await this.prisma.classroomDefinition.findUnique({ where: { id: definitionId } });
     if (!definition || definition.school_id !== year.school_id)
       throw new ForbiddenException('Classroom definition not accessible');
     if (definition.is_archived)
@@ -471,9 +451,7 @@ export class ClassroomsService {
     }
 
     // Check for existing active enrollments
-    const existingEnrollments = await (
-      this.prisma as any
-    ).studentEnrollment.findMany({
+    const existingEnrollments = await this.prisma.studentEnrollment.findMany({
       where: {
         student_id: { in: studentIds },
         academic_year_id: academicYearId,
@@ -492,9 +470,7 @@ export class ClassroomsService {
     }
 
     // Check for returning to same classroom definition in later years
-    const priorSameClassEnrollments = await (
-      this.prisma as any
-    ).studentEnrollment.findMany({
+    const priorSameClassEnrollments = await this.prisma.studentEnrollment.findMany({
       where: {
         student_id: { in: studentIds },
         status: { in: ['completed'] },

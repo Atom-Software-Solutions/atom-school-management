@@ -5,8 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as XLSX from 'xlsx';
-import { PrismaService } from '../prisma/prisma.service';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { PrismaService } from '../prisma/prisma.service';
 
 // File validation constants
 const MAX_FILE_SIZE = parseInt(process.env.MAX_IMPORT_FILE_SIZE || '5242880'); // 5MB default
@@ -1018,6 +1018,50 @@ export class StudentsService {
       });
       return { promotedFrom: closed, promotedTo: opened };
     });
+  }
+
+  async promoteStudentWithOrdinalCheck(
+    studentId: string,
+    adminUserId: string,
+    schoolId: string,
+    params: {
+      fromEnrollmentId: string;
+      toYearId: string;
+      toDefinitionId: string;
+      actionDate?: Date;
+      narration?: string;
+    },
+  ) {
+    const student = await this.findOwned(studentId, adminUserId);
+    if (student.school_id !== schoolId)
+      throw new ForbiddenException('Student not accessible');
+
+    // Fetch current enrollment and classroom definitions
+    const fromEnrollment = await this.prisma.studentEnrollment.findUnique({
+      where: { id: params.fromEnrollmentId },
+      include: { classroom_definition: true, academic_year: true },
+    });
+    if (!fromEnrollment || fromEnrollment.student_id !== student.id)
+      throw new BadRequestException('Invalid fromEnrollmentId');
+    if (fromEnrollment.end_date)
+      throw new BadRequestException('Enrollment already closed');
+
+    const toDefinition = await this.prisma.classroomDefinition.findUnique({
+      where: { id: params.toDefinitionId },
+    });
+    if (!toDefinition || toDefinition.school_id !== schoolId)
+      throw new ForbiddenException('Target classroom definition not accessible');
+
+    const currentOrdinal = fromEnrollment.classroom_definition.ordinal;
+    const nextOrdinal = toDefinition.ordinal;
+    if (nextOrdinal !== currentOrdinal + 1) {
+      throw new BadRequestException(
+        `Student can only be promoted to the next class in sequence (ordinal ${currentOrdinal + 1})`,
+      );
+    }
+
+    // Delegate to main promotion logic
+    return this.promoteStudent(studentId, adminUserId, schoolId, params);
   }
 
   async retainStudent(
