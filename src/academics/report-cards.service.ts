@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 // Import your SchoolsService (adjust the path as needed)
-import { SchoolsService } from '../schools/schools.service';
-import { AcademicsService } from './academics.service';
-import { StudentsService } from '../students/students.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { SchoolsService } from '../schools/schools.service';
+import { StudentsService } from '../students/students.service';
+import { AcademicsService } from './academics.service';
 
 @Injectable()
 export class ReportCardsService {
@@ -139,7 +139,7 @@ export class ReportCardsService {
     termId: string,
   ) {
     // Get all assessments for this classroom, year, and term
-    const assessments = await (this.prisma as any).assessment.findMany({
+    const assessments = await this.prisma.assessment.findMany({
       where: {
         classroom_definition_id: classroomDefinitionId,
         academic_year_id: yearId,
@@ -170,7 +170,7 @@ export class ReportCardsService {
     // For each subject, fetch student grades and calculate weighted average
     const subjects: any[] = [];
     for (const [subjectId, data] of subjectMap) {
-      const subjectGrades = await (this.prisma as any).grade.findMany({
+      const subjectGrades = await this.prisma.grade.findMany({
         where: {
           student_id: studentId,
           subject_id: subjectId,

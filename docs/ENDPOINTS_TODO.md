@@ -95,6 +95,7 @@ Legend:
 - [x] `GET /students/:studentId/enrollments/history` - Enrollment history for student
 - [x] `POST /students/:studentId/promote` - Promote to next-year classroom definition (creates a pending placement; student must be actively enrolled to be eligible to take the class; cannot promote to the same classroom definition)
 - [x] `POST /students/:studentId/retain` - Retain student (enroll into an allowed alternative; narration later)
+- [ ] `POST /students/:studentId/promote-class` - Promote student from one class to another (if not already covered by `/students/:studentId/promote`)
 
 ---
 
@@ -161,6 +162,7 @@ Legend:
 - [ ] `GET /payments/:id/receipt` - Fetch or generate payment receipt
 - [ ] `POST /payments/:id/receipt` - Generate receipt for successful payment
 - [ ] `GET /payments/stats` - Get payment statistics
+- [ ] `PATCH /payments/:id/reverse` - Reverse a payment (NEW)
 
 ---
 
@@ -170,6 +172,7 @@ Legend:
 - [ ] `POST /notifications/send` - Send notification (SMS, Email, or InApp)
 - [ ] `GET /notifications/:id` - View notification details
 - [ ] `PATCH /notifications/:id/read` - Mark notification as read
+- [ ] `DELETE /notifications/:id` - Delete notification (NEW)
 
 ---
 
@@ -179,6 +182,8 @@ Legend:
 - [ ] `GET /reports/school/:id` - Get school-specific analytics (Super Admin)
 - [ ] `GET /reports/student/:id` - Get student-level fee report
 - [ ] `GET /reports/download` - Export reports in CSV or PDF format
+- [ ] `GET /reports/attendance` - Attendance analytics (NEW)
+- [ ] `GET /reports/performance` - Academic performance analytics (NEW)
 
 ---
 
@@ -189,6 +194,7 @@ Legend:
 - [ ] `PATCH /integrations/channels/:id` - Update payment channel configuration
 - [ ] `DELETE /integrations/channels/:id` - Remove payment channel integration
 - [ ] `POST /integrations/webhooks` - Register callback URL for payment gateway
+- [ ] `GET /integrations/webhooks` - List registered webhooks (NEW)
 
 ---
 
@@ -198,6 +204,8 @@ Legend:
 - [ ] `GET /admin/usage` - Resource usage per tenant
 - [ ] `GET /admin/logs` - Audit logs
 - [ ] `GET /admin/errors` - Error tracking list
+- [ ] `POST /admin/impersonate/:userId` - Impersonate user (NEW)
+- [ ] `GET /admin/roles` - List all roles (NEW)
 
 ---
 
@@ -210,11 +218,11 @@ Legend:
 
 ## Summary
 
-- **Total Endpoints**: 110
-- **Implemented**: 84
+- **Total Endpoints**: 122
+- **Implemented**: 88
 - **In Progress**: 0
-- **Not Implemented**: 26
-- **Completion**: 76.4%
+- **Not Implemented**: 34
+- **Completion**: 72.1%
 
 ---
 

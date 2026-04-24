@@ -7,7 +7,6 @@ import {
 } from '@nestjs/common';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { PrismaService } from '../prisma/prisma.service';
-import { PdfGenerationService } from './pdf-generation.service';
 import { BulkCreateGradesDto } from './dto/bulk-create-grades.dto';
 import { CreateAssessmentDto } from './dto/create-assessment.dto';
 import { CreateGradeDto } from './dto/create-grade.dto';
@@ -16,6 +15,7 @@ import { GenerateReportCardDto } from './dto/generate-report-card.dto';
 import { UpdateAssessmentDto } from './dto/update-assessment.dto';
 import { UpdateGradeDto } from './dto/update-grade.dto';
 import { UpdateSubjectDto } from './dto/update-subject.dto';
+import { PdfGenerationService } from './pdf-generation.service';
 
 @Injectable()
 export class ResultsService {
@@ -24,7 +24,7 @@ export class ResultsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly pdfGenerationService: PdfGenerationService,
-  ) {}
+  ) { }
 
   private async assertIsAdminOfSchool(schoolId: string, userId: string) {
     const rel = await this.prisma.schoolAdmin.findUnique({
@@ -432,9 +432,7 @@ export class ResultsService {
     }
 
     // Verify classroom definition exists and belongs to school
-    const classroomDef = await (
-      this.prisma as any
-    ).classroomDefinition.findUnique({
+    const classroomDef = await this.prisma.classroomDefinition.findUnique({
       where: { id: (data as any).classroomDefinitionId },
     });
     if (!classroomDef)
@@ -1163,7 +1161,7 @@ export class ResultsService {
     const overallAverageRaw =
       subjectResults.length > 0
         ? subjectResults.reduce((sum, subj) => sum + subj.average, 0) /
-          subjectResults.length
+        subjectResults.length
         : 0;
     console.log('subjectResults.length', subjectResults.length);
     const overallAverage = Number(overallAverageRaw.toFixed(2));
@@ -1317,9 +1315,7 @@ export class ResultsService {
 
           if (enrollment) {
             // Get all active enrollments in the same classroom definition
-            const classmates = await (
-              this.prisma as any
-            ).studentEnrollment.findMany({
+            const classmates = await this.prisma.studentEnrollment.findMany({
               where: {
                 classroom_definition_id: enrollment.classroom_definition_id,
                 academic_year_id: data.academicYearId,
@@ -1596,7 +1592,7 @@ export class ResultsService {
     const overallAverageRaw =
       subjectResults.length > 0
         ? subjectResults.reduce((sum, subj) => sum + subj.average, 0) /
-          subjectResults.length
+        subjectResults.length
         : 0;
     const overallAverage = Number(overallAverageRaw.toFixed(2));
     const overallLetterGrade =
@@ -1723,7 +1719,7 @@ export class ResultsService {
       const overallAverageRaw =
         subjectResults.length > 0
           ? subjectResults.reduce((sum, subj) => sum + subj.average, 0) /
-            subjectResults.length
+          subjectResults.length
           : 0;
       const overallAverage = Number(overallAverageRaw.toFixed(2));
       return {
