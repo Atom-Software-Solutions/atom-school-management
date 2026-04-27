@@ -15,6 +15,83 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
 import { GuardiansService } from './guardians.service';
+import { IsArray, IsEmail, IsNotEmpty, IsOptional, IsString, ValidateNested, ArrayMinSize } from 'class-validator';
+import { Type } from 'class-transformer';
+
+// DTOs
+class StudentRelationDto {
+    @IsString()
+    @IsNotEmpty()
+    id: string;
+
+    @IsOptional()
+    @IsString()
+    relation?: string;
+}
+
+class CreateGuardianDto {
+    @IsString()
+    @IsNotEmpty()
+    firstName: string;
+
+    @IsString()
+    @IsNotEmpty()
+    lastName: string;
+
+    @IsOptional()
+    @IsEmail()
+    email?: string;
+
+    @IsOptional()
+    @IsString()
+    phone?: string;
+
+    @IsArray()
+    @ArrayMinSize(1, { message: 'students array must be non-empty' })
+    @ValidateNested({ each: true })
+    @Type(() => StudentRelationDto)
+    students: StudentRelationDto[];
+}
+
+class UpdateGuardianDto {
+    @IsOptional()
+    @IsString()
+    firstName?: string;
+
+    @IsOptional()
+    @IsString()
+    lastName?: string;
+
+    @IsOptional()
+    @IsEmail()
+    email?: string;
+
+    @IsOptional()
+    @IsString()
+    phone?: string;
+}
+
+class AddGuardianToStudentDto {
+    @IsString()
+    @IsNotEmpty()
+    firstName: string;
+
+    @IsString()
+    @IsNotEmpty()
+    lastName: string;
+
+    @IsOptional()
+    @IsEmail()
+    email?: string;
+
+    @IsOptional()
+    @IsString()
+    phone?: string;
+
+    @IsOptional()
+    @IsString()
+    relation?: string;
+}
 
 @Controller('guardians')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -31,7 +108,12 @@ export class GuardiansController {
         if (!schoolId || typeof schoolId !== 'string' || schoolId.trim() === '') {
             throw new BadRequestException('Missing required query parameter: schoolId');
         }
-        return this.guardiansService.listAll(schoolId, adminUserId);
+        try {
+            return await this.guardiansService.listAll(schoolId, adminUserId);
+        } catch (err) {
+            console.error('List Guardians Error:', err);
+            throw new BadRequestException('Failed to fetch guardians.');
+        }
     }
 
     @Get(':id')
@@ -40,42 +122,41 @@ export class GuardiansController {
         @Request() req: AuthenticatedRequest,
     ) {
         const adminUserId = req.user?.id as string;
-        return this.guardiansService.getOne(id, adminUserId);
+        try {
+            return await this.guardiansService.getOne(id, adminUserId);
+        } catch (err) {
+            console.error('Get Guardian Error:', err);
+            throw new BadRequestException('Failed to fetch guardian.');
+        }
     }
 
     @Post()
     async create(
-        @Body()
-        body: {
-            firstName: string;
-            lastName: string;
-            email?: string;
-            phone?: string;
-            students: { id: string; relation?: string }[];
-        },
+        @Body() body: CreateGuardianDto,
         @Request() req: AuthenticatedRequest,
     ) {
         const adminUserId = req.user?.id as string;
-        if (!Array.isArray(body.students) || body.students.length === 0) {
-            throw new BadRequestException('students array must be non-empty');
+        try {
+            return await this.guardiansService.create(body, adminUserId);
+        } catch (err) {
+            console.error('Create Guardian Error:', err);
+            throw new BadRequestException('Failed to create guardian. Please check your input and try again.');
         }
-        return this.guardiansService.create(body, adminUserId);
     }
 
     @Patch(':id')
     async update(
         @Param('id') id: string,
-        @Body()
-        body: {
-            firstName?: string;
-            lastName?: string;
-            email?: string;
-            phone?: string;
-        },
+        @Body() body: UpdateGuardianDto,
         @Request() req: AuthenticatedRequest,
     ) {
         const adminUserId = req.user?.id as string;
-        return this.guardiansService.update(id, body, adminUserId);
+        try {
+            return await this.guardiansService.update(id, body, adminUserId);
+        } catch (err) {
+            console.error('Update Guardian Error:', err);
+            throw new BadRequestException('Failed to update guardian. Please check your input and try again.');
+        }
     }
 
     @Delete(':id')
@@ -84,23 +165,26 @@ export class GuardiansController {
         @Request() req: AuthenticatedRequest,
     ) {
         const adminUserId = req.user?.id as string;
-        return this.guardiansService.archive(id, adminUserId);
+        try {
+            return await this.guardiansService.archive(id, adminUserId);
+        } catch (err) {
+            console.error('Delete Guardian Error:', err);
+            throw new BadRequestException('Failed to delete guardian.');
+        }
     }
 
     @Post('/students/:id/guardians')
     async addGuardian(
         @Param('id') id: string,
-        @Body()
-        body: {
-            firstName: string;
-            lastName: string;
-            email?: string;
-            phone?: string;
-            relation?: string;
-        },
+        @Body() body: AddGuardianToStudentDto,
         @Request() req: AuthenticatedRequest,
     ) {
         const adminUserId = req.user?.id as string;
-        return this.guardiansService.addGuardianToStudent(id, adminUserId, body);
+        try {
+            return await this.guardiansService.addGuardianToStudent(id, adminUserId, body);
+        } catch (err) {
+            console.error('Add Guardian To Student Error:', err);
+            throw new BadRequestException('Failed to add guardian to student. Please check your input and try again.');
+        }
     }
 }
