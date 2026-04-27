@@ -109,8 +109,8 @@ model Guardian {
   id         String            @id @default(uuid())
   first_name String
   last_name  String
-  email      String?           @unique
-  phone      String?           @unique
+  email      String?
+  phone      String?
   created_at DateTime          @default(now())
   updated_at DateTime          @updatedAt
   school_id  String
