@@ -96,7 +96,7 @@ model Student {
   enrollments   StudentEnrollment[]
   grades        Grade[]
   reportCards   ReportCard[]
-  guardianMessages GuardianMessage[] // <-- Add this line
+  guardianMessages GuardianMessage[]
 
   @@unique([school_id, first_name, last_name, date_of_birth])
   @@unique([school_id, student_no])

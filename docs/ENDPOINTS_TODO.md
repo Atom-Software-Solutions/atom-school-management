@@ -66,9 +66,9 @@ Legend:
 - [ ] `GET /students/:id/guardians` - List all guardians for a student
 - [ ] `DELETE /students/:id/guardians/:guardianId` - Remove guardian from student
 - [ ] `PATCH /students/:id/guardians/:guardianId` - Update guardian details for a student
-- [ ] `GET /guardians` - List all guardians (school-wide)
-- [ ] `GET /guardians/:id` - Get guardian profile/details
-- [ ] `POST /guardians` - Create a new guardian and link to students (payload must include a non-empty `students` array)
+- [x] `GET /guardians` - List all guardians (school-wide)
+- [x] `GET /guardians/:id` - Get guardian profile/details
+- [x] `POST /guardians` - Create a new guardian and link to student(s)
   - Payload example:
     ```json
     {
@@ -79,8 +79,8 @@ Legend:
       "students": ["studentId1", "studentId2"] // must be non-empty
     }
     ```
-- [ ] `PATCH /guardians/:id` - Update guardian profile
-- [ ] `DELETE /guardians/:id` - Archive/deactivate guardian
+- [x] `PATCH /guardians/:id` - Update guardian profile
+- [x] `DELETE /guardians/:id` - Archive/deactivate guardian
 
 ---
 
