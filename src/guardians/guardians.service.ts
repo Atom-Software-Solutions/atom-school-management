@@ -71,7 +71,7 @@ export class GuardiansService {
             lastName: string;
             email?: string;
             phone?: string;
-            students: { id: string; relation?: string }[];
+            students: { id: string; relation?: string; is_primary?: boolean }[];
         },
         adminUserId: string,
     ) {
@@ -91,7 +91,7 @@ export class GuardiansService {
             throw new BadRequestException('All students must belong to the same school');
         }
 
-        // Create guardian and link to students
+        // Create guardian and link to students, enforcing single primary per student
         return this.prisma.$transaction(async (tx) => {
             const guardian = await tx.guardian.create({
                 data: {
@@ -102,12 +102,20 @@ export class GuardiansService {
                     phone: data.phone,
                 },
             });
-            for (const student of data.students) {
+            for (const studentRel of data.students) {
+                if (studentRel.is_primary) {
+                    // unset existing primary guardians for the student
+                    await tx.studentGuardian.updateMany({
+                        where: { student_id: studentRel.id, is_primary: true },
+                        data: { is_primary: false },
+                    });
+                }
                 await tx.studentGuardian.create({
                     data: {
-                        student_id: student.id,
+                        student_id: studentRel.id,
                         guardian_id: guardian.id,
-                        relation: student.relation,
+                        relation: studentRel.relation,
+                        is_primary: studentRel.is_primary ?? false,
                     },
                 });
             }
@@ -161,6 +169,7 @@ export class GuardiansService {
             email?: string;
             phone?: string;
             relation?: string;
+            is_primary?: boolean;
         },
     ) {
         // Find student and check admin rights
@@ -170,26 +179,36 @@ export class GuardiansService {
         }
         await this.assertIsAdminOfSchool(student.school_id, adminUserId);
 
-        // Create guardian
-        const guardian = await this.prisma.guardian.create({
-            data: {
-                school_id: student.school_id,
-                first_name: data.firstName,
-                last_name: data.lastName,
-                email: data.email,
-                phone: data.phone,
-            },
-        });
+        // Create guardian and link within a transaction to enforce single primary
+        return this.prisma.$transaction(async (tx) => {
+            const guardian = await tx.guardian.create({
+                data: {
+                    school_id: student.school_id,
+                    first_name: data.firstName,
+                    last_name: data.lastName,
+                    email: data.email,
+                    phone: data.phone,
+                },
+            });
 
-        // Link guardian to student
-        await this.prisma.studentGuardian.create({
-            data: {
-                student_id: student.id,
-                guardian_id: guardian.id,
-                relation: data.relation,
-            },
-        });
+            if (data.is_primary) {
+                // unset existing primary guardian for this student
+                await tx.studentGuardian.updateMany({
+                    where: { student_id: student.id, is_primary: true },
+                    data: { is_primary: false },
+                });
+            }
 
-        return guardian;
+            await tx.studentGuardian.create({
+                data: {
+                    student_id: student.id,
+                    guardian_id: guardian.id,
+                    relation: data.relation,
+                    is_primary: data.is_primary ?? false,
+                },
+            });
+
+            return guardian;
+        });
     }
 }

@@ -15,7 +15,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
 import { GuardiansService } from './guardians.service';
-import { IsArray, IsEmail, IsNotEmpty, IsOptional, IsString, ValidateNested, ArrayMinSize } from 'class-validator';
+import { IsArray, IsBoolean, IsEmail, IsNotEmpty, IsOptional, IsString, ValidateNested, ArrayMinSize } from 'class-validator';
 import { Type } from 'class-transformer';
 
 // DTOs
@@ -27,6 +27,10 @@ class StudentRelationDto {
     @IsOptional()
     @IsString()
     relation?: string;
+
+    @IsOptional()
+    @IsBoolean()
+    is_primary?: boolean;
 }
 
 class CreateGuardianDto {
@@ -91,6 +95,10 @@ class AddGuardianToStudentDto {
     @IsOptional()
     @IsString()
     relation?: string;
+
+    @IsOptional()
+    @IsBoolean()
+    is_primary?: boolean;
 }
 
 @Controller('guardians')

@@ -126,6 +126,7 @@ model StudentGuardian {
   student_id  String
   guardian_id String
   relation    String?
+  is_primary  Boolean  @default(false)
   created_at  DateTime @default(now())
   guardian    Guardian @relation(fields: [guardian_id], references: [id], onDelete: Cascade)
   student     Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
