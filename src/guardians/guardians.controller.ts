@@ -168,13 +168,13 @@ export class GuardiansController {
     }
 
     @Delete(':id')
-    async archive(
+    async delete(
         @Param('id') id: string,
         @Request() req: AuthenticatedRequest,
     ) {
         const adminUserId = req.user?.id as string;
         try {
-            return await this.guardiansService.archive(id, adminUserId);
+            return await this.guardiansService.delete(id, adminUserId);
         } catch (err) {
             console.error('Delete Guardian Error:', err);
             throw new BadRequestException('Failed to delete guardian.');

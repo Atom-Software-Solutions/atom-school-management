@@ -211,4 +211,18 @@ export class GuardiansService {
             return guardian;
         });
     }
+
+    async delete(id: string, adminUserId: string) {
+        // Find guardian and check admin rights
+        const guardian = await this.prisma.guardian.findUnique({ where: { id } });
+        if (!guardian) throw new NotFoundException('Guardian not found');
+        await this.assertIsAdminOfSchool(guardian.school_id, adminUserId);
+
+        // Delete related StudentGuardian and GuardianMessage records
+        await this.prisma.studentGuardian.deleteMany({ where: { guardian_id: id } });
+        await this.prisma.guardianMessage.deleteMany({ where: { guardian_id: id } });
+
+        // Delete the guardian
+        return this.prisma.guardian.delete({ where: { id } });
+    }
 }
