@@ -676,6 +676,20 @@ Add guardian to student.
 
 ---
 
+### PATCH `/students/:studentId/guardians/:guardianId/set-primary`
+Set the specified guardian as the primary guardian for a student. Unsets any other primary guardian for the student.
+
+**Response:** `200 OK`
+```typescript
+{
+  message: string; // 'Primary guardian set successfully'
+}
+```
+
+**Permissions:** SCHOOL_ADMIN
+
+---
+
 ## Fee & Billing
 
 ### GET `/fees/categories`

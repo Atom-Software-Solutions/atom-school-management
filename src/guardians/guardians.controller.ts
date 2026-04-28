@@ -22,7 +22,7 @@ import { Type } from 'class-transformer';
 class StudentRelationDto {
     @IsString()
     @IsNotEmpty()
-    id: string;
+    id!: string;
 
     @IsOptional()
     @IsString()
@@ -36,11 +36,11 @@ class StudentRelationDto {
 class CreateGuardianDto {
     @IsString()
     @IsNotEmpty()
-    firstName: string;
+    firstName!: string;
 
     @IsString()
     @IsNotEmpty()
-    lastName: string;
+    lastName!: string;
 
     @IsOptional()
     @IsEmail()
@@ -54,7 +54,7 @@ class CreateGuardianDto {
     @ArrayMinSize(1, { message: 'students array must be non-empty' })
     @ValidateNested({ each: true })
     @Type(() => StudentRelationDto)
-    students: StudentRelationDto[];
+    students!: StudentRelationDto[];
 }
 
 class UpdateGuardianDto {
@@ -78,11 +78,11 @@ class UpdateGuardianDto {
 class AddGuardianToStudentDto {
     @IsString()
     @IsNotEmpty()
-    firstName: string;
+    firstName!: string;
 
     @IsString()
     @IsNotEmpty()
-    lastName: string;
+    lastName!: string;
 
     @IsOptional()
     @IsEmail()
@@ -181,7 +181,7 @@ export class GuardiansController {
         }
     }
 
-    @Post('/students/:id/guardians')
+    @Post(':id/guardians')
     async addGuardian(
         @Param('id') id: string,
         @Body() body: AddGuardianToStudentDto,
@@ -193,6 +193,21 @@ export class GuardiansController {
         } catch (err) {
             console.error('Add Guardian To Student Error:', err);
             throw new BadRequestException('Failed to add guardian to student. Please check your input and try again.');
+        }
+    }
+
+    @Patch(':studentId/guardians/:guardianId/set-primary')
+    async setPrimaryGuardian(
+        @Param('studentId') studentId: string,
+        @Param('guardianId') guardianId: string,
+        @Request() req: AuthenticatedRequest,
+    ) {
+        const adminUserId = req.user?.id as string;
+        try {
+            return await this.guardiansService.setPrimaryGuardian(studentId, guardianId, adminUserId);
+        } catch (err) {
+            console.error('Set Primary Guardian Error:', err);
+            throw new BadRequestException('Failed to set primary guardian.');
         }
     }
 }

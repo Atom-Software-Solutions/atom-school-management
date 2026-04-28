@@ -225,4 +225,44 @@ export class GuardiansService {
         // Delete the guardian
         return this.prisma.guardian.delete({ where: { id } });
     }
+
+    async setPrimaryGuardian(studentId: string, guardianId: string, adminUserId: string) {
+        // Check student exists and admin rights
+        const student = await this.prisma.student.findUnique({ where: { id: studentId } });
+        if (!student || student.deleted_at) {
+            throw new NotFoundException('Student not found');
+        }
+        await this.assertIsAdminOfSchool(student.school_id, adminUserId);
+
+        // Check guardian exists and is linked to student
+        const studentGuardian = await this.prisma.studentGuardian.findUnique({
+            where: {
+                student_id_guardian_id: {
+                    student_id: studentId,
+                    guardian_id: guardianId,
+                },
+            },
+        });
+        if (!studentGuardian) {
+            throw new NotFoundException('Guardian is not linked to this student');
+        }
+
+        // Unset all other primary guardians for this student, set this one as primary
+        await this.prisma.$transaction([
+            this.prisma.studentGuardian.updateMany({
+                where: { student_id: studentId, is_primary: true },
+                data: { is_primary: false },
+            }),
+            this.prisma.studentGuardian.update({
+                where: {
+                    student_id_guardian_id: {
+                        student_id: studentId,
+                        guardian_id: guardianId,
+                    },
+                },
+                data: { is_primary: true },
+            }),
+        ]);
+        return { message: 'Primary guardian set successfully' };
+    }
 }

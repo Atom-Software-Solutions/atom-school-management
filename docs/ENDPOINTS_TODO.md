@@ -81,6 +81,7 @@ Legend:
     ```
 - [x] `PATCH /guardians/:id` - Update guardian profile
 - [x] `DELETE /guardians/:id` - Archive/deactivate guardian
+- [x] `PATCH /students/:studentId/guardians/:guardianId/set-primary` - Set a guardian as primary for a student (School Admin only)
 
 ---
 
@@ -254,10 +255,10 @@ Legend:
 ## Summary
 
 - **Total Endpoints**: 122
-- **Implemented**: 88
+- **Implemented**: 89
 - **In Progress**: 0
-- **Not Implemented**: 34
-- **Completion**: 72.1%
+- **Not Implemented**: 33
+- **Completion**: 73.0%
 
 ---
 
