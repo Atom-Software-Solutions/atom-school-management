@@ -690,6 +690,250 @@ Set the specified guardian as the primary guardian for a student. Unsets any oth
 
 ---
 
+## Guardian Management
+
+### GET `/guardians`
+List all guardians (school-wide).
+
+**Query Parameters:**
+- `schoolId: string` (required)
+
+**Response:** `200 OK`
+```typescript
+{
+  data: Guardian[];
+}
+```
+
+**Permissions:** SCHOOL_ADMIN
+
+---
+
+### GET `/guardians/:id`
+Get guardian profile/details.
+
+**Response:** `200 OK`
+```typescript
+{
+  ...Guardian;
+  students: StudentGuardian[];
+}
+```
+
+**Permissions:** SCHOOL_ADMIN
+
+---
+
+### POST `/guardians`
+Create a new guardian and link to student(s).
+
+**Request Body:**
+```typescript
+{
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phone?: string;
+  students: Array<{
+    id: string;
+    relation?: string;
+    is_primary?: boolean;
+  }>;
+}
+```
+
+**Response:** `201 Created`
+```typescript
+{
+  ...Guardian;
+}
+```
+
+**Permissions:** SCHOOL_ADMIN
+
+---
+
+### PATCH `/guardians/:id`
+Update guardian profile.
+
+**Request Body:** (all fields optional)
+```typescript
+{
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+}
+```
+
+**Response:** `200 OK`
+```typescript
+{
+  ...Guardian;
+}
+```
+
+**Permissions:** SCHOOL_ADMIN
+
+---
+
+### DELETE `/guardians/:id`
+Archive/deactivate guardian.
+
+**Response:** `200 OK`
+```typescript
+{
+  message: "Guardian archived successfully";
+}
+```
+
+**Permissions:** SCHOOL_ADMIN
+
+---
+
+### POST `/students/:id/guardians`
+Add guardian to student.
+
+**Request Body:**
+```typescript
+{
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phone?: string;
+  relation?: string;
+  is_primary?: boolean;
+}
+```
+
+**Response:** `201 Created`
+```typescript
+{
+  ...Guardian;
+}
+```
+
+**Permissions:** SCHOOL_ADMIN
+
+---
+
+### PATCH `/students/:studentId/guardians/:guardianId/set-primary`
+Set the specified guardian as the primary guardian for a student.
+
+**Response:** `200 OK`
+```typescript
+{
+  message: string; // 'Primary guardian set successfully'
+}
+```
+
+**Permissions:** SCHOOL_ADMIN
+
+---
+
+### POST `/guardians/:id/messages`
+Send message (email/SMS/WhatsApp) to guardian.
+
+**Request Body:**
+```typescript
+{
+  type: "Email" | "SMS" | "WhatsApp";
+  message: string;
+  category?: string;
+  subject?: string;
+  studentId?: string;
+}
+```
+
+**Response:** `201 Created`
+```typescript
+{
+  ...GuardianMessage;
+}
+```
+
+**Permissions:** SCHOOL_ADMIN
+
+---
+
+### POST `/students/:id/guardians/messages`
+Send message to all guardians of a student.
+
+**Request Body:**
+```typescript
+{
+  type: "Email" | "SMS" | "WhatsApp";
+  message: string;
+  category?: string;
+  subject?: string;
+}
+```
+
+**Response:** `200 OK`
+```typescript
+{
+  data: GuardianMessage[];
+}
+```
+
+**Permissions:** SCHOOL_ADMIN
+
+---
+
+### POST `/guardians/bulk-messages`
+Send message to multiple guardians.
+
+**Request Body:**
+```typescript
+{
+  guardianIds: string[];
+  type: "Email" | "SMS" | "WhatsApp";
+  message: string;
+  category?: string;
+  subject?: string;
+  studentId?: string;
+}
+```
+
+**Response:** `200 OK`
+```typescript
+{
+  data: GuardianMessage[];
+}
+```
+
+**Permissions:** SCHOOL_ADMIN
+
+---
+
+### GET `/guardians/:id/messages`
+List all messages sent to a guardian.
+
+**Response:** `200 OK`
+```typescript
+{
+  data: GuardianMessage[];
+}
+```
+
+**Permissions:** SCHOOL_ADMIN
+
+---
+
+### GET `/guardians/:id/messages/:messageId`
+Get details/status of a specific message to guardian.
+
+**Response:** `200 OK`
+```typescript
+{
+  ...GuardianMessage;
+}
+```
+
+**Permissions:** SCHOOL_ADMIN
+
+---
+
 ## Fee & Billing
 
 ### GET `/fees/categories`

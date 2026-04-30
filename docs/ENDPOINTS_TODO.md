@@ -65,7 +65,7 @@ Legend:
 - [x] `POST /students/:id/guardians` - Add guardian to student (School Admin only, tenant-scoped)
 - [ ] `GET /students/:id/guardians` - List all guardians for a student
 - [ ] `DELETE /students/:id/guardians/:guardianId` - Remove guardian from student
-- [ ] `PATCH /students/:id/guardians/:guardianId` - Update guardian details for a student
+- [x] `PATCH /:id/guardians/:guardianId` - Update guardian details for a student
 - [x] `GET /guardians` - List all guardians (school-wide)
 - [x] `GET /guardians/:id` - Get guardian profile/details
 - [x] `POST /guardians` - Create a new guardian and link to student(s)
@@ -87,11 +87,11 @@ Legend:
 
 ## Guardian Messaging & Notifications
 
-- [ ] `POST /guardians/:id/messages` - Send message (email/SMS/WhatsApp) to guardian
-- [ ] `POST /students/:id/guardians/messages` - Send message to all guardians of a student
-- [ ] `POST /guardians/bulk-messages` - Send message to multiple guardians (by filter or list)
-- [ ] `GET /guardians/:id/messages` - List all messages sent to a guardian
-- [ ] `GET /guardians/:id/messages/:messageId` - Get details/status of a specific message to guardian
+- [x] `POST /guardians/:id/messages` - Send message (email/SMS/WhatsApp) to guardian
+- [x] `POST /students/:id/guardians/messages` - Send message to all guardians of a student
+- [x] `POST /guardians/bulk-messages` - Send message to multiple guardians (by filter or list)
+- [x] `GET /guardians/:id/messages` - List all messages sent to a guardian
+- [x] `GET /guardians/:id/messages/:messageId` - Get details/status of a specific message to guardian
 
   - Messages can be academic (results, attendance, etc.) or general (fee reminders, announcements, etc.)
   - Support for multiple channels: Email, SMS, WhatsApp (future)
@@ -255,10 +255,10 @@ Legend:
 ## Summary
 
 - **Total Endpoints**: 122
-- **Implemented**: 89
+- **Implemented**: 95
 - **In Progress**: 0
-- **Not Implemented**: 33
-- **Completion**: 73.0%
+- **Not Implemented**: 27
+- **Completion**: 77.0%
 
 ---
 
