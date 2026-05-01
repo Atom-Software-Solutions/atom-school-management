@@ -220,6 +220,7 @@ Legend:
 - [ ] `GET /reports/download` - Export reports in CSV or PDF format
 - [ ] `GET /reports/attendance` - Attendance analytics (NEW)
 - [ ] `GET /reports/performance` - Academic performance analytics (NEW)
+- [x] `GET /dashboard/school/:schoolId` - Get dashboard summary for a school
 
 ---
 

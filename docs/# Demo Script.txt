@@ -1,0 +1,33 @@
+# Demo Script
+
+## Atom School Management Demo
+
+**1. Introduction**
+- Welcome participants and introduce Atom School Management as a modern solution for school administration and communication.
+
+**2. Dashboard Overview**
+- Log in as a school admin.
+- Show the main dashboard: quick stats, recent activity, and navigation.
+
+**3. Guardians Management**
+- Navigate to the Guardians section.
+- Demonstrate adding a new guardian.
+- Show how to link a guardian to a student.
+- Edit and delete guardian records.
+
+**4. Messaging Guardians**
+- Go to the "Messages" tab.
+- Select a student and send a message to their primary guardian.
+- Show error handling (e.g., selecting a student with no guardian).
+- Display confirmation and error messages on the UI.
+
+**5. Academic Records**
+- Briefly show how to manage students, classes, and academic years.
+
+**6. Security & Roles**
+- Highlight role-based access (e.g., only admins can manage guardians).
+
+**7. Q&A**
+- Invite questions and feedback.
+
+---

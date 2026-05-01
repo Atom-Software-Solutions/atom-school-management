@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { ClassroomsModule } from './classrooms/classrooms.module';
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { EmailModule } from './email/email.module';
 import { GuardiansModule } from './guardians/guardians.module';
 import { PrismaService } from './prisma/prisma.service';
@@ -26,6 +27,7 @@ import { UsersModule } from './users/users.module';
     AcademicsModule,
     EmailModule,
     GuardiansModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService, PrismaService],

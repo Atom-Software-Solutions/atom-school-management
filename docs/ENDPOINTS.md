@@ -1695,6 +1695,25 @@ Audit logs.
 
 ---
 
+## School Dashboard
+
+### GET `/dashboard/school/:schoolId`
+Get dashboard summary for a school.
+
+**Response:** `200 OK`
+```typescript
+{
+  students: number;
+  teachers: number;
+  guardians: number;
+  classrooms: number;
+}
+```
+
+**Permissions:** SUPER_ADMIN
+
+---
+
 ### GET `/admin/errors`
 Error tracking list.
 
