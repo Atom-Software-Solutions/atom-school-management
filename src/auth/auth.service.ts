@@ -111,7 +111,12 @@ export class AuthService {
     return { success: 'success' };
   }
 
-  async login(loginDto: LoginDto) {
+  async login(
+    loginDto: LoginDto,
+    ipAddress?: string,
+    userAgent?: string,
+    location?: string
+  ) {
     const user = await this.usersService.findByEmail(loginDto.email);
 
     if (!user) {
@@ -134,8 +139,8 @@ export class AuthService {
     // Update last login time
     await this.usersService.update(user.id, {});
 
-    const accessToken = await this.generateAccessToken(user);
-    const refreshToken = await this.generateRefreshToken(user);
+    const accessToken = await this.generateAccessToken(user, ipAddress, userAgent, location);
+    const refreshToken = await this.generateRefreshToken(user, ipAddress, userAgent, location);
     // Fetch memberships (schools the user is related to)
     const memberships = await this.getUserMemberships(user.id);
 
@@ -189,11 +194,12 @@ export class AuthService {
     }));
   }
 
-  private async generateAccessToken(user: {
-    id: string;
-    email: string;
-    role: string;
-  }) {
+  private async generateAccessToken(
+    user: { id: string; email: string; role: string },
+    ipAddress?: string,
+    userAgent?: string,
+    location?: string
+  ) {
     const jti = randomUUID();
     const schoolId = await this.getUserSchoolId(user.id, user.role);
 
@@ -217,17 +223,21 @@ export class AuthService {
         jti,
         is_active: true,
         expires_at: expiresAt,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        location: location,
       },
     });
 
     return token;
   }
 
-  private async generateRefreshToken(user: {
-    id: string;
-    email: string;
-    role: string;
-  }) {
+  private async generateRefreshToken(
+    user: { id: string; email: string; role: string },
+    ipAddress?: string,
+    userAgent?: string,
+    location?: string
+  ) {
     const jti = randomUUID();
     // Refresh token expires in 30 days
     const expiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000);
@@ -253,6 +263,9 @@ export class AuthService {
         jti,
         is_active: true,
         expires_at: expiresAt,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        location: location,
       },
     });
 

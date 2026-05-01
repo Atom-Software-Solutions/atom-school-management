@@ -390,6 +390,7 @@ model Session {
   is_active  Boolean   @default(true)
   ip_address String?
   user_agent String?
+  location   String?   // NEW: Approximate location (e.g., "Kampala, Uganda")
   created_at DateTime  @default(now())
   expires_at DateTime
   revoked_at DateTime?
