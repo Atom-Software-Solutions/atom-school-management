@@ -126,6 +126,14 @@ export class ResultsController {
    * Transform report card data from the service to the format expected by PDF generation
    */
   private transformReportCardDataToPDF(reportCardData: any) {
+    // Helper to round to 1 decimal place if value is a number
+    const round1 = (val: any) =>
+      typeof val === "number" ? Math.round(val * 10) / 10 : val;
+
+    // Helper to round to 2 decimal places if value is a number
+    const round2 = (val: any) =>
+      typeof val === "number" ? Math.round(val * 100) / 100 : val;
+
     return {
       school: {
         name: reportCardData.school.name,
@@ -145,18 +153,18 @@ export class ResultsController {
       },
       subjects: reportCardData.subjects.map((subject: any) => ({
         name: subject.name,
-        score: subject.score,
+        score: round1(subject.score),
         grade: subject.grade,
-        credits: subject.credits,
+        credits: round1(subject.credits),
         remarks: subject.remarks || '',
       })),
       summary: {
-        totalMarks: reportCardData.summary.totalMarks || 0,
-        totalCredits: reportCardData.summary.totalCredits,
-        average: reportCardData.summary.average,
-        gpa: reportCardData.summary.gpa,
+        totalMarks: round1(reportCardData.summary.totalMarks || 0),
+        totalCredits: round1(reportCardData.summary.totalCredits),
+        average: round1(reportCardData.summary.average),
+        gpa: round2(reportCardData.summary.gpa),
         division: reportCardData.summary.division,
-        rank: reportCardData.summary.rank,
+        rank: round1(reportCardData.summary.rank),
       },
       attendance: reportCardData.attendance,
       conduct: reportCardData.conduct,

@@ -330,7 +330,6 @@ export class StudentsController {
     // Validate file size
     const sizeValidation = validateFileSize(file?.buffer);
     if (!sizeValidation.valid) {
-      console.log('xxx sizeValidation', sizeValidation);
       throw new UnprocessableEntityException({
         valid: false,
         errors: [sizeValidation.error],
@@ -341,7 +340,6 @@ export class StudentsController {
     // Validate file type (expecting spreadsheet upload)
     const typeValidation = validateFileType(file?.mimetype, file?.originalname);
     if (!typeValidation.valid) {
-      console.log('xxx typeValidation', typeValidation);
       throw new UnprocessableEntityException({
         valid: false,
         errors: [typeValidation.error],
@@ -355,8 +353,10 @@ export class StudentsController {
       .then(async (result) => {
         // If validation failed, return 422
         if (!result.valid) {
-          console.log('xxx importValidation', result);
-          throw new UnprocessableEntityException(result);
+          throw new UnprocessableEntityException({
+            message: 'There were validation errors with your request.',
+            errors: result.errors,
+          });
         }
         // Only import when validation fully passed
         const importResult = await this.studentsService.importStudents(

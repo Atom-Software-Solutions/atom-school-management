@@ -595,7 +595,6 @@ export class StudentsService {
     let rows;
     try {
       rows = this.parseWorkbook(buffer);
-      console.log('xxx1 importValidation', rows);
     } catch (e: any) {
       return {
         valid: false,
@@ -604,7 +603,6 @@ export class StudentsService {
       };
     }
     const errors: string[] = [];
-    // Load existing values in this school for uniqueness checks
     const existing = await this.prisma.student.findMany({
       where: { school_id: schoolId },
       select: {
@@ -689,7 +687,7 @@ export class StudentsService {
     });
     return {
       valid: errors.length === 0,
-      errors,
+      errors: errors.map(e => ({ field: null, message: e })),
       total: rows.length,
       processed: rows.length,
       failed: errors.length > 0 ? rows.length : 0,
