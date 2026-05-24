@@ -243,6 +243,9 @@ Legend:
 - [ ] `GET /admin/errors` - Error tracking list
 - [ ] `POST /admin/impersonate/:userId` - Impersonate user (NEW)
 - [ ] `GET /admin/roles` - List all roles (NEW)
+- [x] `POST /admins/school` - Create a new School Admin (Super Admin only)
+- [x] `GET /admins/school` - List all School Admins (Super Admin or School Admin for their own school)
+- [x] `GET /admins/super` - List all Super Admins (Super Admin only)
 
 ---
 
@@ -256,10 +259,10 @@ Legend:
 ## Summary
 
 - **Total Endpoints**: 122
-- **Implemented**: 95
+- **Implemented**: 96
 - **In Progress**: 0
-- **Not Implemented**: 27
-- **Completion**: 77.0%
+- **Not Implemented**: 26
+- **Completion**: 78.7%
 
 ---
 

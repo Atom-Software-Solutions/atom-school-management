@@ -592,7 +592,7 @@ export class StudentsService {
     if (!buffer || buffer.length === 0) {
       return { valid: false, errors: ['No file uploaded'], total: 0 };
     }
-    let rows;
+    let rows: any[];
     try {
       rows = this.parseWorkbook(buffer);
     } catch (e: any) {
