@@ -96,6 +96,7 @@ model Student {
   enrollments   StudentEnrollment[]
   grades        Grade[]
   reportCards   ReportCard[]
+  guardianMessages GuardianMessage[]
 
   @@unique([school_id, first_name, last_name, date_of_birth])
   @@unique([school_id, student_no])
@@ -114,6 +115,7 @@ model Guardian {
   updated_at DateTime          @updatedAt
   school_id  String
   students   StudentGuardian[]
+  messages   GuardianMessage[]
 
   @@index([school_id])
   @@schema("student_mgt")
@@ -124,6 +126,7 @@ model StudentGuardian {
   student_id  String
   guardian_id String
   relation    String?
+  is_primary  Boolean  @default(false)
   created_at  DateTime @default(now())
   guardian    Guardian @relation(fields: [guardian_id], references: [id], onDelete: Cascade)
   student     Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
@@ -131,6 +134,33 @@ model StudentGuardian {
   @@unique([student_id, guardian_id])
   @@index([student_id])
   @@index([guardian_id])
+  @@schema("student_mgt")
+}
+
+// NEW: Messaging model for guardian notifications/messages
+model GuardianMessage {
+  id           String    @id @default(uuid())
+  school_id    String
+  guardian_id  String
+  student_id   String?   // Optional: message may relate to a specific student
+  type         String    // "SMS", "Email", "WhatsApp"
+  category     String?   // "academic", "fee", "general", etc.
+  subject      String?
+  message      String
+  status       String    @default("pending") // "sent", "failed", "pending"
+  sent_at      DateTime?
+  metadata     Json?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+
+  guardian     Guardian  @relation(fields: [guardian_id], references: [id], onDelete: Cascade)
+  student      Student?  @relation(fields: [student_id], references: [id], onDelete: SetNull)
+  
+  @@index([school_id])
+  @@index([guardian_id])
+  @@index([student_id])
+  @@index([status])
+  @@index([type])
   @@schema("student_mgt")
 }
 
@@ -360,6 +390,7 @@ model Session {
   is_active  Boolean   @default(true)
   ip_address String?
   user_agent String?
+  location   String?   // NEW: Approximate location (e.g., "Kampala, Uganda")
   created_at DateTime  @default(now())
   expires_at DateTime
   revoked_at DateTime?

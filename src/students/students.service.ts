@@ -356,37 +356,6 @@ export class StudentsService {
     return [];
   }
 
-  async addGuardian(
-    studentId: string,
-    adminUserId: string,
-    data: {
-      firstName: string;
-      lastName: string;
-      email?: string;
-      phone?: string;
-      relation?: string;
-    },
-  ) {
-    const student = await this.findOwned(studentId, adminUserId);
-    const guardian = await this.prisma.guardian.create({
-      data: {
-        school_id: student.school_id, // Set tenant context from student
-        first_name: data.firstName,
-        last_name: data.lastName,
-        email: data.email,
-        phone: data.phone,
-      },
-    });
-    await this.prisma.studentGuardian.create({
-      data: {
-        student_id: student.id,
-        guardian_id: guardian.id,
-        relation: data.relation,
-      },
-    });
-    return guardian;
-  }
-
   generateImportTemplate(): Buffer {
     const worksheet = XLSX.utils.aoa_to_sheet([
       [
@@ -626,7 +595,6 @@ export class StudentsService {
     let rows;
     try {
       rows = this.parseWorkbook(buffer);
-      console.log('xxx1 importValidation', rows);
     } catch (e: any) {
       return {
         valid: false,
@@ -635,7 +603,6 @@ export class StudentsService {
       };
     }
     const errors: string[] = [];
-    // Load existing values in this school for uniqueness checks
     const existing = await this.prisma.student.findMany({
       where: { school_id: schoolId },
       select: {
@@ -720,7 +687,7 @@ export class StudentsService {
     });
     return {
       valid: errors.length === 0,
-      errors,
+      errors: errors.map(e => ({ field: null, message: e })),
       total: rows.length,
       processed: rows.length,
       failed: errors.length > 0 ? rows.length : 0,

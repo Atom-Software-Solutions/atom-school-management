@@ -1,0 +1,32 @@
+# Go-To-Market Plan for Kampala
+
+## 1. Market Research & Positioning
+- Identify top private and public schools in Kampala.
+- Understand local administrative challenges and tailor messaging accordingly.
+
+## 2. Product Localization
+- Ensure the platform supports local languages and grading systems.
+- Integrate with popular communication channels (SMS, WhatsApp).
+
+## 3. Outreach & Awareness
+- Partner with local education authorities and school associations.
+- Organize workshops and free demo days for school administrators.
+- Leverage social media and radio to reach school decision-makers.
+
+## 4. Pilot Program
+- Offer a 3-month free trial to select schools.
+- Collect feedback and success stories for case studies.
+
+## 5. Sales & Support
+- Deploy a local sales team for in-person demos and onboarding.
+- Provide dedicated support via phone, WhatsApp, and email.
+
+## 6. Partnerships
+- Collaborate with local ICT companies for integration and support.
+- Explore partnerships with telecoms for bulk SMS rates.
+
+## 7. Continuous Improvement
+- Regularly update the platform based on user feedback.
+- Host user forums and training sessions.
+
+---

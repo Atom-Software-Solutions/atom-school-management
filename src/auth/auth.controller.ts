@@ -31,7 +31,7 @@ import { ProfileResponseDto } from './dto/profile-response.dto';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   @Post('register')
   @ApiOperation({ summary: 'Register a new user' })
@@ -96,8 +96,14 @@ export class AuthController {
     },
   })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  async login(@Request() req, @Body() loginDto: LoginDto) {
+    const ipAddress =
+      req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+      req.ip;
+    const userAgent = req.headers['user-agent'];
+    const location = req.headers['x-geo-location'];
+
+    return this.authService.login(loginDto, ipAddress, userAgent, location);
   }
 
   @UseGuards(JwtAuthGuard)

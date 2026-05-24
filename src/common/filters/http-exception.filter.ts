@@ -84,7 +84,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
         resBody.errors[0].field !== undefined
       ) {
         message = 'There were validation errors with your request.';
-        errors = resBody.errors;
+        errors = resBody.errors.map((error: any) => error.message);
       } else if (Array.isArray(resBody.message)) {
         message = 'There were validation errors with your request.';
         errors = extractValidationErrors(resBody.message);
