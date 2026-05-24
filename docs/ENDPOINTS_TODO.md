@@ -258,11 +258,11 @@ Legend:
 
 ## Summary
 
-- **Total Endpoints**: 122
-- **Implemented**: 96
+- **Total Endpoints**: 123
+- **Implemented**: 97
 - **In Progress**: 0
 - **Not Implemented**: 26
-- **Completion**: 78.7%
+- **Completion**: 78.9%
 
 ---
 
