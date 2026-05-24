@@ -1,9 +1,9 @@
-import { Body, Controller, Post, UseGuards, ValidationPipe, Req, Request } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Request, UseGuards, ValidationPipe } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
+import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
 import { AdminService } from './admin.service';
 import { CreateSchoolAdminDto } from './dto/create-school-admin.dto';
-import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
 
 @Controller('admins')
 export class AdminController {
@@ -18,5 +18,19 @@ export class AdminController {
         @Request() req: AuthenticatedRequest,
     ) {
         return this.adminService.createSchoolAdmin(dto, req.user);
+    }
+
+    @Get('school')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('SUPER_ADMIN', 'SCHOOL_ADMIN')
+    async listSchoolAdmins(@Request() req: AuthenticatedRequest, @Query('schoolId') schoolId?: string) {
+        return this.adminService.listSchoolAdmins(req.user, schoolId);
+    }
+
+    @Get('super')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles('SUPER_ADMIN')
+    async listSuperAdmins(@Request() req: AuthenticatedRequest) {
+        return this.adminService.listSuperAdmins(req.user);
     }
 }
