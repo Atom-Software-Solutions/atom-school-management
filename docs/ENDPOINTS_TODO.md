@@ -243,6 +243,9 @@ Legend:
 - [ ] `GET /admin/errors` - Error tracking list
 - [ ] `POST /admin/impersonate/:userId` - Impersonate user (NEW)
 - [ ] `GET /admin/roles` - List all roles (NEW)
+- [ ] `POST /admins/school` - Create a new School Admin (Super Admin only)
+- [ ] `GET /admins/school` - List all School Admins (Super Admin or School Admin for their own school)
+- [ ] `GET /admins/super` - List all Super Admins (Super Admin only)
 
 ---
 
