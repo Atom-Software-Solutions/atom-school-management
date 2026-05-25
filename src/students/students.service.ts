@@ -1320,11 +1320,12 @@ export class StudentsService {
     // Fetch guardians via join table
     const studentGuardians = await this.prisma.studentGuardian.findMany({
       where: { student_id: student.id },
-      select: { guardian_id: true, relation: true },
+      select: { guardian_id: true, relation: true, is_primary: true },
     });
     const guardianIds = studentGuardians.map((sg) => sg.guardian_id);
     const guardians: Array<{
       relation: string | null;
+      is_primary: boolean | null;
       email: string | null;
       phone: string | null;
       id: string;
@@ -1338,11 +1339,11 @@ export class StudentsService {
       const guardianRecords = await this.prisma.guardian.findMany({
         where: { id: { in: guardianIds } },
       });
-      // Attach relation to each guardian using push
+      // Attach relation and is_primary to each guardian using push
       guardianRecords.forEach((g) => {
         const sg = studentGuardians.find((sg) => sg.guardian_id === g.id);
 
-        if (sg) guardians.push({ ...g, relation: sg.relation });
+        if (sg) guardians.push({ ...g, relation: sg.relation, is_primary: sg.is_primary });
       });
     }
     (student as any).guardians = guardians;
