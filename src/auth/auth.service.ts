@@ -194,6 +194,21 @@ export class AuthService {
     }));
   }
 
+  /**
+   * Return all schools in the system, for SUPER_ADMIN profile memberships.
+   */
+  async getAllMemberships(): Promise<Array<{ schoolId: string; schoolName: string; role: string }>> {
+    const schools = await this.prisma.school.findMany({
+      select: { id: true, name: true },
+    });
+
+    return schools.map((school) => ({
+      schoolId: school.id,
+      schoolName: school.name,
+      role: 'super_admin',
+    }));
+  }
+
   private async generateAccessToken(
     user: { id: string; email: string; role: string },
     ipAddress?: string,
