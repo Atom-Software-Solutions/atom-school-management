@@ -10,7 +10,7 @@ import { TenantMiddleware } from './common/middleware/tenant.middleware';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { EmailModule } from './email/email.module';
 import { GuardiansModule } from './guardians/guardians.module';
-import { PrismaService } from './prisma/prisma.service';
+import { PrismaModule } from './prisma/prisma.module';
 import { SchoolsModule } from './schools/schools.module';
 import { StudentsModule } from './students/students.module';
 import { UsersModule } from './users/users.module';
@@ -20,6 +20,7 @@ import { UsersModule } from './users/users.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    PrismaModule,
     AdminModule,
     UsersModule,
     AuthModule,
@@ -32,8 +33,7 @@ import { UsersModule } from './users/users.module';
     DashboardModule,
   ],
   controllers: [AppController],
-  providers: [AppService, PrismaService],
-  exports: [PrismaService],
+  providers: [AppService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

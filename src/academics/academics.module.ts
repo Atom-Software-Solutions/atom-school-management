@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { PrismaService } from '../prisma/prisma.service';
 import { AcademicsService } from './academics.service';
 import { AssessmentsController } from './assessments.controller';
 import { GradesController } from './grades.controller';
@@ -38,7 +37,6 @@ import { StudentsModule } from '../students/students.module';
   providers: [
     AcademicsService,
     ResultsService,
-    PrismaService,
     JwtAuthGuard,
     RolesGuard,
     PdfGenerationService,

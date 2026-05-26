@@ -272,3 +272,53 @@ Legend:
 - Mark completed endpoints with ✅
 - Mark in-progress endpoints with ⏳
 - Leave unmarked for not implemented
+
+
+
+
+1. We need to split O-level (Senior 1 to Senior 4) from A-level (Senior 5 & Senior 6) since they are graded differently and have different subjects too.
+
+2. Grading:
+  - A-level: A, B, C, D, E
+  - O-level: A, B, C, D, E
+
+3. O-level subject breakdown:
+  - English Language                2 papers
+  - Literature in English           1 paper
+  - Mathematics                     2 papers
+  - Biology                         2 papers (Theory + Practical)
+  - Chemistry                       2 papers (Theory + Practical)
+  - Physics                         2 papers (Theory + Practical)
+  - Geography                       1 paper
+  - History & Political Education   1 paper
+  - CRE / IRE                       1 paper
+  - Kiswahili                       2 papers
+  - Local Languages                 2 papers
+  - Agriculture                     2 papers (Theory + Practical)
+  - ICT / Computer Studies          2 papers (Theory + Practical)
+  - Entrepreneurship                1 paper
+  - Art & Design                    2 components (Theory + Practical/Project)
+  - Performing Arts                 2 components
+  - Nutrition & Food Technology     2 papers/components
+  - Technology & Design             2 papers/components
+  - Physical Education              Practical assessment + theory
+  - Foreign Languages               Usually 2 papers
+
+4. A-level subject breakdown:
+  - General Paper                   1 paper
+  - Mathematics                     2 papers (Pure + Applied)
+  - Physics                         2 papers (Theory + Practical)
+  - Chemistry                       2 papers (Theory + Practical)
+  - Biology                         2 papers (Theory + Practical)
+  - Agriculture                     2 components (Theory + Practical + Project)
+  - Computer Studies / ICT          2 components (Theory + Practical)
+  - Economics                       1 paper
+  - Geography                       2 components (Theory + Fieldwork)
+  - History                         1 paper
+  - Divinity / CRE / IRE            1 paper
+  - Entrepreneurship                1 paper
+  - Literature in English           1 paper
+  - English Language                1–2 components (Reading/Writing + Oral or continuous assessment)
+  - Kiswahili / Foreign Languages   2–3 components (Paper 1 (Grammar/Composition) + Paper 2 (Comprehension/Literature) + Oral Test)
+  - Art & Design                    2–3 components (Theory + Practical Coursework + Portfolio/Project)
+  - Music / Performing Arts         3 components (Theory + Performance (Practical) + Composition/Project)

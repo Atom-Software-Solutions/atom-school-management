@@ -68,6 +68,10 @@ export class AssessmentsController {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
     }
+    // Optionally, check for componentId here if you want extra validation
+    if (!dto.componentId) {
+      throw new BadRequestException('componentId is required');
+    }
     return this.resultsService.createAssessment(schoolId, req.user.id, dto);
   }
 
@@ -111,5 +115,17 @@ export class AssessmentsController {
       throw new ForbiddenException('Authentication required');
     }
     return this.resultsService.deleteAssessment(id, req.user.id);
+  }
+
+  @Get('by-component/:componentId')
+  listByComponent(
+    @Param('schoolId') schoolId: string,
+    @Param('componentId') componentId: string,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    if (!req.user) {
+      throw new ForbiddenException('Authentication required');
+    }
+    return this.resultsService.listAssessmentsByComponent(schoolId, req.user.id, componentId);
   }
 }

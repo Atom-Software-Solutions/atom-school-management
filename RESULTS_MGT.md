@@ -1034,7 +1034,7 @@ Once grades are entered, you can fetch detailed results and summaries.
       "name": "Mid-Term Exam",
       "type": "exam",
       "weight": "0.40",
-      "assessment_date": "2025-05-01T09:00:00.000Z",
+      "date": "2025-05-01T09:00:00.000Z",
       "subject": {
         "id": "<subjectIdMath>",
         "name": "Mathematics",

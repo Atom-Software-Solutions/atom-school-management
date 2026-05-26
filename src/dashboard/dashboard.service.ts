@@ -96,7 +96,11 @@ export class DashboardService {
             this.prisma.classroomDefinition.count({ where: { school_id: schoolId, is_archived: false } }),
             this.prisma.assessment.count({
                 where: {
-                    school_id: schoolId,
+                    component: {
+                        subject: {
+                            school_id: schoolId,
+                        },
+                    },
                     ...(currentAcademicYear && { academic_year_id: currentAcademicYear.id })
                 }
             }),

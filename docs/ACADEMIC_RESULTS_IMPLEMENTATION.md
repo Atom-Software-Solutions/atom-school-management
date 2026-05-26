@@ -13,7 +13,7 @@ This document describes the implementation of student results and academic repor
    - Unique constraint: school_id + name
 
 2. **Assessment** - Represents different types of assessments (exams, tests, assignments)
-  - Fields: id, school_id, academic_year_id, term_template_item_id, classroom_definition_id, subject_id, name, type, max_score, weight, assessment_date, due_date, is_published
+  - Fields: id, school_id, academic_year_id, term_template_item_id, classroom_definition_id, subject_id, name, type, max_score, weight, date, due_date, is_published
    - Types: "exam", "test", "assignment", "project", "quiz"
   - Note: yearId + term_template_item_id are immutable after creation
 

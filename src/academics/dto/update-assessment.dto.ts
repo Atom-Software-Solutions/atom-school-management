@@ -1,5 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateAssessmentDto } from './create-assessment.dto';
+import type { AssessmentType } from '@prisma/client';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsString,
@@ -27,11 +28,10 @@ export class UpdateAssessmentDto {
 
   @ApiPropertyOptional({
     description: 'Assessment type',
-    enum: ['exam', 'test', 'assignment', 'project', 'quiz'],
+    enum: ['CAT', 'MIDTERM', 'END_OF_TERM', 'MOCK', 'FINAL', 'ASSIGNMENT', 'QUIZ'],
   })
-  @IsString()
   @IsOptional()
-  type?: string;
+  type?: AssessmentType;
 
   @ApiPropertyOptional({
     description: 'Maximum possible score',
@@ -63,11 +63,4 @@ export class UpdateAssessmentDto {
   @IsDateString()
   @IsOptional()
   dueDate?: string;
-
-  @ApiPropertyOptional({
-    description: 'Whether results are published',
-  })
-  @IsBoolean()
-  @IsOptional()
-  isPublished?: boolean;
 }
