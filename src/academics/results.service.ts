@@ -5,9 +5,10 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import type { ComponentType } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { PrismaService } from '../prisma/prisma.service';
-import type { ComponentType } from '@prisma/client';
 import { BulkCreateGradesDto } from './dto/bulk-create-grades.dto';
 import { CreateAssessmentDto } from './dto/create-assessment.dto';
 import { CreateGradeDto } from './dto/create-grade.dto';
@@ -142,14 +143,40 @@ export class ResultsService {
     }
 
     try {
-      return await this.prisma.subject.create({
-        data: {
-          school_id: schoolId,
-          name: data.name.trim(),
-          code: data.code?.trim() || null,
-          description: data.description?.trim() || null,
-          is_active: data.isActive !== undefined ? data.isActive : true,
-        },
+      // Create subject and components in a transaction
+      const subject = await this.prisma.$transaction(async (tx) => {
+        // Create the subject
+        const createdSubject = await tx.subject.create({
+          data: {
+            school_id: schoolId,
+            name: data.name.trim(),
+            code: data.code?.trim() || null,
+            description: data.description?.trim() || null,
+            is_active: data.isActive !== undefined ? data.isActive : true,
+          },
+        });
+
+        // Create components if provided
+        if (data.components && data.components.length > 0) {
+          await tx.assessmentComponent.createMany({
+            data: data.components.map((component) => ({
+              subject_id: createdSubject.id,
+              name: component.name.trim(),
+              code: component.code?.trim() || null,
+              type: component.type,
+              max_score: new Decimal(component.maxScore),
+              is_active: component.isActive !== undefined ? component.isActive : true,
+            })),
+          });
+        }
+
+        return createdSubject;
+      });
+
+      // Fetch the subject with its components
+      return await this.prisma.subject.findUnique({
+        where: { id: subject.id },
+        include: { components: true },
       });
     } catch (e: any) {
       throw e;
@@ -187,14 +214,33 @@ export class ResultsService {
         continue;
       }
       try {
-        const subject = await this.prisma.subject.create({
-          data: {
-            school_id: schoolId,
-            name: data.name.trim(),
-            code: data.code?.trim() || null,
-            description: data.description?.trim() || null,
-            is_active: data.isActive !== undefined ? data.isActive : true,
-          },
+        const subject = await this.prisma.$transaction(async (tx) => {
+          // Create the subject
+          const createdSubject = await tx.subject.create({
+            data: {
+              school_id: schoolId,
+              name: data.name.trim(),
+              code: data.code?.trim() || null,
+              description: data.description?.trim() || null,
+              is_active: data.isActive !== undefined ? data.isActive : true,
+            },
+          });
+
+          // Create components if provided
+          if (data.components && data.components.length > 0) {
+            await tx.assessmentComponent.createMany({
+              data: data.components.map((component) => ({
+                subject_id: createdSubject.id,
+                name: component.name.trim(),
+                code: component.code?.trim() || null,
+                type: component.type,
+                max_score: new Decimal(component.maxScore),
+                is_active: component.isActive !== undefined ? component.isActive : true,
+              })),
+            });
+          }
+
+          return createdSubject;
         });
         results.push(subject);
       } catch (e: any) {

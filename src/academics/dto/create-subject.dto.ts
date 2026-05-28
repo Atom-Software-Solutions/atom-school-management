@@ -1,5 +1,7 @@
-import { IsString, IsNotEmpty, IsOptional, IsBoolean } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { IsArray, IsBoolean, IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { CreateAssessmentComponentDto } from './create-assessment-component.dto';
 
 export class CreateSubjectDto {
   @ApiProperty({
@@ -34,4 +36,23 @@ export class CreateSubjectDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Assessment components for this subject',
+    type: [CreateAssessmentComponentDto],
+    example: [
+      {
+        name: 'Paper 1',
+        code: 'P1',
+        type: 'EXAM',
+        maxScore: 100,
+        isActive: true,
+      },
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateAssessmentComponentDto)
+  @IsOptional()
+  components?: CreateAssessmentComponentDto[];
 }

@@ -68,6 +68,12 @@ export class SchoolStructureController {
     // Fetch all subjects for this school
     const subjects = await this.prisma.subject.findMany({
       where: { school_id: schoolId },
+      include: {
+        components: {
+          where: { is_active: true },
+          orderBy: { created_at: 'asc' },
+        },
+      },
       orderBy: { name: 'asc' },
     });
     // Map classroom definitions to include their assessments

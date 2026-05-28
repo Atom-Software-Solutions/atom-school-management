@@ -1,10 +1,11 @@
 import {
-  IsString,
-  IsEmail,
-  IsOptional,
   IsBoolean,
-  MinLength,
+  IsEmail,
+  IsEnum,
+  IsOptional,
+  IsString,
   Matches,
+  MinLength,
 } from 'class-validator';
 
 export class UpdateSchoolDto {
@@ -52,4 +53,11 @@ export class UpdateSchoolDto {
   @IsOptional()
   @MinLength(3, { message: 'Motto must be at least 3 characters' })
   motto?: string;
+
+  @IsEnum(['PRIMARY_SCHOOL', 'SECONDARY_SCHOOL', 'UNIVERSITY'] as const, {
+    message:
+      'institutionType must be one of PRIMARY_SCHOOL, SECONDARY_SCHOOL, UNIVERSITY',
+  })
+  @IsOptional()
+  institutionType?: 'PRIMARY_SCHOOL' | 'SECONDARY_SCHOOL' | 'UNIVERSITY';
 }

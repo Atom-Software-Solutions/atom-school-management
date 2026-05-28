@@ -1,8 +1,8 @@
 import {
-  Injectable,
-  NotFoundException,
   ConflictException,
   ForbiddenException,
+  Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSchoolDto } from './dto/create-school.dto';
@@ -11,7 +11,7 @@ import { UpdateSettingsDto } from './dto/update-settings.dto';
 
 @Injectable()
 export class SchoolsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   async create(createSchoolDto: CreateSchoolDto, creatorUserId?: string) {
     // If request originated from an authenticated user, enforce verification for SCHOOL_ADMINs
@@ -58,6 +58,7 @@ export class SchoolsService {
         phone: createSchoolDto.phone,
         address: createSchoolDto.address,
         logo_url: createSchoolDto.logoUrl,
+        institution_type: createSchoolDto.institutionType,
         currency: createSchoolDto.currency || 'UGX',
         time_zone: createSchoolDto.timeZone || 'Africa/Kampala',
         motto: createSchoolDto.motto,
@@ -184,6 +185,8 @@ export class SchoolsService {
       updateData.is_active = updateSchoolDto.isActive;
     if (updateSchoolDto.motto !== undefined)
       updateData.motto = updateSchoolDto.motto;
+    if (updateSchoolDto.institutionType !== undefined)
+      updateData.institution_type = updateSchoolDto.institutionType;
 
     return this.prisma.school.update({
       where: { id },

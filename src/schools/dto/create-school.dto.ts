@@ -1,13 +1,14 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
-  IsString,
   IsEmail,
-  IsOptional,
+  IsEnum,
   IsNotEmpty,
+  IsOptional,
+  IsString,
   Matches,
   MinLength,
 } from 'class-validator';
-import { Transform } from 'class-transformer';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateSchoolDto {
   @ApiProperty({
@@ -123,4 +124,16 @@ export class CreateSchoolDto {
   @Transform(({ value }) => (value === '' ? undefined : value))
   @MinLength(3, { message: 'Motto must be at least 3 characters' })
   motto?: string | undefined;
+
+  @ApiPropertyOptional({
+    description: 'Type of institution',
+    enum: ['PRIMARY_SCHOOL', 'SECONDARY_SCHOOL', 'UNIVERSITY'],
+    example: 'PRIMARY_SCHOOL',
+  })
+  @IsEnum(['PRIMARY_SCHOOL', 'SECONDARY_SCHOOL', 'UNIVERSITY'] as const, {
+    message:
+      'institutionType must be one of PRIMARY_SCHOOL, SECONDARY_SCHOOL, UNIVERSITY',
+  })
+  @IsOptional()
+  institutionType?: 'PRIMARY_SCHOOL' | 'SECONDARY_SCHOOL' | 'UNIVERSITY';
 }

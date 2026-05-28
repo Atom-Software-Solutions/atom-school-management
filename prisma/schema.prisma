@@ -25,6 +25,7 @@ model School {
   deleted_at DateTime?
   domain     String
   motto      String?
+  institution_type InstitutionType @default(PRIMARY_SCHOOL)
   admins     SchoolAdmin[]
   reportCards ReportCard[]
 
@@ -491,6 +492,14 @@ enum ComponentType {
   PERFORMANCE
 
   @@schema("results_mgt")
+}
+
+enum InstitutionType {
+  PRIMARY_SCHOOL
+  SECONDARY_SCHOOL
+  UNIVERSITY
+
+  @@schema("user_mgt")
 }
 
 enum AssessmentType {
