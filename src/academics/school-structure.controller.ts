@@ -47,17 +47,33 @@ export class SchoolStructureController {
     );
     // Fetch all assessments for this school
     const assessments = await this.prisma.assessment.findMany({
-      where: { school_id: schoolId },
+      where: {
+        component: {
+          subject: {
+            school_id: schoolId,
+          },
+        },
+      },
       include: {
         academic_year: true,
         term_template_item: true,
-        subject: true,
+        component: {
+          include: {
+            subject: true,
+          },
+        },
       },
-      orderBy: { assessment_date: 'desc' },
+      orderBy: { date: 'desc' },
     });
     // Fetch all subjects for this school
     const subjects = await this.prisma.subject.findMany({
       where: { school_id: schoolId },
+      include: {
+        components: {
+          where: { is_active: true },
+          orderBy: { created_at: 'asc' },
+        },
+      },
       orderBy: { name: 'asc' },
     });
     // Map classroom definitions to include their assessments

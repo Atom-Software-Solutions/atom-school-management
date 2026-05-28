@@ -10,6 +10,7 @@ import {
   Max,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import type { AssessmentType } from '@prisma/client';
 
 export class CreateAssessmentDto {
   @ApiProperty({
@@ -29,12 +30,12 @@ export class CreateAssessmentDto {
   termTemplateItemId!: string;
 
   @ApiProperty({
-    description: 'Subject ID',
-    example: 'uuid-of-subject',
+    description: 'Assessment component ID (e.g., Paper 1, Practical)',
+    example: 'uuid-of-assessment-component',
   })
   @IsUUID()
   @IsNotEmpty()
-  subjectId!: string;
+  componentId!: string;
 
   @ApiProperty({
     description: 'Classroom definition ID where this assessment applies',
@@ -54,12 +55,11 @@ export class CreateAssessmentDto {
 
   @ApiProperty({
     description: 'Assessment type',
-    example: 'exam',
-    enum: ['exam', 'test', 'assignment', 'project', 'quiz'],
+    example: 'MIDTERM',
+    enum: ['CAT', 'MIDTERM', 'END_OF_TERM', 'MOCK', 'FINAL', 'ASSIGNMENT', 'QUIZ'],
   })
-  @IsString()
   @IsNotEmpty()
-  type!: string;
+  type!: AssessmentType;
 
   @ApiProperty({
     description: 'Maximum possible score',
@@ -84,7 +84,7 @@ export class CreateAssessmentDto {
   })
   @IsDateString()
   @IsOptional()
-  assessmentDate?: string;
+  date?: string;
 
   @ApiPropertyOptional({
     description: 'Due date for assignments',
@@ -93,12 +93,4 @@ export class CreateAssessmentDto {
   @IsDateString()
   @IsOptional()
   dueDate?: string;
-
-  @ApiPropertyOptional({
-    description: 'Whether results are published',
-    default: false,
-  })
-  @IsBoolean()
-  @IsOptional()
-  isPublished?: boolean;
 }

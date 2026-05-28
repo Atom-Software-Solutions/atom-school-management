@@ -1,22 +1,22 @@
 import {
-  Injectable,
-  UnauthorizedException,
-  NotFoundException,
   BadRequestException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { UsersService } from '../users/users.service';
-import { CreateUserDto } from '../users/dto/create-user.dto';
-import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { ForgotPasswordDto } from './dto/forgot-password.dto';
-import { ResetPasswordDto } from './dto/reset-password.dto';
-import { JwtPayload } from './interfaces/jwt-payload.interface';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
-import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateUserDto } from '../users/dto/create-user.dto';
+import { UsersService } from '../users/users.service';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { LoginDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { RegisterDto } from './dto/register.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { JwtPayload } from './interfaces/jwt-payload.interface';
 
 @Injectable()
 export class AuthService {
@@ -25,7 +25,7 @@ export class AuthService {
     private jwtService: JwtService,
     private prisma: PrismaService,
     private emailService: EmailService,
-  ) {}
+  ) { }
 
   async register(registerDto: RegisterDto) {
     // Generate verification token
@@ -181,16 +181,33 @@ export class AuthService {
   // Return all schools the user has an admin relationship with.
   async getUserMemberships(
     userId: string,
-  ): Promise<Array<{ schoolId: string; schoolName: string; role: string }>> {
+  ): Promise<Array<{ schoolId: string; schoolName: string; role: string; institutionType: string }>> {
     const rels = await this.prisma.schoolAdmin.findMany({
       where: { user_id: userId },
-      include: { school: { select: { id: true, name: true } } },
+      include: { school: { select: { id: true, name: true, institution_type: true } } },
     });
 
     return rels.map((r) => ({
       schoolId: r.school.id,
       schoolName: r.school.name,
       role: r.is_super_admin ? 'super_admin' : 'admin',
+      institutionType: r.school.institution_type,
+    }));
+  }
+
+  /**
+   * Return all schools in the system, for SUPER_ADMIN profile memberships.
+   */
+  async getAllMemberships(): Promise<Array<{ schoolId: string; schoolName: string; role: string; institutionType: string }>> {
+    const schools = await this.prisma.school.findMany({
+      select: { id: true, name: true, institution_type: true },
+    });
+
+    return schools.map((school) => ({
+      schoolId: school.id,
+      schoolName: school.name,
+      role: 'super_admin',
+      institutionType: school.institution_type,
     }));
   }
 

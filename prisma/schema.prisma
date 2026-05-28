@@ -25,6 +25,7 @@ model School {
   deleted_at DateTime?
   domain     String
   motto      String?
+  institution_type InstitutionType @default(PRIMARY_SCHOOL)
   admins     SchoolAdmin[]
   reportCards ReportCard[]
 
@@ -97,6 +98,7 @@ model Student {
   grades        Grade[]
   reportCards   ReportCard[]
   guardianMessages GuardianMessage[]
+  results StudentResult[]
 
   @@unique([school_id, first_name, last_name, date_of_birth])
   @@unique([school_id, student_no])
@@ -288,7 +290,8 @@ model Subject {
   is_active   Boolean      @default(true)
   created_at  DateTime     @default(now())
   updated_at  DateTime     @updatedAt
-  assessments Assessment[]
+
+  components  AssessmentComponent[]
   grades      Grade[]
 
   @@unique([school_id, name])
@@ -297,35 +300,67 @@ model Subject {
   @@schema("results_mgt")
 }
 
+model AssessmentComponent {
+  id          String       @id @default(uuid())
+  subject_id  String
+  name        String       // e.g. "Paper 1", "Paper 2", "Practical"
+  code        String?      // optional short code like P1, P2
+  type        ComponentType
+  max_score   Decimal      @db.Decimal(5, 2)
+  is_active   Boolean      @default(true)
+  created_at  DateTime     @default(now())
+  updated_at  DateTime     @updatedAt
+
+  subject     Subject      @relation(fields: [subject_id], references: [id], onDelete: Cascade)
+  assessments Assessment[]
+
+  @@index([subject_id])
+  @@index([type])
+  @@schema("results_mgt")
+}
+
 model Assessment {
-  id                      String    @id @default(uuid())
-  school_id               String
-  academic_year_id        String // Reference to AcademicYear
-  term_template_item_id   String // Reference to TermTemplateItem (replaces term_name)
-  classroom_definition_id String // Reference to ClassroomDefinition (required)
-  subject_id              String
-  name                    String // e.g., "Mid-Term Exam", "Assignment 1"
-  type                    String // "exam", "test", "assignment", "project", "quiz"
-  max_score               Decimal   @db.Decimal(5, 2) // Maximum possible score
-  weight                  Decimal   @db.Decimal(5, 2) // Weight for grade calculation (e.g., 0.3 for 30%)
-  assessment_date         DateTime?
-  due_date                DateTime?
-  is_published            Boolean   @default(false) // Whether results are published to students/parents
-  created_at              DateTime  @default(now())
-  updated_at              DateTime  @updatedAt
+  id               String               @id @default(uuid())
+  component_id     String
+  academic_year_id String
+  name             String               // e.g., "Midterm", "End of Term", "UNEB Final"
+  type             AssessmentType
+  weight           Decimal              @db.Decimal(5, 2)
+  term             Int?                 // If Term model is added, replace with term_id String
+  date             DateTime?
+  created_at       DateTime             @default(now())
+  updated_at       DateTime             @updatedAt
+  term_template_item_id String?
+  classroom_definition_id String?
+  component        AssessmentComponent  @relation(fields: [component_id], references: [id], onDelete: Cascade)
+  academic_year    AcademicYear         @relation(fields: [academic_year_id], references: [id], onDelete: Cascade)
+  term_template_item TermTemplateItem? @relation(fields: [term_template_item_id], references: [id], onDelete: SetNull)
+  classroom_definition ClassroomDefinition? @relation(fields: [classroom_definition_id], references: [id], onDelete: SetNull)
+  results          StudentResult[]
+  grades Grade[]
 
-  academic_year        AcademicYear        @relation(fields: [academic_year_id], references: [id], onDelete: Restrict)
-  subject              Subject             @relation(fields: [subject_id], references: [id], onDelete: Restrict)
-  classroom_definition ClassroomDefinition @relation(fields: [classroom_definition_id], references: [id], onDelete: Restrict)
-  term_template_item   TermTemplateItem    @relation(fields: [term_template_item_id], references: [id], onDelete: Restrict)
-  grades               Grade[]
-
-  @@index([school_id])
+  @@index([component_id])
   @@index([academic_year_id])
   @@index([term_template_item_id])
   @@index([classroom_definition_id])
-  @@index([subject_id])
-  @@index([is_published])
+  @@unique([component_id, name, academic_year_id, term])
+  @@schema("results_mgt")
+}
+
+model StudentResult {
+  id            String      @id @default(uuid())
+  student_id    String
+  assessment_id String
+  score         Decimal     @db.Decimal(5, 2)
+  grade         String?
+  created_at    DateTime    @default(now())
+  updated_at    DateTime    @updatedAt
+
+  assessment    Assessment  @relation(fields: [assessment_id], references: [id], onDelete: Cascade)
+  student       Student     @relation(fields: [student_id], references: [id], onDelete: Cascade)
+
+  @@index([student_id])
+  @@index([assessment_id])
   @@schema("results_mgt")
 }
 
@@ -446,4 +481,35 @@ enum Role {
   STUDENT
 
   @@schema("user_mgt")
+}
+
+enum ComponentType {
+  WRITTEN
+  PRACTICAL
+  ORAL
+  COURSEWORK
+  PROJECT
+  PERFORMANCE
+
+  @@schema("results_mgt")
+}
+
+enum InstitutionType {
+  PRIMARY_SCHOOL
+  SECONDARY_SCHOOL
+  UNIVERSITY
+
+  @@schema("user_mgt")
+}
+
+enum AssessmentType {
+  CAT
+  MIDTERM
+  END_OF_TERM
+  MOCK
+  FINAL
+  ASSIGNMENT
+  QUIZ
+
+  @@schema("results_mgt")
 }

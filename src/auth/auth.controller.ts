@@ -136,7 +136,12 @@ export class AuthController {
     if (!user) {
       throw new Error('User not authenticated');
     }
-    const memberships = await this.authService.getUserMemberships(user.id);
+    let memberships;
+    if (user.role === 'SUPER_ADMIN') {
+      memberships = await this.authService.getAllMemberships();
+    } else {
+      memberships = await this.authService.getUserMemberships(user.id);
+    }
     return {
       id: user.id,
       email: user.email,
@@ -283,3 +288,5 @@ export class AuthController {
     return this.authService.resendVerificationEmail(user.id);
   }
 }
+
+// On the profile endpoint if the role of the user is 'SUPER_ADMIN', the array memberships should be an array of all the institutions we have.

@@ -146,7 +146,11 @@ export class ReportCardsService {
         term_template_item_id: termId,
       },
       include: {
-        subject: true,
+        component: {
+          include: {
+            subject: true,
+          },
+        },
       },
     });
 
@@ -157,10 +161,10 @@ export class ReportCardsService {
     // Group assessments by subject
     const subjectMap = new Map<string, any>();
     for (const assessment of assessments) {
-      const subjectId = assessment.subject_id;
+      const subjectId = assessment.component.subject.id;
       if (!subjectMap.has(subjectId)) {
         subjectMap.set(subjectId, {
-          subject: assessment.subject,
+          subject: assessment.component.subject,
           assessments: [],
         });
       }

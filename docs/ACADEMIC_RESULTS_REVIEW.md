@@ -16,7 +16,7 @@
 - **Impact**: Prevents type mismatch errors and ensures correct comparisons
 
 ### 3. **OrderBy Query** ✅ Fixed
-- **Issue**: Nested `orderBy` with `assessment.assessment_date` may not work reliably in Prisma
+- **Issue**: Nested `orderBy` with `assessment.date` may not work reliably in Prisma
 - **Fix**: Changed to manual sorting after fetching grades
 - **Impact**: Ensures consistent sorting by assessment date
 

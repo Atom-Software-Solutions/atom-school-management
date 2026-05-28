@@ -9,6 +9,9 @@ class MembershipDto {
 
   @ApiProperty()
   role!: string;
+
+  @ApiProperty({ enum: ['PRIMARY_SCHOOL', 'SECONDARY_SCHOOL', 'UNIVERSITY'] })
+  institutionType!: 'PRIMARY_SCHOOL' | 'SECONDARY_SCHOOL' | 'UNIVERSITY';
 }
 
 export class ProfileResponseDto {
