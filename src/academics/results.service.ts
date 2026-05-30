@@ -117,6 +117,7 @@ export class ResultsService {
         school_id: schoolId,
         ...(includeInactive ? {} : { is_active: true }),
       },
+      include: { components: true },
       orderBy: { name: 'asc' },
     });
   }
@@ -152,6 +153,7 @@ export class ResultsService {
             name: data.name.trim(),
             code: data.code?.trim() || null,
             description: data.description?.trim() || null,
+            level: data.level?.trim() || null,
             is_active: data.isActive !== undefined ? data.isActive : true,
           },
         });
@@ -222,6 +224,7 @@ export class ResultsService {
               name: data.name.trim(),
               code: data.code?.trim() || null,
               description: data.description?.trim() || null,
+              level: data.level?.trim() || null,
               is_active: data.isActive !== undefined ? data.isActive : true,
             },
           });
@@ -285,6 +288,7 @@ export class ResultsService {
     if (data.code !== undefined) updateData.code = data.code?.trim() || null;
     if (data.description !== undefined)
       updateData.description = data.description?.trim() || null;
+    if (data.level !== undefined) updateData.level = data.level?.trim() || null;
     if (data.isActive !== undefined) updateData.is_active = data.isActive;
 
     if (Object.keys(updateData).length === 0) {
@@ -338,54 +342,29 @@ export class ResultsService {
     schoolId: string,
     adminUserId: string,
     yearId: string,
-    termItemId: string,
+    termTemplateItemId: string,
+    componentId?: string,
   ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     const where: any = {
-      school_id: schoolId,
       academic_year_id: yearId,
-      term_template_item_id: termItemId,
+      term_template_item_id: termTemplateItemId,
     };
 
-    const assessments = await this.prisma.assessment.findMany({
-      where,
-      include: {
-        component: {
-          include: {
-            subject: true,
-          },
-        },
-        classroom_definition: {
-          select: { id: true, name: true, level: true },
-        },
-        term_template_item: {
-          select: { id: true, name: true, ordinal: true },
-        },
-      },
-      orderBy: { date: 'desc' },
-    });
-
-    const groups: Record<string, any> = {};
-    for (const a of assessments) {
-      const defId = a.classroom_definition_id || '__unassigned__';
-      if (!groups[defId]) {
-        groups[defId] = {
-          classroomDefinition: a.classroom_definition || null,
-          assessments: [],
-        };
-      }
-      groups[defId].assessments.push(a);
+    if (componentId) {
+      where.component_id = componentId;
     }
 
-    // Convert to array and sort by classroom name when available
-    const result = Object.values(groups).sort((x: any, y: any) => {
-      const nameA = x.classroomDefinition?.name || '';
-      const nameB = y.classroomDefinition?.name || '';
-      return nameA.localeCompare(nameB);
+    return this.prisma.assessment.findMany({
+      where,
+      include: {
+        component: true,
+        classroom_definition: true,
+        term_template_item: true,
+      },
+      orderBy: [{ date: 'asc' }, { name: 'asc' }],
     });
-
-    return result;
   }
 
   async listAssessmentsByDefinition(
@@ -398,7 +377,7 @@ export class ResultsService {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     const where: any = {
-      school_id: schoolId,
+      // school_id: schoolId,
       academic_year_id: yearId,
       term_template_item_id: termItemId,
       classroom_definition_id: definitionId,
@@ -1241,7 +1220,7 @@ export class ResultsService {
         ? subjectResults.reduce((sum, subj) => sum + subj.average, 0) /
         subjectResults.length
         : 0;
-    console.log('subjectResults.length', subjectResults.length);
+
     const overallAverage = Number(overallAverageRaw.toFixed(2));
 
     return {
@@ -1695,6 +1674,15 @@ export class ResultsService {
           subject: g.assessment?.subject
             ? { id: g.assessment.subject.id, name: g.assessment.subject.name }
             : null,
+          component: g.assessment?.component
+            ? {
+              id: g.assessment.component.id,
+              name: g.assessment.component.name,
+              subject: g.assessment.component.subject
+                ? { id: g.assessment.component.subject.id, name: g.assessment.component.subject.name }
+                : null,
+            }
+            : null,
         },
         score: g.score,
         percentage: g.percentage,
@@ -1824,6 +1812,15 @@ export class ResultsService {
             name: g.assessment?.name,
             subject: g.assessment?.subject
               ? { id: g.assessment.subject.id, name: g.assessment.subject.name }
+              : null,
+            component: g.assessment?.component
+              ? {
+                id: g.assessment.component.id,
+                name: g.assessment.component.name,
+                subject: g.assessment.component.subject
+                  ? { id: g.assessment.component.subject.id, name: g.assessment.component.subject.name }
+                  : null,
+              }
               : null,
           },
           score: g.score,

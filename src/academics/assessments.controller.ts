@@ -1,8 +1,8 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
-  BadRequestException,
   ForbiddenException,
   Get,
   Param,
@@ -14,16 +14,16 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
-import { ResultsService } from './results.service';
+import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
 import { CreateAssessmentDto } from './dto/create-assessment.dto';
 import { UpdateAssessmentDto } from './dto/update-assessment.dto';
-import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
+import { ResultsService } from './results.service';
 
 @Controller('schools/:schoolId/assessments')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('SCHOOL_ADMIN')
 export class AssessmentsController {
-  constructor(private readonly resultsService: ResultsService) {}
+  constructor(private readonly resultsService: ResultsService) { }
 
   @Get()
   list(
@@ -31,13 +31,12 @@ export class AssessmentsController {
     @Query('yearId') yearId: string,
     @Query('termItemId') termItemId: string,
     @Request() req: AuthenticatedRequest,
+    @Query('componentId') componentId?: string,
     @Query('definitionId') definitionId?: string,
   ) {
     if (!req.user) {
       throw new ForbiddenException('Authentication required');
     }
-
-    // This endpoint requires both yearId and termItemId and returns assessments grouped by classroom definition.
     if (!yearId || !termItemId) {
       throw new BadRequestException('yearId and termItemId are required');
     }
@@ -56,6 +55,7 @@ export class AssessmentsController {
       req.user.id,
       yearId,
       termItemId,
+      componentId,
     );
   }
 

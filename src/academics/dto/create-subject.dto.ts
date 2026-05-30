@@ -29,6 +29,14 @@ export class CreateSubjectDto {
   description?: string;
 
   @ApiPropertyOptional({
+    description: 'Level (e.g., O-Level, A-Level, Grade 10)',
+    example: 'O-Level',
+  })
+  @IsString()
+  @IsOptional()
+  level?: string;
+
+  @ApiPropertyOptional({
     description: 'Whether the subject is active',
     example: true,
     default: true,
