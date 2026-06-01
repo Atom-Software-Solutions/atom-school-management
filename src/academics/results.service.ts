@@ -112,13 +112,22 @@ export class ResultsService {
     includeInactive = false,
   ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
-    return this.prisma.subject.findMany({
+    const subjectsRaw = await this.prisma.subject.findMany({
       where: {
         school_id: schoolId,
         ...(includeInactive ? {} : { is_active: true }),
       },
       include: { components: true },
       orderBy: { name: 'asc' },
+    });
+
+    // Put O-Level subjects first, then by name
+    return subjectsRaw.sort((a, b) => {
+      const aIsO = a.level === 'O-Level';
+      const bIsO = b.level === 'O-Level';
+      if (aIsO && !bIsO) return -1;
+      if (!aIsO && bIsO) return 1;
+      return (a.name || '').localeCompare(b.name || '');
     });
   }
 

@@ -32,9 +32,7 @@ export class GradesController {
     @Body() dto: CreateGradeDto,
     @Request() req: AuthenticatedRequest,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     return this.resultsService.createGrade(schoolId, req.user.id, dto);
   }
 
@@ -44,9 +42,7 @@ export class GradesController {
     @Body() dto: BulkCreateGradesDto,
     @Request() req: AuthenticatedRequest,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     return this.resultsService.bulkCreateGrades(schoolId, req.user.id, dto);
   }
 
@@ -69,9 +65,7 @@ export class GradesController {
 
   @Get(':id')
   get(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     return this.resultsService.getGrade(id, req.user.id);
   }
 
@@ -81,17 +75,13 @@ export class GradesController {
     @Body() dto: UpdateGradeDto,
     @Request() req: AuthenticatedRequest,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     return this.resultsService.updateGrade(id, req.user.id, dto);
   }
 
   @Delete(':id')
   delete(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     return this.resultsService.deleteGrade(id, req.user.id);
   }
 
@@ -101,9 +91,7 @@ export class GradesController {
     @Query('assessmentId') assessmentId: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     return this.resultsService.listGradesForAssessment(
       schoolId,
       req.user.id,

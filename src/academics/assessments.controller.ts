@@ -34,9 +34,8 @@ export class AssessmentsController {
     @Query('componentId') componentId?: string,
     @Query('definitionId') definitionId?: string,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
+
     if (!yearId || !termItemId) {
       throw new BadRequestException('yearId and termItemId are required');
     }
@@ -65,9 +64,7 @@ export class AssessmentsController {
     @Body() dto: CreateAssessmentDto,
     @Request() req: AuthenticatedRequest,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     // Optionally, check for componentId here if you want extra validation
     if (!dto.componentId) {
       throw new BadRequestException('componentId is required');
@@ -77,9 +74,7 @@ export class AssessmentsController {
 
   @Get(':id')
   get(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     return this.resultsService.getAssessment(id, req.user.id);
   }
 
@@ -88,9 +83,7 @@ export class AssessmentsController {
     @Param('id') id: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     return this.resultsService.getEnrolledStudentsForAssessment(
       id,
       req.user.id,
@@ -103,17 +96,13 @@ export class AssessmentsController {
     @Body() dto: UpdateAssessmentDto,
     @Request() req: AuthenticatedRequest,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     return this.resultsService.updateAssessment(id, req.user.id, dto);
   }
 
   @Delete(':id')
   delete(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     return this.resultsService.deleteAssessment(id, req.user.id);
   }
 
@@ -123,9 +112,7 @@ export class AssessmentsController {
     @Param('componentId') componentId: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     return this.resultsService.listAssessmentsByComponent(schoolId, req.user.id, componentId);
   }
 }

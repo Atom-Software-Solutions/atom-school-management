@@ -22,9 +22,7 @@ export class StudentReportCardsController {
     @Param('studentId') studentId: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     return this.resultsService.listStudentReportCardsForViewer(
       studentId,
       req.user,

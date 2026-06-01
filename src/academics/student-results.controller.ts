@@ -17,7 +17,7 @@ import type { AuthenticatedRequest } from '../common/middleware/tenant.middlewar
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('SCHOOL_ADMIN', 'PARENT')
 export class StudentResultsController {
-  constructor(private readonly resultsService: ResultsService) {}
+  constructor(private readonly resultsService: ResultsService) { }
 
   @Get()
   getGrades(
@@ -27,9 +27,7 @@ export class StudentResultsController {
     @Query('subjectId') subjectId: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     return this.resultsService.getStudentGradesForViewer(
       studentId,
       req.user,
@@ -46,14 +44,8 @@ export class StudentResultsController {
     @Query('termItemId') termItemId: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
-    if (!yearId || !termItemId) {
-      throw new BadRequestException(
-        'yearId and termItemId query parameters are required',
-      );
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
+    if (!yearId || !termItemId) throw new BadRequestException('yearId and termItemId query parameters are required');
     return this.resultsService.getStudentAcademicSummaryForViewer(
       studentId,
       req.user,

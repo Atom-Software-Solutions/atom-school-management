@@ -19,13 +19,11 @@ import type { AuthenticatedRequest } from '../common/middleware/tenant.middlewar
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('SCHOOL_ADMIN')
 export class ClassroomDefinitionsUpdateController {
-  constructor(private readonly classroomsService: ClassroomsService) {}
+  constructor(private readonly classroomsService: ClassroomsService) { }
 
   @Get(':id')
   getOne(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     const adminUserId = req.user.id;
     return this.classroomsService.getDefinitionById(id, adminUserId);
   }
@@ -36,9 +34,7 @@ export class ClassroomDefinitionsUpdateController {
     @Body() dto: UpdateClassroomDefinitionDto,
     @Request() req: AuthenticatedRequest,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     const adminUserId = req.user.id;
     return this.classroomsService.updateDefinitionById(id, adminUserId, {
       name: dto.name,
@@ -50,9 +46,7 @@ export class ClassroomDefinitionsUpdateController {
 
   @Delete(':id')
   delete(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     const adminUserId = req.user.id;
     return this.classroomsService.deleteDefinitionById(id, adminUserId);
   }

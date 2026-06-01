@@ -171,7 +171,7 @@ export class ReportCardsService {
       subjectMap.get(subjectId).assessments.push(assessment);
     }
 
-    // For each subject, fetch student grades and calculate weighted average
+    // For each subject, fetch student grades and build components + calculate weighted average
     const subjects: any[] = [];
     for (const [subjectId, data] of subjectMap) {
       const subjectGrades = await this.prisma.grade.findMany({
@@ -184,23 +184,52 @@ export class ReportCardsService {
           },
         },
         include: {
-          assessment: true,
+          assessment: {
+            include: {
+              component: true, // include component so we can use its name / weight
+            },
+          },
         },
       });
 
       if (subjectGrades.length > 0) {
-        // Calculate weighted average
-        const { weightedScore, totalWeight } = this.calculateWeightedAverage(
-          subjectGrades,
-        );
+        // Build components array from individual grade records
+        const components = subjectGrades.map(g => {
+          const assessment = g.assessment || ({} as any);
+          const component = assessment.component || ({} as any);
+          const percentage = Number(g.percentage);
+          const weight = Number(assessment.weight) || undefined;
+          const compScore = Number.isFinite(percentage) ? percentage : undefined;
+          const compGrade = typeof compScore === 'number' ? this.calculateLetterGrade(compScore) : undefined;
+
+          return {
+            name: component.name || `Assessment ${assessment.id}`,
+            score: compScore,
+            grade: compGrade,
+            credits: weight,
+            remarks: g.remarks || '',
+          };
+        });
+
+        // Calculate weighted average using the same helper (works on original grade records)
+        const { weightedScore, totalWeight } = this.calculateWeightedAverage(subjectGrades);
         const average = totalWeight > 0 ? weightedScore / totalWeight : 0;
         const roundedAverage = Math.round(average * 100) / 100;
 
+        // Determine total credits for the subject (sum of assessment weights if present, fallback to count)
+        const totalCredits = subjectGrades.reduce((sum, g) => {
+          const w = Number(g.assessment?.weight) || 0;
+          return sum + w;
+        }, 0) || subjectGrades.length;
+
         subjects.push({
           name: data.subject.name,
+          // provide individual component entries
+          components,
+          // aggregated fields for compatibility
           score: roundedAverage,
           grade: this.calculateLetterGrade(roundedAverage),
-          credits: subjectGrades.length, // Number of assessments
+          credits: totalCredits,
           remarks: this.getRemarkForScore(roundedAverage),
         });
       }

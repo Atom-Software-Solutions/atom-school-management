@@ -32,9 +32,7 @@ export class ResultsController {
     @Query('termId') termId: string,
     @Req() req: any,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     return this.resultsService.getStudentResultsByIdentity(
       schoolId,
       req.user.id,
@@ -52,9 +50,7 @@ export class ResultsController {
     @Query('definitionId') definitionId: string,
     @Req() req: any,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     return this.resultsService.getResultsByClassroom(
       schoolId,
       req.user.id,
@@ -72,9 +68,7 @@ export class ResultsController {
     @Query('termId') termId: string,
     @Req() req: any,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     return this.reportCardsService.getReportCardByIdentity(
       schoolId,
       req.user.id,
@@ -92,9 +86,7 @@ export class ResultsController {
     @Query('termId') termId: string,
     @Req() req: any,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
 
     // Get the report card data
     const reportCardData = await this.reportCardsService.getReportCardByIdentity(

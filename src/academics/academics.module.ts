@@ -7,6 +7,7 @@ import { AcademicsService } from './academics.service';
 import { AssessmentsController } from './assessments.controller';
 import { GradesController } from './grades.controller';
 import { PdfGenerationService } from './pdf-generation.service';
+import { ReportCard2DataService } from './report-card-2-data.service';
 import { ReportCard2PdfService } from './report-card-2-pdf.service';
 import { ReportCard2Controller } from './report-card-2.controller';
 import { ReportCardsController } from './report-cards.controller';
@@ -45,6 +46,7 @@ import { YearsController } from './years.controller';
     PdfGenerationService,
     ReportCardsService,
     ReportCard2PdfService,
+    ReportCard2DataService,
   ],
   exports: [
     ReportCard2PdfService,

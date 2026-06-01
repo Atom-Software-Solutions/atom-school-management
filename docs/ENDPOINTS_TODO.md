@@ -283,13 +283,13 @@ Legend:
   - O-level: A, B, C, D, E
 
 3. O-level subject breakdown:
-  - English Language                2 papers
-  - Literature in English           1 paper
-  - Mathematics                     2 papers
-  - Biology                         2 papers (Theory + Practical)
-  - Chemistry                       2 papers (Theory + Practical)
+  - ✅English Language                2 papers
+  - ✅Literature in English           1 paper
+  - ✅Mathematics                     2 papers
+  - ✅Biology                         2 papers (Theory + Practical)
+  - ✅Chemistry                       2 papers (Theory + Practical)
   - Physics                         2 papers (Theory + Practical)
-  - Geography                       1 paper
+  - ✅Geography                       1 paper
   - History & Political Education   1 paper
   - CRE / IRE                       1 paper
   - Kiswahili                       2 papers

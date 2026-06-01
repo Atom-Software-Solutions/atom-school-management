@@ -1,9 +1,10 @@
 import { Controller, ForbiddenException, Get, Param, Query, Req, StreamableFile, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
+import { ReportCard2DataService } from './report-card-2-data.service';
 import { ReportCard2PdfService } from './report-card-2-pdf.service';
+import { exampleConfig2 } from './report-card-2.component';
 import { ReportCardsService } from './report-cards.service';
-import { exampleData2, exampleConfig2 } from './report-card-2.component';
 
 @Controller('schools/:schoolId/report-card-2')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -12,6 +13,7 @@ export class ReportCard2Controller {
     constructor(
         private readonly reportCardsService: ReportCardsService,
         private readonly pdfService: ReportCard2PdfService,
+        private readonly dataService: ReportCard2DataService, // added
     ) { }
 
     @Get('by-identity/pdf')
@@ -22,9 +24,7 @@ export class ReportCard2Controller {
         @Query('termId') termId: string,
         @Req() req: any,
     ) {
-        if (!req.user) {
-            throw new ForbiddenException('Authentication required');
-        }
+        if (!req.user) throw new ForbiddenException('Authentication required');
 
         // fetch report card data (reuse existing service)
         const reportCardData = await this.reportCardsService.getReportCardByIdentity(
@@ -50,17 +50,27 @@ export class ReportCard2Controller {
         });
     }
 
-    // New: generate PDF from the component's dummy data for quick testing
+    // New: generate PDF from DB-derived structure (used by dummy/pdf)
     @Get('dummy/pdf')
     async getReportCard2DummyPDF(
         @Param('schoolId') schoolId: string,
+        @Query('identity') identity: string,
+        @Query('yearId') yearId: string,
+        @Query('termId') termId: string,
         @Req() req: any,
     ) {
-        if (!req.user) {
-            throw new ForbiddenException('Authentication required');
-        }
+        if (!req.user) throw new ForbiddenException('Authentication required');
 
-        const pdfBuffer = await this.pdfService.generateReportCard2PDF(exampleData2, exampleConfig2);
+        // Build ReportCard2-shaped data from DB (ensures components present)
+        const pdfData = await this.dataService.buildReportCard2Data(
+            schoolId,
+            identity,
+            yearId,
+            termId,
+            req,
+        );
+
+        const pdfBuffer = await this.pdfService.generateReportCard2PDF(pdfData, exampleConfig2);
 
         const fileName = `report-card-2-dummy.pdf`;
 
