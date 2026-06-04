@@ -288,16 +288,16 @@ Legend:
   - ✅Mathematics                     2 papers
   - ✅Biology                         2 papers (Theory + Practical)
   - ✅Chemistry                       2 papers (Theory + Practical)
-  - Physics                         2 papers (Theory + Practical)
+  - ✅Physics                         2 papers (Theory + Practical)
   - ✅Geography                       1 paper
-  - History & Political Education   1 paper
-  - CRE / IRE                       1 paper
-  - Kiswahili                       2 papers
+  - ✅History & Political Education   1 paper
+  - ✅CRE / IRE                       1 paper
+  - ✅Kiswahili                       2 papers
   - Local Languages                 2 papers
-  - Agriculture                     2 papers (Theory + Practical)
-  - ICT / Computer Studies          2 papers (Theory + Practical)
-  - Entrepreneurship                1 paper
-  - Art & Design                    2 components (Theory + Practical/Project)
+  - ✅Agriculture                     2 papers (Theory + Practical)
+  - ✅ICT / Computer Studies          2 papers (Theory + Practical)
+  - ✅Entrepreneurship                1 paper
+  - ✅Art & Design                    2 components (Theory + Practical/Project)
   - Performing Arts                 2 components
   - Nutrition & Food Technology     2 papers/components
   - Technology & Design             2 papers/components
@@ -305,16 +305,16 @@ Legend:
   - Foreign Languages               Usually 2 papers
 
 4. A-level subject breakdown:
-  - General Paper                   1 paper
-  - Mathematics                     2 papers (Pure + Applied)
-  - Physics                         2 papers (Theory + Practical)
-  - Chemistry                       2 papers (Theory + Practical)
-  - Biology                         2 papers (Theory + Practical)
-  - Agriculture                     2 components (Theory + Practical + Project)
-  - Computer Studies / ICT          2 components (Theory + Practical)
-  - Economics                       1 paper
-  - Geography                       2 components (Theory + Fieldwork)
-  - History                         1 paper
+  - ✅General Paper                   1 paper
+  - ✅Mathematics                     2 papers (Pure + Applied)
+  - ✅Physics                         2 papers (Theory + Practical)
+  - ✅Chemistry                       2 papers (Theory + Practical)
+  - ✅Biology                         2 papers (Theory + Practical)
+  - ✅Agriculture                     2 components (Theory + Practical + Project)
+  - ✅Computer Studies / ICT          2 components (Theory + Practical)
+  - ✅Economics                       1 paper
+  - ✅Geography                       2 components (Theory + Fieldwork)
+  - ✅History                         1 paper
   - Divinity / CRE / IRE            1 paper
   - Entrepreneurship                1 paper
   - Literature in English           1 paper

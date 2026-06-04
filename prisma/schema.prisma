@@ -295,8 +295,9 @@ model Subject {
   components  AssessmentComponent[]
   grades      Grade[]
 
-  @@unique([school_id, name])
   @@index([school_id])
+  @@index([name])
+  @@index([code])
   @@index([is_active])
   @@schema("results_mgt")
 }

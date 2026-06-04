@@ -138,19 +138,7 @@ export class ResultsService {
   ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
-    // Check for existing subject with same name or code (active)
-    const existing = await this.prisma.subject.findFirst({
-      where: {
-        school_id: schoolId,
-        OR: [{ name: data.name.trim() }, { code: data.code?.trim() || null }],
-        is_active: true,
-      },
-    });
-    if (existing) {
-      throw new BadRequestException(
-        'A subject with this name or code already exists for this school',
-      );
-    }
+    // (uniqueness checks removed — name/code are allowed to repeat)
 
     try {
       // Create subject and components in a transaction
@@ -210,18 +198,8 @@ export class ResultsService {
 
     for (let i = 0; i < dataArray.length; i++) {
       const data = dataArray[i];
-      // Check for existing subject with same name or code (active)
-      const existing = await this.prisma.subject.findFirst({
-        where: {
-          school_id: schoolId,
-          OR: [{ name: data.name.trim() }, { code: data.code?.trim() || null }],
-          is_active: true,
-        },
-      });
-      if (existing) {
-        errors.push(
-          `Subject ${i + 1} (${data.name}): A subject with this name or code already exists for this school`,
-        );
+      if (!data.name || !data.name.trim()) {
+        errors.push(`Subject ${i + 1}: name is required`);
         continue;
       }
       try {
