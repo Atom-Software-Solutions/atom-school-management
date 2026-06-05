@@ -130,6 +130,39 @@ export class ReportCardsService {
   }
 
   /**
+   * Return the classroom definition level for a student enrollment (e.g. 'O-Level'|'A-Level')
+   */
+  async getEnrollmentLevelByIdentity(
+    schoolId: string,
+    userId: string,
+    yearId: string,
+    identity: string,
+  ): Promise<string> {
+    // Fetch the student (reuse existing helper/service)
+    const student = await this.studentsService.findByIdentity(schoolId, identity, userId);
+    if (!student) {
+      throw new NotFoundException('Student not found');
+    }
+
+    // Fetch enrollment for the year and include classroom definition
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: {
+        student_id: student.id,
+        academic_year_id: yearId,
+        deleted_at: null,
+      },
+      include: { classroom_definition: true },
+    });
+
+    if (!enrollment || !enrollment.classroom_definition) {
+      throw new NotFoundException('Student not enrolled in the specified year');
+    }
+
+    return enrollment.classroom_definition.level || 'O-Level';
+    // return 'A-Level'; // For testing purposes, we can hardcode this to 'A-Level' to trigger the new report card format
+  }
+
+  /**
    * Fetch all subjects with student grades for a specific classroom, year, and term
    */
   private async fetchStudentSubjectsWithGrades(

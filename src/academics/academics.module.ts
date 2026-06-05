@@ -50,6 +50,7 @@ import { YearsController } from './years.controller';
   ],
   exports: [
     ReportCard2PdfService,
+    ReportCard2DataService,
   ],
 })
 export class AcademicsModule { }
