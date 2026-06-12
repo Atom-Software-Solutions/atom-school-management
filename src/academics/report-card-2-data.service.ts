@@ -33,7 +33,7 @@ export class ReportCard2DataService {
         const subjects = (base.subjects || []).map((s: any) => {
             let components: Array<any> = [];
 
-            if (Array.isArray(s.components) && s.components.length >= 2) {
+            if (Array.isArray(s.components) && s.components.length >= 1) {
                 components = s.components.map((c: any) => ({
                     name: c.name,
                     score: typeof c.score === 'number' ? c.score : (c.score ? Number(c.score) : undefined),
