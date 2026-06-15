@@ -1,16 +1,15 @@
-import {
-  IsString,
-  IsNotEmpty,
-  IsOptional,
-  IsUUID,
-  IsNumber,
-  IsDateString,
-  IsBoolean,
-  Min,
-  Max,
-} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import type { AssessmentType } from '@prisma/client';
+import {
+  IsDateString,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  Min
+} from 'class-validator';
 
 export class CreateAssessmentDto {
   @ApiProperty({
@@ -62,14 +61,6 @@ export class CreateAssessmentDto {
   type!: AssessmentType;
 
   @ApiProperty({
-    description: 'Maximum possible score',
-    example: 100,
-  })
-  @IsNumber()
-  @Min(0)
-  maxScore!: number;
-
-  @ApiProperty({
     description: 'Weight for grade calculation (0-1)',
     example: 0.3,
   })
@@ -93,4 +84,13 @@ export class CreateAssessmentDto {
   @IsDateString()
   @IsOptional()
   dueDate?: string;
+
+  @ApiProperty({
+    description: 'Maximum possible score for this assessment',
+    example: 100,
+  })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  maxScore?: number;
 }

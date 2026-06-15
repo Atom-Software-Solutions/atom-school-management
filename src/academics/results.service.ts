@@ -6,7 +6,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { ComponentType } from '@prisma/client';
-import { Decimal } from '@prisma/client/runtime/library';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { PrismaService } from '../prisma/prisma.service';
 import { BulkCreateGradesDto } from './dto/bulk-create-grades.dto';
@@ -112,12 +111,22 @@ export class ResultsService {
     includeInactive = false,
   ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
-    return this.prisma.subject.findMany({
+    const subjectsRaw = await this.prisma.subject.findMany({
       where: {
         school_id: schoolId,
         ...(includeInactive ? {} : { is_active: true }),
       },
+      include: { components: true },
       orderBy: { name: 'asc' },
+    });
+
+    // Put O-Level subjects first, then by name
+    return subjectsRaw.sort((a, b) => {
+      const aIsO = a.level === 'O-Level';
+      const bIsO = b.level === 'O-Level';
+      if (aIsO && !bIsO) return -1;
+      if (!aIsO && bIsO) return 1;
+      return (a.name || '').localeCompare(b.name || '');
     });
   }
 
@@ -128,35 +137,20 @@ export class ResultsService {
   ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
-    // Check for existing subject with same name or code (active)
-    const existing = await this.prisma.subject.findFirst({
-      where: {
-        school_id: schoolId,
-        OR: [{ name: data.name.trim() }, { code: data.code?.trim() || null }],
-        is_active: true,
-      },
-    });
-    if (existing) {
-      throw new BadRequestException(
-        'A subject with this name or code already exists for this school',
-      );
-    }
-
     try {
-      // Create subject and components in a transaction
       const subject = await this.prisma.$transaction(async (tx) => {
-        // Create the subject
         const createdSubject = await tx.subject.create({
           data: {
             school_id: schoolId,
             name: data.name.trim(),
             code: data.code?.trim() || null,
             description: data.description?.trim() || null,
+            level: data.level?.trim() || null,
             is_active: data.isActive !== undefined ? data.isActive : true,
           },
         });
 
-        // Create components if provided
+        // Create components if provided (assessmentComponent no longer stores max_score)
         if (data.components && data.components.length > 0) {
           await tx.assessmentComponent.createMany({
             data: data.components.map((component) => ({
@@ -164,7 +158,6 @@ export class ResultsService {
               name: component.name.trim(),
               code: component.code?.trim() || null,
               type: component.type,
-              max_score: new Decimal(component.maxScore),
               is_active: component.isActive !== undefined ? component.isActive : true,
             })),
           });
@@ -173,7 +166,6 @@ export class ResultsService {
         return createdSubject;
       });
 
-      // Fetch the subject with its components
       return await this.prisma.subject.findUnique({
         where: { id: subject.id },
         include: { components: true },
@@ -199,34 +191,23 @@ export class ResultsService {
 
     for (let i = 0; i < dataArray.length; i++) {
       const data = dataArray[i];
-      // Check for existing subject with same name or code (active)
-      const existing = await this.prisma.subject.findFirst({
-        where: {
-          school_id: schoolId,
-          OR: [{ name: data.name.trim() }, { code: data.code?.trim() || null }],
-          is_active: true,
-        },
-      });
-      if (existing) {
-        errors.push(
-          `Subject ${i + 1} (${data.name}): A subject with this name or code already exists for this school`,
-        );
+      if (!data.name || !data.name.trim()) {
+        errors.push(`Subject ${i + 1}: name is required`);
         continue;
       }
       try {
         const subject = await this.prisma.$transaction(async (tx) => {
-          // Create the subject
           const createdSubject = await tx.subject.create({
             data: {
               school_id: schoolId,
               name: data.name.trim(),
               code: data.code?.trim() || null,
               description: data.description?.trim() || null,
+              level: data.level?.trim() || null,
               is_active: data.isActive !== undefined ? data.isActive : true,
             },
           });
 
-          // Create components if provided
           if (data.components && data.components.length > 0) {
             await tx.assessmentComponent.createMany({
               data: data.components.map((component) => ({
@@ -234,7 +215,6 @@ export class ResultsService {
                 name: component.name.trim(),
                 code: component.code?.trim() || null,
                 type: component.type,
-                max_score: new Decimal(component.maxScore),
                 is_active: component.isActive !== undefined ? component.isActive : true,
               })),
             });
@@ -285,6 +265,7 @@ export class ResultsService {
     if (data.code !== undefined) updateData.code = data.code?.trim() || null;
     if (data.description !== undefined)
       updateData.description = data.description?.trim() || null;
+    if (data.level !== undefined) updateData.level = data.level?.trim() || null;
     if (data.isActive !== undefined) updateData.is_active = data.isActive;
 
     if (Object.keys(updateData).length === 0) {
@@ -333,59 +314,34 @@ export class ResultsService {
   // ==========================================
   // ASSESSMENT MANAGEMENT
   // ==========================================
-
   async listAssessments(
     schoolId: string,
     adminUserId: string,
     yearId: string,
-    termItemId: string,
+    termTemplateItemId: string,
+    componentId?: string,
   ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     const where: any = {
-      school_id: schoolId,
       academic_year_id: yearId,
-      term_template_item_id: termItemId,
+      term_template_item_id: termTemplateItemId,
     };
 
-    const assessments = await this.prisma.assessment.findMany({
-      where,
-      include: {
-        component: {
-          include: {
-            subject: true,
-          },
-        },
-        classroom_definition: {
-          select: { id: true, name: true, level: true },
-        },
-        term_template_item: {
-          select: { id: true, name: true, ordinal: true },
-        },
-      },
-      orderBy: { date: 'desc' },
-    });
-
-    const groups: Record<string, any> = {};
-    for (const a of assessments) {
-      const defId = a.classroom_definition_id || '__unassigned__';
-      if (!groups[defId]) {
-        groups[defId] = {
-          classroomDefinition: a.classroom_definition || null,
-          assessments: [],
-        };
-      }
-      groups[defId].assessments.push(a);
+    if (componentId) {
+      where.component_id = componentId;
     }
 
-    // Convert to array and sort by classroom name when available
-    const result = Object.values(groups).sort((x: any, y: any) => {
-      const nameA = x.classroomDefinition?.name || '';
-      const nameB = y.classroomDefinition?.name || '';
-      return nameA.localeCompare(nameB);
+    const rows = await this.prisma.assessment.findMany({
+      where,
+      include: {
+        component: true,
+        classroom_definition: true,
+        term_template_item: true,
+      },
+      orderBy: [{ date: 'asc' }, { name: 'asc' }],
     });
-
-    return result;
+    return rows;
   }
 
   async listAssessmentsByDefinition(
@@ -398,7 +354,6 @@ export class ResultsService {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     const where: any = {
-      school_id: schoolId,
       academic_year_id: yearId,
       term_template_item_id: termItemId,
       classroom_definition_id: definitionId,
@@ -434,7 +389,6 @@ export class ResultsService {
       groups[defId].assessments.push(a);
     }
 
-    // Convert to array and sort by classroom name
     const result = Object.values(groups).sort((x: any, y: any) => {
       const nameA = x.classroomDefinition?.name || '';
       const nameB = y.classroomDefinition?.name || '';
@@ -447,7 +401,7 @@ export class ResultsService {
   async createAssessment(
     schoolId: string,
     adminUserId: string,
-    data: CreateAssessmentDto, // Should now include componentId, not subjectId
+    data: CreateAssessmentDto,
   ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
@@ -519,7 +473,15 @@ export class ResultsService {
         name: data.name.trim(),
         type: data.type,
         weight: data.weight,
+        max_score: data.maxScore ?? 100,
         date: data.date ? new Date(data.date) : null,
+      },
+      include: {
+        component: {
+          include: {
+            subject: true,
+          },
+        },
       },
     });
   }
@@ -613,10 +575,16 @@ export class ResultsService {
       }
     }
 
-    return this.prisma.assessment.update({
+    const updated = await this.prisma.assessment.update({
       where: { id: assessmentId },
       data: updateData,
+      include: {
+        component: {
+          include: { subject: true },
+        },
+      },
     });
+    return updated;
   }
 
   async deleteAssessment(assessmentId: string, adminUserId: string) {
@@ -726,8 +694,8 @@ export class ResultsService {
       throw new ForbiddenException('Assessment does not belong to this school');
     }
 
-    // Validate score doesn't exceed max score
-    const maxScore = Number(assessment.component.max_score);
+    // Validate score doesn't exceed max score from assessment
+    const maxScore = Number(assessment.max_score ?? 100);
     if (data.score > maxScore) {
       throw new BadRequestException(
         `Score cannot exceed maximum score of ${maxScore}`,
@@ -803,7 +771,7 @@ export class ResultsService {
       message: string;
       statusCode: number;
     }> = [];
-    const maxScore = Number(assessment.component.max_score);
+    const maxScore = Number(assessment.max_score ?? 100);
     const startTime = Date.now();
 
     this.logger.log(
@@ -982,7 +950,7 @@ export class ResultsService {
     const updateData: any = {};
 
     if (data.score !== undefined) {
-      const maxScore = Number(grade.assessment.component.max_score);
+      const maxScore = Number(grade.assessment.max_score ?? 100);
       if (data.score > maxScore) {
         throw new BadRequestException(
           `Score cannot exceed maximum score of ${maxScore}`,
@@ -1241,7 +1209,7 @@ export class ResultsService {
         ? subjectResults.reduce((sum, subj) => sum + subj.average, 0) /
         subjectResults.length
         : 0;
-    console.log('subjectResults.length', subjectResults.length);
+
     const overallAverage = Number(overallAverageRaw.toFixed(2));
 
     return {
@@ -1695,6 +1663,16 @@ export class ResultsService {
           subject: g.assessment?.subject
             ? { id: g.assessment.subject.id, name: g.assessment.subject.name }
             : null,
+          component: g.assessment?.component
+            ? {
+              id: g.assessment.component.id,
+              name: g.assessment.component.name,
+              subject: g.assessment.component.subject
+                ? { id: g.assessment.component.subject.id, name: g.assessment.component.subject.name }
+                : null,
+              max_score: g.assessment?.max_score,
+            }
+            : null,
         },
         score: g.score,
         percentage: g.percentage,
@@ -1825,6 +1803,15 @@ export class ResultsService {
             subject: g.assessment?.subject
               ? { id: g.assessment.subject.id, name: g.assessment.subject.name }
               : null,
+            component: g.assessment?.component
+              ? {
+                id: g.assessment.component.id,
+                name: g.assessment.component.name,
+                subject: g.assessment.component.subject
+                  ? { id: g.assessment.component.subject.id, name: g.assessment.component.subject.name }
+                  : null,
+              }
+              : null,
           },
           score: g.score,
           percentage: g.percentage,
@@ -1866,7 +1853,6 @@ export class ResultsService {
   // ==========================================
   // ASSESSMENT COMPONENT MANAGEMENT
   // ==========================================
-
   async createAssessmentComponent(
     schoolId: string,
     adminUserId: string,
@@ -1882,7 +1868,7 @@ export class ResultsService {
   ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
-    // Verify subject exists and belongs to school
+    // Validate subject exists and belongs to school
     const subject = await this.prisma.subject.findUnique({
       where: { id: data.subjectId },
     });
@@ -1914,7 +1900,6 @@ export class ResultsService {
         name: data.name.trim(),
         code: data.code?.trim() || null,
         type: data.type,
-        max_score: data.maxScore ?? 100,
         is_active: data.isActive !== undefined ? data.isActive : true,
       },
     });
@@ -1960,7 +1945,6 @@ export class ResultsService {
     if (data.name !== undefined) updateData.name = data.name.trim();
     if (data.code !== undefined) updateData.code = data.code?.trim() || null;
     if (data.type !== undefined) updateData.type = data.type;
-    if (data.maxScore !== undefined) updateData.max_score = data.maxScore;
     if (data.isActive !== undefined) updateData.is_active = data.isActive;
 
     if (Object.keys(updateData).length === 0) {
@@ -2016,8 +2000,7 @@ export class ResultsService {
       throw new ForbiddenException('Component does not belong to this school');
     }
 
-    // Fetch all assessments for this component
-    return this.prisma.assessment.findMany({
+    const rows = await this.prisma.assessment.findMany({
       where: { component_id: componentId },
       include: {
         component: {
@@ -2036,5 +2019,6 @@ export class ResultsService {
       },
       orderBy: { date: 'desc' },
     });
+    return rows;
   }
 }

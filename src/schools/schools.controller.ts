@@ -28,7 +28,7 @@ import type { AuthenticatedRequest } from '../common/middleware/tenant.middlewar
 @ApiTags('schools')
 @Controller('schools')
 export class SchoolsController {
-  constructor(private readonly schoolsService: SchoolsService) {}
+  constructor(private readonly schoolsService: SchoolsService) { }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -103,9 +103,7 @@ export class SchoolsController {
   })
   @ApiResponse({ status: 404, description: 'School not found' })
   findOne(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     const userRole = req.user.role;
     if (userRole === 'SUPER_ADMIN') {
       return this.schoolsService.findOne(id);
@@ -125,9 +123,7 @@ export class SchoolsController {
     @Body() updateSchoolDto: UpdateSchoolDto,
     @Request() req: AuthenticatedRequest,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     const userRole = req.user.role;
     if (userRole === 'SUPER_ADMIN') {
       return this.schoolsService.update(id, updateSchoolDto);
@@ -147,9 +143,7 @@ export class SchoolsController {
   @Get(':id/settings')
   @UseGuards(JwtAuthGuard, RolesGuard)
   getSettings(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     const userRole = req.user.role;
     if (userRole === 'SUPER_ADMIN') {
       return this.schoolsService.getSettings(id);
@@ -169,9 +163,7 @@ export class SchoolsController {
     @Body() updateSettingsDto: UpdateSettingsDto,
     @Request() req: AuthenticatedRequest,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     const userRole = req.user.role;
     if (userRole === 'SUPER_ADMIN') {
       return this.schoolsService.updateSettings(id, updateSettingsDto);

@@ -22,7 +22,7 @@ import type { AuthenticatedRequest } from '../common/middleware/tenant.middlewar
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('SCHOOL_ADMIN')
 export class SubjectsController {
-  constructor(private readonly resultsService: ResultsService) {}
+  constructor(private readonly resultsService: ResultsService) { }
 
   @Get()
   list(
@@ -30,9 +30,7 @@ export class SubjectsController {
     @Query('includeInactive') includeInactive: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     return this.resultsService.listSubjects(
       schoolId,
       req.user.id,
@@ -46,9 +44,7 @@ export class SubjectsController {
     @Body() dto: CreateSubjectDto | CreateSubjectDto[],
     @Request() req: AuthenticatedRequest,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     // Support both single subject and array of subjects
     if (Array.isArray(dto)) {
       return this.resultsService.createSubjects(schoolId, req.user.id, dto);
@@ -58,9 +54,7 @@ export class SubjectsController {
 
   @Get(':id')
   get(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     return this.resultsService.getSubject(id, req.user.id);
   }
 
@@ -70,17 +64,13 @@ export class SubjectsController {
     @Body() dto: UpdateSubjectDto,
     @Request() req: AuthenticatedRequest,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     return this.resultsService.updateSubject(id, req.user.id, dto);
   }
 
   @Delete(':id')
   delete(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     return this.resultsService.deleteSubject(id, req.user.id);
   }
 }
