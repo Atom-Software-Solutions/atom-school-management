@@ -308,7 +308,6 @@ model AssessmentComponent {
   name        String       // e.g. "Paper 1", "Paper 2", "Practical"
   code        String?      // optional short code like P1, P2
   type        ComponentType
-  max_score   Decimal      @db.Decimal(5, 2)
   is_active   Boolean      @default(true)
   created_at  DateTime     @default(now())
   updated_at  DateTime     @updatedAt
@@ -328,6 +327,7 @@ model Assessment {
   name             String               // e.g., "Midterm", "End of Term", "UNEB Final"
   type             AssessmentType
   weight           Decimal              @db.Decimal(5, 2)
+  max_score        Decimal              @default(100) @db.Decimal(5, 2)
   term             Int?                 // If Term model is added, replace with term_id String
   date             DateTime?
   created_at       DateTime             @default(now())

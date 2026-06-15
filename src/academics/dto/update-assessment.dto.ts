@@ -35,10 +35,11 @@ export class UpdateAssessmentDto {
 
   @ApiPropertyOptional({
     description: 'Maximum possible score',
+    example: 100,
   })
+  @IsOptional()
   @IsNumber()
   @Min(0)
-  @IsOptional()
   maxScore?: number;
 
   @ApiPropertyOptional({

@@ -26,7 +26,7 @@ export class AssessmentsController {
   constructor(private readonly resultsService: ResultsService) { }
 
   @Get()
-  list(
+  async list(
     @Param('schoolId') schoolId: string,
     @Query('yearId') yearId: string,
     @Query('termItemId') termItemId: string,
@@ -41,25 +41,27 @@ export class AssessmentsController {
     }
 
     if (definitionId) {
-      return this.resultsService.listAssessmentsByDefinition(
+      const res = await this.resultsService.listAssessmentsByDefinition(
         schoolId,
         req.user.id,
         yearId,
         termItemId,
         definitionId,
       );
+      return res;
     }
-    return this.resultsService.listAssessments(
+    const res = await this.resultsService.listAssessments(
       schoolId,
       req.user.id,
       yearId,
       termItemId,
       componentId,
     );
+    return res;
   }
 
   @Post()
-  create(
+  async create(
     @Param('schoolId') schoolId: string,
     @Body() dto: CreateAssessmentDto,
     @Request() req: AuthenticatedRequest,
@@ -69,13 +71,15 @@ export class AssessmentsController {
     if (!dto.componentId) {
       throw new BadRequestException('componentId is required');
     }
-    return this.resultsService.createAssessment(schoolId, req.user.id, dto);
+    const created = await this.resultsService.createAssessment(schoolId, req.user.id, dto);
+    return created;
   }
 
   @Get(':id')
-  get(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
+  async get(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
     if (!req.user) throw new ForbiddenException('Authentication required');
-    return this.resultsService.getAssessment(id, req.user.id);
+    const res = await this.resultsService.getAssessment(id, req.user.id);
+    return res;
   }
 
   @Get(':id/enrolled-students')
@@ -91,13 +95,14 @@ export class AssessmentsController {
   }
 
   @Patch(':id')
-  update(
+  async update(
     @Param('id') id: string,
     @Body() dto: UpdateAssessmentDto,
     @Request() req: AuthenticatedRequest,
   ) {
     if (!req.user) throw new ForbiddenException('Authentication required');
-    return this.resultsService.updateAssessment(id, req.user.id, dto);
+    const res = await this.resultsService.updateAssessment(id, req.user.id, dto);
+    return res;
   }
 
   @Delete(':id')
@@ -107,12 +112,13 @@ export class AssessmentsController {
   }
 
   @Get('by-component/:componentId')
-  listByComponent(
+  async listByComponent(
     @Param('schoolId') schoolId: string,
     @Param('componentId') componentId: string,
     @Request() req: AuthenticatedRequest,
   ) {
     if (!req.user) throw new ForbiddenException('Authentication required');
-    return this.resultsService.listAssessmentsByComponent(schoolId, req.user.id, componentId);
+    const res = await this.resultsService.listAssessmentsByComponent(schoolId, req.user.id, componentId);
+    return res;
   }
 }

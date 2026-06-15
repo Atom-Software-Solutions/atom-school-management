@@ -84,4 +84,13 @@ export class CreateAssessmentDto {
   @IsDateString()
   @IsOptional()
   dueDate?: string;
+
+  @ApiProperty({
+    description: 'Maximum possible score for this assessment',
+    example: 100,
+  })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  maxScore?: number;
 }

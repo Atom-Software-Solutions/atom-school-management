@@ -6,7 +6,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { ComponentType } from '@prisma/client';
-import { Decimal } from '@prisma/client/runtime/library';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { PrismaService } from '../prisma/prisma.service';
 import { BulkCreateGradesDto } from './dto/bulk-create-grades.dto';
@@ -138,12 +137,8 @@ export class ResultsService {
   ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
-    // (uniqueness checks removed — name/code are allowed to repeat)
-
     try {
-      // Create subject and components in a transaction
       const subject = await this.prisma.$transaction(async (tx) => {
-        // Create the subject
         const createdSubject = await tx.subject.create({
           data: {
             school_id: schoolId,
@@ -155,7 +150,7 @@ export class ResultsService {
           },
         });
 
-        // Create components if provided
+        // Create components if provided (assessmentComponent no longer stores max_score)
         if (data.components && data.components.length > 0) {
           await tx.assessmentComponent.createMany({
             data: data.components.map((component) => ({
@@ -163,7 +158,6 @@ export class ResultsService {
               name: component.name.trim(),
               code: component.code?.trim() || null,
               type: component.type,
-              max_score: new Decimal(component.maxScore),
               is_active: component.isActive !== undefined ? component.isActive : true,
             })),
           });
@@ -172,7 +166,6 @@ export class ResultsService {
         return createdSubject;
       });
 
-      // Fetch the subject with its components
       return await this.prisma.subject.findUnique({
         where: { id: subject.id },
         include: { components: true },
@@ -204,7 +197,6 @@ export class ResultsService {
       }
       try {
         const subject = await this.prisma.$transaction(async (tx) => {
-          // Create the subject
           const createdSubject = await tx.subject.create({
             data: {
               school_id: schoolId,
@@ -216,7 +208,6 @@ export class ResultsService {
             },
           });
 
-          // Create components if provided
           if (data.components && data.components.length > 0) {
             await tx.assessmentComponent.createMany({
               data: data.components.map((component) => ({
@@ -224,7 +215,6 @@ export class ResultsService {
                 name: component.name.trim(),
                 code: component.code?.trim() || null,
                 type: component.type,
-                max_score: new Decimal(component.maxScore),
                 is_active: component.isActive !== undefined ? component.isActive : true,
               })),
             });
@@ -324,7 +314,6 @@ export class ResultsService {
   // ==========================================
   // ASSESSMENT MANAGEMENT
   // ==========================================
-
   async listAssessments(
     schoolId: string,
     adminUserId: string,
@@ -343,7 +332,7 @@ export class ResultsService {
       where.component_id = componentId;
     }
 
-    return this.prisma.assessment.findMany({
+    const rows = await this.prisma.assessment.findMany({
       where,
       include: {
         component: true,
@@ -352,6 +341,7 @@ export class ResultsService {
       },
       orderBy: [{ date: 'asc' }, { name: 'asc' }],
     });
+    return rows;
   }
 
   async listAssessmentsByDefinition(
@@ -364,7 +354,6 @@ export class ResultsService {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
     const where: any = {
-      // school_id: schoolId,
       academic_year_id: yearId,
       term_template_item_id: termItemId,
       classroom_definition_id: definitionId,
@@ -400,7 +389,6 @@ export class ResultsService {
       groups[defId].assessments.push(a);
     }
 
-    // Convert to array and sort by classroom name
     const result = Object.values(groups).sort((x: any, y: any) => {
       const nameA = x.classroomDefinition?.name || '';
       const nameB = y.classroomDefinition?.name || '';
@@ -413,7 +401,7 @@ export class ResultsService {
   async createAssessment(
     schoolId: string,
     adminUserId: string,
-    data: CreateAssessmentDto, // Should now include componentId, not subjectId
+    data: CreateAssessmentDto,
   ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
@@ -485,7 +473,15 @@ export class ResultsService {
         name: data.name.trim(),
         type: data.type,
         weight: data.weight,
+        max_score: data.maxScore ?? 100,
         date: data.date ? new Date(data.date) : null,
+      },
+      include: {
+        component: {
+          include: {
+            subject: true,
+          },
+        },
       },
     });
   }
@@ -579,10 +575,16 @@ export class ResultsService {
       }
     }
 
-    return this.prisma.assessment.update({
+    const updated = await this.prisma.assessment.update({
       where: { id: assessmentId },
       data: updateData,
+      include: {
+        component: {
+          include: { subject: true },
+        },
+      },
     });
+    return updated;
   }
 
   async deleteAssessment(assessmentId: string, adminUserId: string) {
@@ -692,8 +694,8 @@ export class ResultsService {
       throw new ForbiddenException('Assessment does not belong to this school');
     }
 
-    // Validate score doesn't exceed max score
-    const maxScore = Number(assessment.component.max_score);
+    // Validate score doesn't exceed max score from assessment
+    const maxScore = Number(assessment.max_score ?? 100);
     if (data.score > maxScore) {
       throw new BadRequestException(
         `Score cannot exceed maximum score of ${maxScore}`,
@@ -769,7 +771,7 @@ export class ResultsService {
       message: string;
       statusCode: number;
     }> = [];
-    const maxScore = Number(assessment.component.max_score);
+    const maxScore = Number(assessment.max_score ?? 100);
     const startTime = Date.now();
 
     this.logger.log(
@@ -948,7 +950,7 @@ export class ResultsService {
     const updateData: any = {};
 
     if (data.score !== undefined) {
-      const maxScore = Number(grade.assessment.component.max_score);
+      const maxScore = Number(grade.assessment.max_score ?? 100);
       if (data.score > maxScore) {
         throw new BadRequestException(
           `Score cannot exceed maximum score of ${maxScore}`,
@@ -1668,6 +1670,7 @@ export class ResultsService {
               subject: g.assessment.component.subject
                 ? { id: g.assessment.component.subject.id, name: g.assessment.component.subject.name }
                 : null,
+              max_score: g.assessment?.max_score,
             }
             : null,
         },
@@ -1850,7 +1853,6 @@ export class ResultsService {
   // ==========================================
   // ASSESSMENT COMPONENT MANAGEMENT
   // ==========================================
-
   async createAssessmentComponent(
     schoolId: string,
     adminUserId: string,
@@ -1866,7 +1868,7 @@ export class ResultsService {
   ) {
     await this.assertIsAdminOfSchool(schoolId, adminUserId);
 
-    // Verify subject exists and belongs to school
+    // Validate subject exists and belongs to school
     const subject = await this.prisma.subject.findUnique({
       where: { id: data.subjectId },
     });
@@ -1898,7 +1900,6 @@ export class ResultsService {
         name: data.name.trim(),
         code: data.code?.trim() || null,
         type: data.type,
-        max_score: data.maxScore ?? 100,
         is_active: data.isActive !== undefined ? data.isActive : true,
       },
     });
@@ -1944,7 +1945,6 @@ export class ResultsService {
     if (data.name !== undefined) updateData.name = data.name.trim();
     if (data.code !== undefined) updateData.code = data.code?.trim() || null;
     if (data.type !== undefined) updateData.type = data.type;
-    if (data.maxScore !== undefined) updateData.max_score = data.maxScore;
     if (data.isActive !== undefined) updateData.is_active = data.isActive;
 
     if (Object.keys(updateData).length === 0) {
@@ -2000,8 +2000,7 @@ export class ResultsService {
       throw new ForbiddenException('Component does not belong to this school');
     }
 
-    // Fetch all assessments for this component
-    return this.prisma.assessment.findMany({
+    const rows = await this.prisma.assessment.findMany({
       where: { component_id: componentId },
       include: {
         component: {
@@ -2020,5 +2019,6 @@ export class ResultsService {
       },
       orderBy: { date: 'desc' },
     });
+    return rows;
   }
 }

@@ -322,3 +322,8 @@ Legend:
   - Kiswahili / Foreign Languages   2–3 components (Paper 1 (Grammar/Composition) + Paper 2 (Comprehension/Literature) + Oral Test)
   - Art & Design                    2–3 components (Theory + Practical Coursework + Portfolio/Project)
   - Music / Performing Arts         3 components (Theory + Performance (Practical) + Composition/Project)
+
+## How do we handle O-level grading?
+ - Do we have practical papers & theory as different subjects for marks entry.
+ - Since we need to have CAT at 20% and EOT/MOT at 80%. How do we handle these separately.
+ - Think about Redis cache on the API level.
