@@ -10,8 +10,8 @@ const puppeteer = isServerless ? require('puppeteer-core') : require('puppeteer'
 export class ReportCard2PdfService {
     async generateReportCard2PDF(data: ReportCardData, config?: Partial<ReportCardConfig>): Promise<Buffer> {
         const defaultConfig: ReportCardConfig = {
-            showCredits: true,
-            useGPA: true,
+            showCredits: false,
+            useGPA: false,
             showRank: false,
             showAttendance: false,
             showConduct: false,

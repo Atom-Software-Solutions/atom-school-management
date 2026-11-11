@@ -1,5 +1,4 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-// Import your SchoolsService (adjust the path as needed)
 import { PrismaService } from '../prisma/prisma.service';
 import { SchoolsService } from '../schools/schools.service';
 import { StudentsService } from '../students/students.service';
@@ -230,9 +229,11 @@ export class ReportCardsService {
         const components = subjectGrades.map(g => {
           const assessment = g.assessment || ({} as any);
           const component = assessment.component || ({} as any);
-          const percentage = Number(g.percentage);
+          const rawScore = Number(g.score);
+          const pct = Number(g.percentage);
+          const value = assessment.type === 'CAT' ? rawScore : (Number.isFinite(pct) ? pct : rawScore);
           const weight = Number(assessment.weight) || undefined;
-          const compScore = Number.isFinite(percentage) ? percentage : undefined;
+          const compScore = Number.isFinite(value) ? value : undefined;
           const compGrade = typeof compScore === 'number' ? this.calculateLetterGrade(compScore) : undefined;
 
           return {
@@ -244,10 +245,38 @@ export class ReportCardsService {
           };
         });
 
+        const assessments = subjectGrades
+          .map(g => {
+            const assessment = g.assessment || ({} as any);
+            const type = assessment.type;
+            const rawScore = Number(g.score);
+            const pct = Number(g.percentage);
+            const chosen = type === 'CAT' ? rawScore : (Number.isFinite(pct) ? pct : rawScore);
+            const maxScore = Number(assessment.max_score ?? 100);
+            return {
+              type,
+              score: Number.isFinite(chosen) ? Math.round(chosen * 10) / 10 : undefined,
+              max_score: Number.isFinite(maxScore) ? Math.round(maxScore * 10) / 10 : undefined,
+            };
+          })
+          .filter((a) => a.type && typeof a.score === 'number');
+
+        const cat = assessments.find((a) => a.type === 'CAT')?.score;
+        const mot = assessments.find((a) => a.type === 'MIDTERM')?.score;
+        const eot = assessments.find((a) => a.type === 'END_OF_TERM')?.score;
+        const motEot = typeof mot === 'number' && typeof eot === 'number'
+          ? Math.round(((mot + eot) / 2) * 10) / 10
+          : mot ?? eot;
+
         // Calculate weighted average using the same helper (works on original grade records)
         const { weightedScore, totalWeight } = this.calculateWeightedAverage(subjectGrades);
         const average = totalWeight > 0 ? weightedScore / totalWeight : 0;
         const roundedAverage = Math.round(average * 100) / 100;
+
+        // Determine score using CAT + average of MOT/EOT when assessment types are available
+        const finalScore = typeof cat === 'number' || typeof motEot === 'number'
+          ? Math.round(((cat ?? 0) + (motEot ?? 0)) * 10) / 10
+          : roundedAverage;
 
         // Determine total credits for the subject (sum of assessment weights if present, fallback to count)
         const totalCredits = subjectGrades.reduce((sum, g) => {
@@ -259,11 +288,15 @@ export class ReportCardsService {
           name: data.subject.name,
           // provide individual component entries
           components,
-          // aggregated fields for compatibility
-          score: roundedAverage,
-          grade: this.calculateLetterGrade(roundedAverage),
+          assessments,
+          cat,
+          mot,
+          eot,
+          motEot,
+          score: finalScore,
+          grade: this.calculateLetterGrade(finalScore),
           credits: totalCredits,
-          remarks: this.getRemarkForScore(roundedAverage),
+          remarks: this.getRemarkForScore(finalScore),
         });
       }
     }

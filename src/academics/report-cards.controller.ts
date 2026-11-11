@@ -22,6 +22,7 @@ import { PdfGenerationService } from './pdf-generation.service';
 import { ReportCard2DataService } from './report-card-2-data.service';
 import { ReportCard2PdfService } from './report-card-2-pdf.service';
 import { ReportCardsService } from './report-cards.service';
+import { computeMotEot, parseNumeric, round1 } from './report-utils';
 import { ResultsService } from './results.service';
 
 @Controller('schools/:schoolId/report-cards')
@@ -162,6 +163,7 @@ export class ReportCardsController {
     }
   }
 
+  // helper functions moved to src/academics/report-utils.ts
   private transformReportCardDataToPDF(reportCardData: any) {
     // Helper to round to 1 decimal place if value is a number
     const round1 = (val: any) =>
@@ -182,13 +184,40 @@ export class ReportCardsController {
 
     const subjectsSource = reportCardData.subjects || reportCardData.summary?.subjects || [];
 
-    const subjects = (subjectsSource || []).map((s: any) => ({
-      name: s.subject?.name || s.name || 'Unknown',
-      score: round1(s.score ?? s.average ?? 0),
-      grade: s.grade ?? s.letterGrade ?? '',
-      credits: round1(s.credits ?? 0),
-      remarks: s.remarks ?? '',
-    }));
+    const subjects = (subjectsSource || []).map((s: any) => {
+      const assessments = Array.isArray(s.assessments)
+        ? s.assessments.map((a: any) => {
+          const parsedScore = parseNumeric(a.score);
+          const parsedMax = parseNumeric(a.max_score);
+          return {
+            type: a.type,
+            score: a.type === 'CAT' ? (typeof a.score === 'number' ? a.score : parsedScore) : round1(parsedScore),
+            max_score: a.type === 'CAT' ? (typeof a.max_score === 'number' ? a.max_score : parsedMax) : round1(parsedMax),
+          };
+        })
+        : undefined;
+
+      const cat = assessments?.find((a: any) => a.type === 'CAT')?.score ?? round1(parseNumeric(s.cat));
+      const mot = assessments?.find((a: any) => a.type === 'MIDTERM')?.score ?? round1(parseNumeric(s.mot));
+      const eot = assessments?.find((a: any) => a.type === 'END_OF_TERM')?.score ?? round1(parseNumeric(s.eot));
+      const motEot = round1(computeMotEot({ assessments, mot, eot, motEot: s.motEot }));
+      const score = typeof cat === 'number' || typeof motEot === 'number'
+        ? Math.round(((cat ?? 0) + (motEot ?? 0)) * 10) / 10
+        : round1(parseNumeric(s.score)) ?? undefined;
+
+      return {
+        name: s.subject?.name || s.name || 'Unknown',
+        assessments,
+        cat,
+        mot,
+        eot,
+        motEot,
+        score,
+        grade: s.grade ?? s.letterGrade ?? '',
+        credits: round1(s.credits ?? 0),
+        remarks: s.remarks ?? '',
+      };
+    });
 
     const summary = reportCardData.summary || {
       totalMarks: 0,
@@ -257,13 +286,47 @@ export class ReportCardsController {
           : 'student');
       const schoolName = reportCard.school?.name || 'School Report';
 
-      const subjects = (subjectsSource || []).map((s: any) => ({
-        name: s.subject?.name || s.name || 'Unknown',
-        score: typeof s.score === 'number' ? Math.round(s.score * 10) / 10 : s.average ?? 0,
-        grade: s.grade ?? s.letterGrade ?? '',
-        credits: typeof s.credits === 'number' ? Math.round(s.credits * 10) / 10 : s.credits ?? 0,
-        remarks: s.remarks || '',
-      }));
+      const subjects = (subjectsSource || []).map((s: any) => {
+        const assessments = Array.isArray(s.assessments)
+          ? s.assessments.map((a: any) => {
+            const parsedScore = parseNumeric(a.score);
+            const parsedMax = parseNumeric(a.max_score);
+            return {
+              type: a.type,
+              score: a.type === 'CAT' ? (typeof a.score === 'number' ? a.score : parsedScore) : round1(parsedScore),
+              max_score: a.type === 'CAT' ? (typeof a.max_score === 'number' ? a.max_score : parsedMax) : round1(parsedMax),
+            };
+          })
+          : undefined;
+
+        const cat = assessments?.find((a: any) => a.type === 'CAT')?.score ?? (typeof s.cat === 'number' ? Math.round(s.cat * 10) / 10 : s.cat ?? undefined);
+        const mot = assessments?.find((a: any) => a.type === 'MIDTERM')?.score ?? (typeof s.mot === 'number' ? Math.round(s.mot * 10) / 10 : s.mot ?? undefined);
+        const eot = assessments?.find((a: any) => a.type === 'END_OF_TERM')?.score ?? (typeof s.eot === 'number' ? Math.round(s.eot * 10) / 10 : s.eot ?? undefined);
+        const motEot = typeof s.motEot === 'number'
+          ? Math.round(s.motEot * 10) / 10
+          : computeMotEot({ assessments, mot, eot, motEot: s.motEot });
+        const hasAssessments = Array.isArray(assessments) && assessments.length > 0;
+        const score = hasAssessments
+          ? (typeof cat === 'number' || typeof motEot === 'number')
+            ? Math.round(((cat ?? 0) + (motEot ?? 0)) * 10) / 10
+            : undefined
+          : typeof s.score === 'number'
+            ? Math.round(s.score * 10) / 10
+            : parseNumeric(s.average ?? s.score);
+
+        return {
+          name: s.subject?.name || s.name || 'Unknown',
+          assessments,
+          cat,
+          mot,
+          eot,
+          motEot,
+          score,
+          grade: s.grade ?? s.letterGrade ?? '',
+          credits: typeof s.credits === 'number' ? Math.round(s.credits * 10) / 10 : s.credits ?? 0,
+          remarks: s.remarks || '',
+        };
+      });
 
       const pdfData = {
         school: {

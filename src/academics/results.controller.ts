@@ -12,6 +12,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { PdfGenerationService } from './pdf-generation.service';
 import { ReportCardsService } from './report-cards.service';
+import { computeMotEot, parseNumeric, round1, round2 } from './report-utils';
 import { ResultsService } from './results.service';
 
 @Controller('schools/:schoolId/results')
@@ -118,14 +119,6 @@ export class ResultsController {
    * Transform report card data from the service to the format expected by PDF generation
    */
   private transformReportCardDataToPDF(reportCardData: any) {
-    // Helper to round to 1 decimal place if value is a number
-    const round1 = (val: any) =>
-      typeof val === "number" ? Math.round(val * 10) / 10 : val;
-
-    // Helper to round to 2 decimal places if value is a number
-    const round2 = (val: any) =>
-      typeof val === "number" ? Math.round(val * 100) / 100 : val;
-
     return {
       school: {
         name: reportCardData.school.name,
@@ -143,20 +136,49 @@ export class ResultsController {
         class: reportCardData.student.class || '',
         stream: reportCardData.student.stream || '',
       },
-      subjects: reportCardData.subjects.map((subject: any) => ({
-        name: subject.name,
-        score: round1(subject.score),
-        grade: subject.grade,
-        credits: round1(subject.credits),
-        remarks: subject.remarks || '',
-      })),
+      subjects: reportCardData.subjects.map((subject: any) => {
+        const assessments = Array.isArray(subject.assessments)
+          ? subject.assessments.map((a: any) => {
+            const parsedScore = parseNumeric(a.score);
+            const parsedMax = parseNumeric(a.max_score);
+            return {
+              type: a.type,
+              score: a.type === 'CAT' ? (typeof a.score === 'number' ? a.score : parsedScore) : round1(parsedScore),
+              max_score: a.type === 'CAT' ? (typeof a.max_score === 'number' ? a.max_score : parsedMax) : round1(parsedMax),
+            };
+          })
+          : undefined;
+
+        const cat = assessments?.find((a: any) => a.type === 'CAT')?.score ?? round1(parseNumeric(subject.cat));
+        const mot = assessments?.find((a: any) => a.type === 'MIDTERM')?.score ?? round1(parseNumeric(subject.mot));
+        const eot = assessments?.find((a: any) => a.type === 'END_OF_TERM')?.score ?? round1(parseNumeric(subject.eot));
+        const motEot = round1(computeMotEot({ assessments, mot, eot, motEot: subject.motEot })) ?? round1(parseNumeric(subject.motEot));
+        const score = typeof subject.score === 'number'
+          ? round1(subject.score)
+          : (typeof cat === 'number' || typeof motEot === 'number')
+            ? Math.round(((cat ?? 0) + (motEot ?? 0)) * 10) / 10
+            : round1(parseNumeric(subject.average ?? subject.score));
+
+        return {
+          name: subject.name,
+          assessments,
+          cat,
+          mot,
+          eot,
+          motEot,
+          score,
+          grade: subject.grade,
+          credits: round1(subject.credits),
+          remarks: subject.remarks || '',
+        };
+      }),
       summary: {
-        totalMarks: round1(reportCardData.summary.totalMarks || 0),
-        totalCredits: round1(reportCardData.summary.totalCredits),
-        average: round1(reportCardData.summary.average),
-        gpa: round2(reportCardData.summary.gpa),
-        division: reportCardData.summary.division,
-        rank: round1(reportCardData.summary.rank),
+        totalMarks: round1(reportCardData.summary.totalMarks || 0) ?? 0,
+        totalCredits: round1(reportCardData.summary.totalCredits) ?? undefined,
+        average: round1(reportCardData.summary.average) ?? 0,
+        gpa: round2(reportCardData.summary.gpa) ?? undefined,
+        division: reportCardData.summary.division ?? undefined,
+        rank: round1(reportCardData.summary.rank) ?? undefined,
       },
       attendance: reportCardData.attendance,
       conduct: reportCardData.conduct,

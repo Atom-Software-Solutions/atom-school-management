@@ -1660,6 +1660,7 @@ export class ResultsService {
         assessment: {
           id: g.assessment?.id,
           name: g.assessment?.name,
+          type: g.assessment?.type,
           subject: g.assessment?.subject
             ? { id: g.assessment.subject.id, name: g.assessment.subject.name }
             : null,

@@ -86,7 +86,8 @@ function AcademicTable({ subjects, showCredits }: { subjects: ReportCardData['su
                     <th style={{ border: '1px solid #9ca3af', padding: '8px 4px' }}>Score</th>
                     <th style={{ border: '1px solid #9ca3af', padding: '8px 4px' }}>Grade</th>
                     {showCredits && <th style={{ border: '1px solid #9ca3af', padding: '8px 4px' }}>Credits</th>}
-                    <th style={{ border: '1px solid #9ca3af', padding: '8px 4px' }}>Remarks</th>
+                    <th style={{ border: '1px solid #9ca3af', padding: '8px 4px' }}>Subject Remarks</th>
+                    {/* <th style={{ border: '1px solid #9ca3af', padding: '8px 4px' }}>Paper Remarks</th> */}
                 </tr>
             </thead>
             <tbody>
@@ -102,8 +103,13 @@ function AcademicTable({ subjects, showCredits }: { subjects: ReportCardData['su
                                 <td style={{ border: '1px solid #9ca3af', padding: '8px 4px' }}>{comp.name}</td>
                                 <td style={{ border: '1px solid #9ca3af', padding: '8px 4px', textAlign: 'center' }}>{comp.score ?? '-'}</td>
                                 <td style={{ border: '1px solid #9ca3af', padding: '8px 4px', textAlign: 'center' }}>{comp.grade ?? '-'}</td>
+                                {compIdx === 0 ? (
+                                    <td style={{ border: '1px solid #9ca3af', padding: '8px 4px' }} rowSpan={subj.components ? subj.components.length : 1}>
+                                        {subj.remarks ?? ''}
+                                    </td>
+                                ) : null}
                                 {showCredits && <td style={{ border: '1px solid #9ca3af', padding: '8px 4px', textAlign: 'center' }}>{comp.credits ?? '-'}</td>}
-                                <td style={{ border: '1px solid #9ca3af', padding: '8px 4px' }}>{comp.remarks ?? ''}</td>
+                                {/* <td style={{ border: '1px solid #9ca3af', padding: '8px 4px' }}>{comp.remarks ?? ''}</td> */}
                             </tr>
                         ))
                     ) : (
@@ -113,6 +119,7 @@ function AcademicTable({ subjects, showCredits }: { subjects: ReportCardData['su
                             <td style={{ border: '1px solid #9ca3af', padding: '8px 4px', textAlign: 'center' }}>{subj.score ?? '-'}</td>
                             <td style={{ border: '1px solid #9ca3af', padding: '8px 4px', textAlign: 'center' }}>{subj.grade ?? '-'}</td>
                             {showCredits && <td style={{ border: '1px solid #9ca3af', padding: '8px 4px', textAlign: 'center' }}>{subj.credits ?? '-'}</td>}
+                            <td style={{ border: '1px solid #9ca3af', padding: '8px 4px' }}>{'-'}</td>
                             <td style={{ border: '1px solid #9ca3af', padding: '8px 4px' }}>{subj.remarks ?? ''}</td>
                         </tr>
                     )
@@ -123,6 +130,7 @@ function AcademicTable({ subjects, showCredits }: { subjects: ReportCardData['su
 }
 
 function PerformanceSummary({ summary, config }: { summary: ReportCardData['summary']; config: ReportCardConfig }) {
+    console.log('PerformanceSummary', config.useGPA);
     return (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginBottom: 16, fontSize: 14 }}>
             <div><strong>Total Marks:</strong> {summary.totalMarks}</div>
@@ -179,9 +187,9 @@ export default function ReportCard2({ data, config }: { data: ReportCardData; co
 
 // Dummy example data and config
 export const exampleConfig2: ReportCardConfig = {
-    showCredits: true,
-    useGPA: true,
-    showRank: true,
+    showCredits: false,
+    useGPA: false,
+    showRank: false,
     showAttendance: true,
     showConduct: true,
     showActivities: true,
@@ -207,6 +215,7 @@ export const exampleData2: ReportCardData = {
     subjects: [
         {
             name: "Mathematics",
+            remarks: "Overall: Very Good",
             components: [
                 { name: "Paper 1", score: 78, grade: "A", credits: 2, remarks: "Good" },
                 { name: "Paper 2", score: 80, grade: "A", credits: 2, remarks: "Very Good" },
@@ -214,6 +223,7 @@ export const exampleData2: ReportCardData = {
         },
         {
             name: "Physics",
+            remarks: "Overall: Very Good",
             components: [
                 { name: "Theory", score: 72, grade: "B+", credits: 1.5, remarks: "Very Good" },
                 { name: "Practical", score: 70, grade: "B", credits: 1.5, remarks: "Good" },
@@ -221,6 +231,7 @@ export const exampleData2: ReportCardData = {
         },
         {
             name: "Chemistry",
+            remarks: "Overall: Good",
             components: [
                 { name: "Theory", score: 68, grade: "B", credits: 1.5, remarks: "Good" },
                 { name: "Practical", score: 66, grade: "C+", credits: 1.5, remarks: "Fair" },
@@ -228,6 +239,7 @@ export const exampleData2: ReportCardData = {
         },
         {
             name: "Literature",
+            remarks: "Overall: Excellent",
             components: [
                 { name: "Paper 1", score: 82, grade: "A", credits: 1, remarks: "Excellent" },
                 { name: "Paper 2", score: 79, grade: "B+", credits: 1, remarks: "Very Good" },

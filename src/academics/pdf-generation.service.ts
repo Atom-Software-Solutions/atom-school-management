@@ -15,7 +15,7 @@ export class PdfGenerationService {
    */
   async generateReportCardPDF(data: ReportCardData, config?: Partial<ReportCardConfig>): Promise<Buffer> {
     const defaultConfig: ReportCardConfig = {
-      showCredits: true,
+      showCredits: false,
       useGPA: true,
       showRank: false,
       showAttendance: false,

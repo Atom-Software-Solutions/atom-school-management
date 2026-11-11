@@ -29,7 +29,12 @@ export interface ReportCardData {
     };
     subjects: Array<{
         name: string;
-        score: number;
+        assessments?: Array<{ type: string; score: number; max_score?: number }>;
+        cat?: number;
+        mot?: number;
+        eot?: number;
+        motEot?: number;
+        score?: number;
         grade: string;
         credits?: number;
         remarks: string;
@@ -178,6 +183,27 @@ function StudentInfo({ student }: { student: ReportCardData['student'] }) {
 
 // 3. AcademicTable Component
 function AcademicTable({ subjects, showCredits }: { subjects: ReportCardData['subjects']; showCredits: boolean }) {
+    const getAssessmentScore = (sub: ReportCardData['subjects'][number], type: string) => {
+        const assessment = sub.assessments?.find((a) => a.type === type)?.score;
+        if (typeof assessment === 'number') return assessment;
+        if (type === 'CAT' && typeof sub.cat === 'number') return sub.cat;
+        if (type === 'MIDTERM' && typeof sub.mot === 'number') return sub.mot;
+        if (type === 'END_OF_TERM' && typeof sub.eot === 'number') return sub.eot;
+        return undefined;
+    };
+
+    const getMotEotAverage = (sub: ReportCardData['subjects'][number]) => {
+        const mot = getAssessmentScore(sub, 'MIDTERM');
+        const eot = getAssessmentScore(sub, 'END_OF_TERM');
+        if (typeof sub.motEot === 'number') return sub.motEot;
+        if (typeof mot === 'number' && typeof eot === 'number') {
+            return Math.round(((mot + eot) / 2) * 10) / 10;
+        }
+        if (typeof mot === 'number') return mot;
+        if (typeof eot === 'number') return eot;
+        return undefined;
+    };
+
     return (
         <table style={{
             width: '100%',
@@ -192,6 +218,14 @@ function AcademicTable({ subjects, showCredits }: { subjects: ReportCardData['su
                         border: '1px solid #9ca3af',
                         padding: '8px 4px'
                     }}>Subject</th>
+                    <th style={{
+                        border: '1px solid #9ca3af',
+                        padding: '8px 4px'
+                    }}>CAT</th>
+                    <th style={{
+                        border: '1px solid #9ca3af',
+                        padding: '8px 4px'
+                    }}>MOT/EOT</th>
                     <th style={{
                         border: '1px solid #9ca3af',
                         padding: '8px 4px'
@@ -211,33 +245,52 @@ function AcademicTable({ subjects, showCredits }: { subjects: ReportCardData['su
                 </tr>
             </thead>
             <tbody>
-                {subjects.map((sub, i) => (
-                    <tr key={i}>
-                        <td style={{
-                            border: '1px solid #9ca3af',
-                            padding: '8px 4px'
-                        }}>{sub.name}</td>
-                        <td style={{
-                            border: '1px solid #9ca3af',
-                            padding: '8px 4px',
-                            textAlign: 'center'
-                        }}>{sub.score}</td>
-                        <td style={{
-                            border: '1px solid #9ca3af',
-                            padding: '8px 4px',
-                            textAlign: 'center'
-                        }}>{sub.grade}</td>
-                        {showCredits && <td style={{
-                            border: '1px solid #9ca3af',
-                            padding: '8px 4px',
-                            textAlign: 'center'
-                        }}>{sub.credits ?? '-'}</td>}
-                        <td style={{
-                            border: '1px solid #9ca3af',
-                            padding: '8px 4px'
-                        }}>{sub.remarks}</td>
-                    </tr>
-                ))}
+                {subjects.map((sub, i) => {
+                    const cat = getAssessmentScore(sub, 'CAT');
+                    const motEot = getMotEotAverage(sub);
+                    const finalScore = typeof sub.score === 'number'
+                        ? sub.score
+                        : cat !== undefined || motEot !== undefined
+                            ? Math.round(((cat ?? 0) + (motEot ?? 0)) * 10) / 10
+                            : undefined;
+                    return (
+                        <tr key={i}>
+                            <td style={{
+                                border: '1px solid #9ca3af',
+                                padding: '8px 4px'
+                            }}>{sub.name}</td>
+                            <td style={{
+                                border: '1px solid #9ca3af',
+                                padding: '8px 4px',
+                                textAlign: 'center'
+                            }}>{cat ?? '-'}</td>
+                            <td style={{
+                                border: '1px solid #9ca3af',
+                                padding: '8px 4px',
+                                textAlign: 'center'
+                            }}>{motEot ?? '-'}</td>
+                            <td style={{
+                                border: '1px solid #9ca3af',
+                                padding: '8px 4px',
+                                textAlign: 'center'
+                            }}>{finalScore !== undefined ? finalScore : '-'}</td>
+                            <td style={{
+                                border: '1px solid #9ca3af',
+                                padding: '8px 4px',
+                                textAlign: 'center'
+                            }}>{sub.grade}</td>
+                            {showCredits && <td style={{
+                                border: '1px solid #9ca3af',
+                                padding: '8px 4px',
+                                textAlign: 'center'
+                            }}>{sub.credits ?? '-'}</td>}
+                            <td style={{
+                                border: '1px solid #9ca3af',
+                                padding: '8px 4px'
+                            }}>{sub.remarks}</td>
+                        </tr>
+                    );
+                })}
             </tbody>
         </table>
     );
