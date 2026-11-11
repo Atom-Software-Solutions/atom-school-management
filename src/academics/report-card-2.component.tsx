@@ -197,7 +197,7 @@ export const exampleConfig2: ReportCardConfig = {
 
 export const exampleData2: ReportCardData = {
     school: {
-        name: "Atom Software School",
+        name: "Atom School Management",
         contact: "Backend Office | Tel: +256 700 000000 | backend@example.com",
         motto: "Learning by Doing",
     },

@@ -13,17 +13,14 @@ export class TenantMiddleware implements NestMiddleware {
     const user = req.user;
 
     if (!user) {
-      // No user authenticated, skip tenant context
       req.tenantId = undefined;
       return next();
     }
 
-    // SUPER_ADMIN can access any tenant (null = no restriction)
     if (user.role === 'SUPER_ADMIN') {
       req.tenantId = null;
     } else {
-      // For other roles, use their school_id as tenant context
-      req.tenantId = user.school_id || undefined;
+      req.tenantId = user.school_id ?? undefined;
     }
 
     next();

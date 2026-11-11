@@ -9,11 +9,14 @@ import {
   UseGuards,
   Request,
   ForbiddenException,
+  ValidationPipe,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { ResetUserPasswordDto } from './dto/reset-user-password.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Roles, RolesGuard } from '../auth/guards/roles.guard';
 import { TenantGuard } from '../common/guards/tenant.guard';
 import { TenantId } from '../common/decorators/tenant-id.decorator';
 import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
@@ -45,6 +48,24 @@ export class UsersController {
     @TenantId() tenantId: string | null | undefined,
   ) {
     return this.usersService.findOne(id, tenantId);
+  }
+
+  @Post(':id/reset-password')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'SCHOOL_ADMIN')
+  resetUserPassword(
+    @Param('id') id: string,
+    @Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })) dto: Partial<ResetUserPasswordDto> = {},
+    @TenantId() tenantId: string | null | undefined,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    if (!req.user) throw new ForbiddenException('Authentication required');
+    return this.usersService.resetUserPassword(
+      id,
+      dto?.newPassword,
+      req.user.id,
+      tenantId,
+    );
   }
 
   @Patch(':id')

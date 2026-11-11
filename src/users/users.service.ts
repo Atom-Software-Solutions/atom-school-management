@@ -3,12 +3,15 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+import { randomUUID } from 'crypto';
+import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import * as bcrypt from 'bcrypt';
 import {
   UserResponse,
   UserWithPassword,
@@ -16,7 +19,10 @@ import {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly emailService: EmailService,
+  ) { }
 
   private async assertIsAdminOfSchool(schoolId: string, userId: string) {
     const rel = await this.prisma.schoolAdmin.findUnique({
@@ -217,6 +223,77 @@ export class UsersService {
     return await this.prisma.user.findUnique({
       where: { email },
     });
+  }
+
+  async resetUserPassword(
+    targetUserId: string,
+    _newPassword: string | undefined,
+    actorUserId: string,
+    tenantId?: string | null,
+  ): Promise<{ message: string }> {
+    const actor = await this.prisma.user.findUnique({
+      where: { id: actorUserId },
+    });
+
+    if (!actor) {
+      throw new ForbiddenException('Actor not found');
+    }
+
+    if (actor.role !== 'SUPER_ADMIN') {
+      if (!tenantId) {
+        throw new ForbiddenException('School context is required');
+      }
+
+      const actorMembership = await this.prisma.schoolAdmin.findFirst({
+        where: { school_id: tenantId, user_id: actorUserId },
+      });
+
+      if (!actorMembership) {
+        throw new ForbiddenException('Insufficient permissions for this school');
+      }
+
+      const targetMembership = await this.prisma.schoolAdmin.findFirst({
+        where: { school_id: tenantId, user_id: targetUserId },
+      });
+
+      if (!targetMembership) {
+        throw new ForbiddenException('User does not belong to this school');
+      }
+    }
+
+    const targetUser = await this.prisma.user.findUnique({
+      where: { id: targetUserId },
+    });
+
+    if (!targetUser) {
+      throw new NotFoundException(`User with ID ${targetUserId} not found`);
+    }
+
+    const resetToken = randomUUID();
+    const resetExpires = new Date(Date.now() + 60 * 60 * 1000);
+
+    await this.prisma.user.update({
+      where: { id: targetUserId },
+      data: {
+        password_reset_token: resetToken,
+        password_reset_expires: resetExpires,
+      },
+    });
+
+    try {
+      await this.emailService.sendPasswordResetEmail(
+        targetUser.email,
+        targetUser.first_name || 'there',
+        resetToken,
+      );
+    } catch (error) {
+      console.error('Failed to send password reset email:', error);
+    }
+
+    return {
+      message:
+        'If an account with that email exists, a password reset link has been sent.',
+    };
   }
 
   async update(

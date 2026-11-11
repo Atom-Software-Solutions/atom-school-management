@@ -7,25 +7,29 @@ import {
 import type { AuthenticatedRequest } from '../middleware/tenant.middleware';
 
 /**
- * Guard to ensure tenant context is properly set
- * Validates that non-SUPER_ADMIN users can only access their own tenant
+ * Guard to ensure tenant context is properly set.
+ * IMPORTANT: Passport populates req.user inside guards, so we must resolve tenant
+ * context from the authenticated user here instead of assuming the middleware has
+ * already run before the auth guard.
  */
 @Injectable()
 export class TenantGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const user = request.user;
-    const tenantId = request.tenantId;
 
-    if (!user) throw new ForbiddenException('Authentication required');
-    if (tenantId === undefined) throw new ForbiddenException('Tenant context not available');
-    // SUPER_ADMIN can access any tenant (tenantId is null)
+    if (!user) {
+      throw new ForbiddenException('Authentication required');
+    }
+
+    const tenantId = request.tenantId ?? user.school_id ?? null;
+    request.tenantId = tenantId;
+
     if (user.role === 'SUPER_ADMIN') {
       return true;
     }
 
-    // For other roles, tenantId must match user's school_id
-    if (tenantId === undefined) {
+    if (tenantId === null || tenantId === undefined) {
       throw new ForbiddenException('Tenant context not available');
     }
 
