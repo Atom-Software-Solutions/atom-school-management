@@ -16,6 +16,7 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 
 @Injectable()
@@ -396,6 +397,17 @@ export class AuthService {
       throw new BadRequestException('Reset token has expired');
     }
 
+    // Reject if the new password is the same as the current one
+    const isSamePassword = await bcrypt.compare(
+      resetPasswordDto.newPassword,
+      user.password_hash,
+    );
+    if (isSamePassword) {
+      throw new BadRequestException(
+        'New password must be different from your current password',
+      );
+    }
+
     // Hash new password
     const passwordHash = await bcrypt.hash(resetPasswordDto.newPassword, 10);
 
@@ -418,6 +430,39 @@ export class AuthService {
     return {
       message: 'Password has been reset successfully',
     };
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const isCurrentValid = await bcrypt.compare(
+      dto.currentPassword,
+      user.password_hash,
+    );
+    if (!isCurrentValid) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+
+    if (dto.currentPassword === dto.newPassword) {
+      throw new BadRequestException(
+        'New password must be different from your current password',
+      );
+    }
+
+    const passwordHash = await bcrypt.hash(dto.newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password_hash: passwordHash,
+        password_reset_token: null,
+        password_reset_expires: null,
+      },
+    });
+
+    return { message: 'Password has been changed successfully' };
   }
 
   async revokeSessionByJti(jti?: string) {

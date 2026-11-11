@@ -9,6 +9,7 @@ import {
   Request,
   Query,
   Res,
+  UnauthorizedException,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import {
@@ -24,6 +25,7 @@ import { RegisterDto } from './dto/register.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
 import { ProfileResponseDto } from './dto/profile-response.dto';
@@ -245,7 +247,6 @@ export class AuthController {
     return this.authService.forgotPassword(forgotPasswordDto);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reset password with token' })
@@ -261,6 +262,31 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Invalid or expired reset token' })
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.authService.resetPassword(resetPasswordDto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Change password for the logged-in user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Password changed successfully',
+    schema: { example: { message: 'Password has been changed successfully' } },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Current password incorrect, or new password same as current',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async changePassword(
+    @Request() req: AuthenticatedRequest,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ) {
+    if (!req.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    return this.authService.changePassword(req.user.id, changePasswordDto);
   }
 
   @UseGuards(JwtAuthGuard)

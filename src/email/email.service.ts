@@ -85,20 +85,69 @@ export class EmailService {
       this.configService.get<string>('EMAIL_FROM') ||
       this.configService.get<string>('EMAIL_USER', '');
 
-    try {
-      const info = await this.transporter.sendMail({
-        from: from || emailFrom,
-        to,
-        subject,
-        html,
-        text,
-      });
+    const maxAttempts = EmailService.RETRY_DELAYS_MS.length + 1;
 
-      this.logger.log(`Email sent successfully: ${info.messageId}`);
-    } catch (error) {
-      this.logger.error(`Failed to send email to ${to}:`, error);
-      throw error;
+    for (let attempt = 1; ; attempt++) {
+      try {
+        const info = await this.transporter.sendMail({
+          from: emailFrom,
+          to,
+          subject,
+          html,
+          text,
+        });
+
+        this.logger.log(
+          `Email sent successfully: ${info.messageId}` +
+            (attempt > 1 ? ` (attempt ${attempt})` : ''),
+        );
+        return;
+      } catch (error) {
+        if (attempt < maxAttempts && this.isTransientError(error)) {
+          const delay = EmailService.RETRY_DELAYS_MS[attempt - 1];
+          this.logger.warn(
+            `Transient failure sending email to ${to} (attempt ${attempt}/${maxAttempts}): ` +
+              `${error instanceof Error ? error.message : String(error)}. Retrying in ${delay}ms`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+
+        this.logger.error(
+          `Failed to send email to ${to} after ${attempt} attempt(s):`,
+          error,
+        );
+        throw error;
+      }
     }
+  }
+
+  /** Delays between retries; attempts = delays + 1. */
+  private static readonly RETRY_DELAYS_MS = [1000, 3000];
+
+  /** Network errors that may succeed on a fresh connection. */
+  private static readonly TRANSIENT_ERROR_CODES = new Set([
+    'ECONNECTION',
+    'ETIMEDOUT',
+    'ESOCKET',
+    'ECONNRESET',
+    'EDNS',
+  ]);
+
+  /**
+   * SMTP 4xx replies (e.g. Gmail's "451 4.3.0 temporarily rejected") and
+   * network errors are worth retrying; 5xx and auth failures are not.
+   */
+  private isTransientError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false;
+    const { responseCode, code } = error as {
+      responseCode?: number;
+      code?: string;
+    };
+    if (typeof responseCode === 'number') {
+      return responseCode >= 400 && responseCode < 500;
+    }
+    return !!code && EmailService.TRANSIENT_ERROR_CODES.has(code);
   }
 
   /**
@@ -139,7 +188,7 @@ export class EmailService {
     firstName: string,
     resetToken: string,
   ): Promise<void> {
-    const resetUrl = `${this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000')}/reset-password?token=${resetToken}`;
+    const resetUrl = `${this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000')}/forgot-password?token=${resetToken}`;
     const subject = 'Password Reset Request';
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
