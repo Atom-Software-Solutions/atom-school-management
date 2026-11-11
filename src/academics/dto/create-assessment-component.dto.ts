@@ -27,14 +27,6 @@ export class CreateAssessmentComponentDto {
     @IsNotEmpty()
     type!: ComponentType;
 
-    @ApiProperty({
-        description: 'Maximum score for the component',
-        example: 100,
-    })
-    @IsNumber()
-    @IsNotEmpty()
-    maxScore!: number;
-
     @ApiPropertyOptional({
         description: 'Whether the component is active',
         example: true,

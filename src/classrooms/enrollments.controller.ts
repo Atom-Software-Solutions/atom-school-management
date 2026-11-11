@@ -33,7 +33,7 @@ export class EnrollmentsController {
         'Tenant context not available for this user',
       );
     }
-    console.log(`Tenant school ID from token: ${tenantSchoolId}, Provided school ID: ${providedSchoolId}`);
+
     if (providedSchoolId && providedSchoolId !== tenantSchoolId) {
       throw new ForbiddenException('Cross-tenant access is not allowed');
     }

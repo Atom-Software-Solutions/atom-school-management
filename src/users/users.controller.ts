@@ -21,7 +21,7 @@ import type { AuthenticatedRequest } from '../common/middleware/tenant.middlewar
 @Controller('users')
 @UseGuards(JwtAuthGuard, TenantGuard)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @Post()
   create(
@@ -29,9 +29,7 @@ export class UsersController {
     @TenantId() tenantId: string | null | undefined,
     @Request() req: AuthenticatedRequest,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     const creatorUserId = req.user.id;
     return this.usersService.create(createUserDto, tenantId, creatorUserId);
   }

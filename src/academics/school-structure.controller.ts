@@ -1,30 +1,28 @@
 import {
   Controller,
+  ForbiddenException,
   Get,
   Param,
   Request,
   UseGuards,
-  ForbiddenException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles, RolesGuard } from '../auth/guards/roles.guard';
-import { PrismaService } from '../prisma/prisma.service';
 import type { AuthenticatedRequest } from '../common/middleware/tenant.middleware';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('schools/:schoolId/structure')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('SCHOOL_ADMIN')
 export class SchoolStructureController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   @Get()
   async getStructure(
     @Param('schoolId') schoolId: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     // Fetch years
     const years = await this.prisma.academicYear.findMany({
       where: { school_id: schoolId },
@@ -66,7 +64,7 @@ export class SchoolStructureController {
       orderBy: { date: 'desc' },
     });
     // Fetch all subjects for this school
-    const subjects = await this.prisma.subject.findMany({
+    const subjectsRaw = await this.prisma.subject.findMany({
       where: { school_id: schoolId },
       include: {
         components: {
@@ -75,6 +73,15 @@ export class SchoolStructureController {
         },
       },
       orderBy: { name: 'asc' },
+    });
+
+    // Ensure "O-Level" subjects come first, then sort by name
+    const subjects = subjectsRaw.sort((a, b) => {
+      const aIsO = a.level === 'O-Level';
+      const bIsO = b.level === 'O-Level';
+      if (aIsO && !bIsO) return -1;
+      if (!aIsO && bIsO) return 1;
+      return (a.name || '').localeCompare(b.name || '');
     });
     // Map classroom definitions to include their assessments
     const classroomDefsWithAssessments = classroomDefinitions.map((def) => {

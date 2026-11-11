@@ -1,5 +1,4 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-// Import your SchoolsService (adjust the path as needed)
 import { PrismaService } from '../prisma/prisma.service';
 import { SchoolsService } from '../schools/schools.service';
 import { StudentsService } from '../students/students.service';
@@ -130,6 +129,39 @@ export class ReportCardsService {
   }
 
   /**
+   * Return the classroom definition level for a student enrollment (e.g. 'O-Level'|'A-Level')
+   */
+  async getEnrollmentLevelByIdentity(
+    schoolId: string,
+    userId: string,
+    yearId: string,
+    identity: string,
+  ): Promise<string> {
+    // Fetch the student (reuse existing helper/service)
+    const student = await this.studentsService.findByIdentity(schoolId, identity, userId);
+    if (!student) {
+      throw new NotFoundException('Student not found');
+    }
+
+    // Fetch enrollment for the year and include classroom definition
+    const enrollment = await this.prisma.studentEnrollment.findFirst({
+      where: {
+        student_id: student.id,
+        academic_year_id: yearId,
+        deleted_at: null,
+      },
+      include: { classroom_definition: true },
+    });
+
+    if (!enrollment || !enrollment.classroom_definition) {
+      throw new NotFoundException('Student not enrolled in the specified year');
+    }
+
+    return enrollment.classroom_definition.level || 'O-Level';
+    // return 'A-Level'; // For testing purposes, we can hardcode this to 'A-Level' to trigger the new report card format
+  }
+
+  /**
    * Fetch all subjects with student grades for a specific classroom, year, and term
    */
   private async fetchStudentSubjectsWithGrades(
@@ -171,7 +203,7 @@ export class ReportCardsService {
       subjectMap.get(subjectId).assessments.push(assessment);
     }
 
-    // For each subject, fetch student grades and calculate weighted average
+    // For each subject, fetch student grades and build components + calculate weighted average
     const subjects: any[] = [];
     for (const [subjectId, data] of subjectMap) {
       const subjectGrades = await this.prisma.grade.findMany({
@@ -184,24 +216,87 @@ export class ReportCardsService {
           },
         },
         include: {
-          assessment: true,
+          assessment: {
+            include: {
+              component: true, // include component so we can use its name / weight
+            },
+          },
         },
       });
 
       if (subjectGrades.length > 0) {
-        // Calculate weighted average
-        const { weightedScore, totalWeight } = this.calculateWeightedAverage(
-          subjectGrades,
-        );
+        // Build components array from individual grade records
+        const components = subjectGrades.map(g => {
+          const assessment = g.assessment || ({} as any);
+          const component = assessment.component || ({} as any);
+          const rawScore = Number(g.score);
+          const pct = Number(g.percentage);
+          const value = assessment.type === 'CAT' ? rawScore : (Number.isFinite(pct) ? pct : rawScore);
+          const weight = Number(assessment.weight) || undefined;
+          const compScore = Number.isFinite(value) ? value : undefined;
+          const compGrade = typeof compScore === 'number' ? this.calculateLetterGrade(compScore) : undefined;
+
+          return {
+            name: component.name || `Assessment ${assessment.id}`,
+            score: compScore,
+            grade: compGrade,
+            credits: weight,
+            remarks: g.remarks || '',
+          };
+        });
+
+        const assessments = subjectGrades
+          .map(g => {
+            const assessment = g.assessment || ({} as any);
+            const type = assessment.type;
+            const rawScore = Number(g.score);
+            const pct = Number(g.percentage);
+            const chosen = type === 'CAT' ? rawScore : (Number.isFinite(pct) ? pct : rawScore);
+            const maxScore = Number(assessment.max_score ?? 100);
+            return {
+              type,
+              score: Number.isFinite(chosen) ? Math.round(chosen * 10) / 10 : undefined,
+              max_score: Number.isFinite(maxScore) ? Math.round(maxScore * 10) / 10 : undefined,
+            };
+          })
+          .filter((a) => a.type && typeof a.score === 'number');
+
+        const cat = assessments.find((a) => a.type === 'CAT')?.score;
+        const mot = assessments.find((a) => a.type === 'MIDTERM')?.score;
+        const eot = assessments.find((a) => a.type === 'END_OF_TERM')?.score;
+        const motEot = typeof mot === 'number' && typeof eot === 'number'
+          ? Math.round(((mot + eot) / 2) * 10) / 10
+          : mot ?? eot;
+
+        // Calculate weighted average using the same helper (works on original grade records)
+        const { weightedScore, totalWeight } = this.calculateWeightedAverage(subjectGrades);
         const average = totalWeight > 0 ? weightedScore / totalWeight : 0;
         const roundedAverage = Math.round(average * 100) / 100;
 
+        // Determine score using CAT + average of MOT/EOT when assessment types are available
+        const finalScore = typeof cat === 'number' || typeof motEot === 'number'
+          ? Math.round(((cat ?? 0) + (motEot ?? 0)) * 10) / 10
+          : roundedAverage;
+
+        // Determine total credits for the subject (sum of assessment weights if present, fallback to count)
+        const totalCredits = subjectGrades.reduce((sum, g) => {
+          const w = Number(g.assessment?.weight) || 0;
+          return sum + w;
+        }, 0) || subjectGrades.length;
+
         subjects.push({
           name: data.subject.name,
-          score: roundedAverage,
-          grade: this.calculateLetterGrade(roundedAverage),
-          credits: subjectGrades.length, // Number of assessments
-          remarks: this.getRemarkForScore(roundedAverage),
+          // provide individual component entries
+          components,
+          assessments,
+          cat,
+          mot,
+          eot,
+          motEot,
+          score: finalScore,
+          grade: this.calculateLetterGrade(finalScore),
+          credits: totalCredits,
+          remarks: this.getRemarkForScore(finalScore),
         });
       }
     }

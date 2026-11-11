@@ -484,9 +484,7 @@ export class StudentsController {
     @Query('schoolId') schoolId: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     if (!schoolId || typeof schoolId !== 'string' || schoolId.trim() === '') {
       throw new BadRequestException(
         'Missing required query parameter: schoolId',

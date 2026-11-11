@@ -1,7 +1,7 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { CreateSubjectDto } from './create-subject.dto';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsBoolean } from 'class-validator';
+import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { CreateSubjectDto } from './create-subject.dto';
 
 export class UpdateSubjectDto extends PartialType(CreateSubjectDto) {
   @ApiPropertyOptional({
@@ -22,13 +22,23 @@ export class UpdateSubjectDto extends PartialType(CreateSubjectDto) {
 
   @ApiPropertyOptional({
     description: 'Subject description',
+    example: 'Advanced topics in mathematics',
   })
   @IsString()
   @IsOptional()
   description?: string;
 
   @ApiPropertyOptional({
+    description: 'Level (e.g., O-Level, A-Level, Grade 10)',
+    example: 'A-Level',
+  })
+  @IsString()
+  @IsOptional()
+  level?: string;
+
+  @ApiPropertyOptional({
     description: 'Whether the subject is active',
+    example: true,
   })
   @IsBoolean()
   @IsOptional()

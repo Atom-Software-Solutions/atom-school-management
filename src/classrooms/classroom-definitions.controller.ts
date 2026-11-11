@@ -28,9 +28,7 @@ export class ClassroomDefinitionsController {
     @Param('schoolId') schoolId: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
     const adminUserId = req.user.id;
     return this.classroomsService.listDefinitions(schoolId, adminUserId);
   }
@@ -41,9 +39,7 @@ export class ClassroomDefinitionsController {
     @Body() dto: CreateClassroomDefinitionDto,
     @Request() req: AuthenticatedRequest,
   ) {
-    if (!req.user) {
-      throw new ForbiddenException('Authentication required');
-    }
+    if (!req.user) throw new ForbiddenException('Authentication required');
 
     const adminUserId = req.user.id;
     return this.classroomsService.createDefinition(schoolId, adminUserId, {

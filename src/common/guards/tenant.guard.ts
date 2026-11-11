@@ -17,10 +17,8 @@ export class TenantGuard implements CanActivate {
     const user = request.user;
     const tenantId = request.tenantId;
 
-    if (!user) {
-      throw new ForbiddenException('Authentication required');
-    }
-
+    if (!user) throw new ForbiddenException('Authentication required');
+    if (tenantId === undefined) throw new ForbiddenException('Tenant context not available');
     // SUPER_ADMIN can access any tenant (tenantId is null)
     if (user.role === 'SUPER_ADMIN') {
       return true;
