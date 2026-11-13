@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { Role } from '@prisma/client';
+import { BillingReportsService } from '../billing/billing-reports.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class DashboardService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly billingReports: BillingReportsService,
+    ) { }
 
     async getSchoolDashboard(schoolId: string) {
         // Dates for filtering
@@ -79,6 +83,7 @@ export class DashboardService {
 
         // Get current term (latest term_template_item in current academic year)
         let currentTerm: string | null = null;
+        let currentTermId: string | null = null;
         if (currentAcademicYear) {
             const term = await this.prisma.termTemplateItem.findFirst({
                 where: {
@@ -89,6 +94,7 @@ export class DashboardService {
                 orderBy: { ordinal: 'desc' }
             });
             currentTerm = term?.name ?? null;
+            currentTermId = term?.id ?? null;
         }
 
         const [subjects, classes, assessments, grades, reportCardsGenerated] = await Promise.all([
@@ -118,7 +124,16 @@ export class DashboardService {
             }),
         ]);
 
-        // Finance (not implemented: Payment/Invoice models are not in schema)
+        // Finance: current term if one is running, else the current academic year.
+        const finance = currentAcademicYear
+            ? {
+                scope: currentTermId ? 'term' : 'year',
+                ...(await this.billingReports.summary(schoolId, {
+                    academicYearId: currentAcademicYear.id,
+                    termId: currentTermId ?? undefined,
+                })),
+            }
+            : null;
         // Alerts (static for now)
         const alerts = [
             {
@@ -159,7 +174,7 @@ export class DashboardService {
                 grades,
                 report_cards_generated: reportCardsGenerated
             },
-            // finance: { ... } // Not implemented
+            finance,
             alerts
         };
     }

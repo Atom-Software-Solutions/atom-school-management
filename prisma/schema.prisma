@@ -9,25 +9,25 @@ datasource db {
 }
 
 model School {
-  id         String        @id @default(uuid())
-  name       String
-  created_at DateTime      @default(now())
-  updated_at DateTime      @updatedAt
-  address    String?
-  code       String        @unique
-  currency   String        @default("UGX")
-  email      String
-  is_active  Boolean       @default(true)
-  logo_url   String?
-  phone      String
-  time_zone  String        @default("Africa/Kampala")
-  settings   Json?
-  deleted_at DateTime?
-  domain     String
-  motto      String?
+  id               String          @id @default(uuid())
+  name             String
+  created_at       DateTime        @default(now())
+  updated_at       DateTime        @updatedAt
+  address          String?
+  code             String          @unique
+  currency         String          @default("UGX")
+  email            String
+  is_active        Boolean         @default(true)
+  logo_url         String?
+  phone            String
+  time_zone        String          @default("Africa/Kampala")
+  settings         Json?
+  deleted_at       DateTime?
+  domain           String
+  motto            String?
   institution_type InstitutionType @default(PRIMARY_SCHOOL)
-  admins     SchoolAdmin[]
-  reportCards ReportCard[]
+  admins           SchoolAdmin[]
+  reportCards      ReportCard[]
 
   @@index([code])
   @@index([deleted_at])
@@ -75,30 +75,33 @@ model SchoolAdmin {
 }
 
 model Student {
-  id            String              @id @default(uuid())
-  school_id     String
-  first_name    String
-  last_name     String
-  email         String?             @unique
-  phone         String?             @unique
-  gender        String?
-  status        String?
-  date_of_birth DateTime
-  religion      String?
-  address       String?
-  avatar_url    String?
-  is_active     Boolean             @default(true)
-  deleted_at    DateTime?
-  created_at    DateTime            @default(now())
-  updated_at    DateTime            @updatedAt
-  reg_no        String?
-  student_no    String
-  guardians     StudentGuardian[]
-  enrollments   StudentEnrollment[]
-  grades        Grade[]
-  reportCards   ReportCard[]
+  id               String                 @id @default(uuid())
+  school_id        String
+  first_name       String
+  last_name        String
+  email            String?                @unique
+  phone            String?                @unique
+  gender           String?
+  status           String?
+  date_of_birth    DateTime
+  religion         String?
+  address          String?
+  avatar_url       String?
+  is_active        Boolean                @default(true)
+  deleted_at       DateTime?
+  created_at       DateTime               @default(now())
+  updated_at       DateTime               @updatedAt
+  reg_no           String?
+  student_no       String
+  guardians        StudentGuardian[]
+  enrollments      StudentEnrollment[]
+  grades           Grade[]
+  reportCards      ReportCard[]
   guardianMessages GuardianMessage[]
-  results StudentResult[]
+  results          StudentResult[]
+  fee_assignments  StudentFeeAssignment[]
+  invoices         Invoice[]
+  payments         Payment[]
 
   @@unique([school_id, first_name, last_name, date_of_birth])
   @@unique([school_id, student_no])
@@ -141,23 +144,23 @@ model StudentGuardian {
 
 // NEW: Messaging model for guardian notifications/messages
 model GuardianMessage {
-  id           String    @id @default(uuid())
-  school_id    String
-  guardian_id  String
-  student_id   String?   // Optional: message may relate to a specific student
-  type         String    // "SMS", "Email", "WhatsApp"
-  category     String?   // "academic", "fee", "general", etc.
-  subject      String?
-  message      String
-  status       String    @default("pending") // "sent", "failed", "pending"
-  sent_at      DateTime?
-  metadata     Json?
-  created_at   DateTime  @default(now())
-  updated_at   DateTime  @updatedAt
+  id          String    @id @default(uuid())
+  school_id   String
+  guardian_id String
+  student_id  String? // Optional: message may relate to a specific student
+  type        String // "SMS", "Email", "WhatsApp"
+  category    String? // "academic", "fee", "general", etc.
+  subject     String?
+  message     String
+  status      String    @default("pending") // "sent", "failed", "pending"
+  sent_at     DateTime?
+  metadata    Json?
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
 
-  guardian     Guardian  @relation(fields: [guardian_id], references: [id], onDelete: Cascade)
-  student      Student?  @relation(fields: [student_id], references: [id], onDelete: SetNull)
-  
+  guardian Guardian @relation(fields: [guardian_id], references: [id], onDelete: Cascade)
+  student  Student? @relation(fields: [student_id], references: [id], onDelete: SetNull)
+
   @@index([school_id])
   @@index([guardian_id])
   @@index([student_id])
@@ -171,14 +174,14 @@ model GuardianMessage {
 // ==========================================
 
 model TermTemplate {
-  id                String            @id @default(uuid())
-  school_id         String
-  name              String
-  is_locked         Boolean           @default(false)
-  created_at        DateTime          @default(now())
-  updated_at        DateTime          @updatedAt
+  id         String   @id @default(uuid())
+  school_id  String
+  name       String
+  is_locked  Boolean  @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
-  academic_years    AcademicYear[]
+  academic_years      AcademicYear[]
   term_template_items TermTemplateItem[]
 
   @@unique([school_id, name])
@@ -188,18 +191,20 @@ model TermTemplate {
 }
 
 model TermTemplateItem {
-  id               String   @id @default(uuid())
+  id               String    @id @default(uuid())
   term_template_id String
   ordinal          Int
   name             String
   start_date       DateTime?
   end_date         DateTime?
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
 
-  term_template TermTemplate @relation(fields: [term_template_id], references: [id], onDelete: Cascade)
+  term_template  TermTemplate   @relation(fields: [term_template_id], references: [id], onDelete: Cascade)
   assessments    Assessment[]
   report_cards   ReportCard[]
+  fee_structures FeeStructure[]
+  invoices       Invoice[]
 
   @@unique([term_template_id, ordinal])
   @@index([term_template_id])
@@ -218,9 +223,11 @@ model AcademicYear {
   created_at       DateTime @default(now())
   updated_at       DateTime @updatedAt
 
-  term_template TermTemplate        @relation(fields: [term_template_id], references: [id], onDelete: Restrict)
-  enrollments   StudentEnrollment[]
-  assessments   Assessment[]
+  term_template  TermTemplate        @relation(fields: [term_template_id], references: [id], onDelete: Restrict)
+  enrollments    StudentEnrollment[]
+  assessments    Assessment[]
+  fee_structures FeeStructure[]
+  invoices       Invoice[]
 
   @@unique([school_id, name])
   @@index([school_id])
@@ -246,8 +253,9 @@ model ClassroomDefinition {
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
-  enrollments StudentEnrollment[]
-  assessments Assessment[]
+  enrollments    StudentEnrollment[]
+  fee_structures FeeStructure[]
+  assessments    Assessment[]
 
   @@unique([school_id, name])
   @@index([school_id])
@@ -282,18 +290,18 @@ model StudentEnrollment {
 }
 
 model Subject {
-  id          String       @id @default(uuid())
+  id          String   @id @default(uuid())
   school_id   String
   name        String
   code        String? // Subject code (e.g., "MATH", "ENG")
   description String?
   level       String?
-  is_active   Boolean      @default(true)
-  created_at  DateTime     @default(now())
-  updated_at  DateTime     @updatedAt
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
 
-  components  AssessmentComponent[]
-  grades      Grade[]
+  components AssessmentComponent[]
+  grades     Grade[]
 
   @@index([school_id])
   @@index([name])
@@ -303,14 +311,14 @@ model Subject {
 }
 
 model AssessmentComponent {
-  id          String       @id @default(uuid())
-  subject_id  String
-  name        String       // e.g. "Paper 1", "Paper 2", "Practical"
-  code        String?      // optional short code like P1, P2
-  type        ComponentType
-  is_active   Boolean      @default(true)
-  created_at  DateTime     @default(now())
-  updated_at  DateTime     @updatedAt
+  id         String        @id @default(uuid())
+  subject_id String
+  name       String // e.g. "Paper 1", "Paper 2", "Practical"
+  code       String? // optional short code like P1, P2
+  type       ComponentType
+  is_active  Boolean       @default(true)
+  created_at DateTime      @default(now())
+  updated_at DateTime      @updatedAt
 
   subject     Subject      @relation(fields: [subject_id], references: [id], onDelete: Cascade)
   assessments Assessment[]
@@ -321,45 +329,45 @@ model AssessmentComponent {
 }
 
 model Assessment {
-  id               String               @id @default(uuid())
-  component_id     String
-  academic_year_id String
-  name             String               // e.g., "Midterm", "End of Term", "UNEB Final"
-  type             AssessmentType
-  weight           Decimal              @db.Decimal(5, 2)
-  max_score        Decimal              @default(100) @db.Decimal(5, 2)
-  term             Int?                 // If Term model is added, replace with term_id String
-  date             DateTime?
-  created_at       DateTime             @default(now())
-  updated_at       DateTime             @updatedAt
-  term_template_item_id String?
+  id                      String               @id @default(uuid())
+  component_id            String
+  academic_year_id        String
+  name                    String // e.g., "Midterm", "End of Term", "UNEB Final"
+  type                    AssessmentType
+  weight                  Decimal              @db.Decimal(5, 2)
+  max_score               Decimal              @default(100) @db.Decimal(5, 2)
+  term                    Int? // If Term model is added, replace with term_id String
+  date                    DateTime?
+  created_at              DateTime             @default(now())
+  updated_at              DateTime             @updatedAt
+  term_template_item_id   String?
   classroom_definition_id String?
-  component        AssessmentComponent  @relation(fields: [component_id], references: [id], onDelete: Cascade)
-  academic_year    AcademicYear         @relation(fields: [academic_year_id], references: [id], onDelete: Cascade)
-  term_template_item TermTemplateItem? @relation(fields: [term_template_item_id], references: [id], onDelete: SetNull)
-  classroom_definition ClassroomDefinition? @relation(fields: [classroom_definition_id], references: [id], onDelete: SetNull)
-  results          StudentResult[]
-  grades Grade[]
+  component               AssessmentComponent  @relation(fields: [component_id], references: [id], onDelete: Cascade)
+  academic_year           AcademicYear         @relation(fields: [academic_year_id], references: [id], onDelete: Cascade)
+  term_template_item      TermTemplateItem?    @relation(fields: [term_template_item_id], references: [id], onDelete: SetNull)
+  classroom_definition    ClassroomDefinition? @relation(fields: [classroom_definition_id], references: [id], onDelete: SetNull)
+  results                 StudentResult[]
+  grades                  Grade[]
 
+  @@unique([component_id, name, academic_year_id, term])
   @@index([component_id])
   @@index([academic_year_id])
   @@index([term_template_item_id])
   @@index([classroom_definition_id])
-  @@unique([component_id, name, academic_year_id, term])
   @@schema("results_mgt")
 }
 
 model StudentResult {
-  id            String      @id @default(uuid())
+  id            String   @id @default(uuid())
   student_id    String
   assessment_id String
-  score         Decimal     @db.Decimal(5, 2)
+  score         Decimal  @db.Decimal(5, 2)
   grade         String?
-  created_at    DateTime    @default(now())
-  updated_at    DateTime    @updatedAt
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
 
-  assessment    Assessment  @relation(fields: [assessment_id], references: [id], onDelete: Cascade)
-  student       Student     @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  assessment Assessment @relation(fields: [assessment_id], references: [id], onDelete: Cascade)
+  student    Student    @relation(fields: [student_id], references: [id], onDelete: Cascade)
 
   @@index([student_id])
   @@index([assessment_id])
@@ -392,25 +400,25 @@ model Grade {
 }
 
 model ReportCard {
-  id               String    @id @default(uuid())
-  school_id        String
-  student_id       String
-  academic_year_id String // Reference to AcademicYear
+  id                    String    @id @default(uuid())
+  school_id             String
+  student_id            String
+  academic_year_id      String // Reference to AcademicYear
   term_template_item_id String // Reference to TermTemplateItem (replaces term_name)
-  overall_average  Decimal?  @db.Decimal(5, 2)
-  total_subjects   Int?
-  rank             Int? // Class rank (optional)
-  total_students   Int? // Total students in class (for rank context)
-  remarks          String? // Teacher/Principal remarks
-  status           String    @default("draft") // "draft", "published", "archived"
-  generated_at     DateTime  @default(now())
-  published_at     DateTime?
-  generated_by     String? // User ID who generated the report
-  pdf_url          String? // URL to generated PDF file
+  overall_average       Decimal?  @db.Decimal(5, 2)
+  total_subjects        Int?
+  rank                  Int? // Class rank (optional)
+  total_students        Int? // Total students in class (for rank context)
+  remarks               String? // Teacher/Principal remarks
+  status                String    @default("draft") // "draft", "published", "archived"
+  generated_at          DateTime  @default(now())
+  published_at          DateTime?
+  generated_by          String? // User ID who generated the report
+  pdf_url               String? // URL to generated PDF file
 
   term_template_item TermTemplateItem @relation(fields: [term_template_item_id], references: [id], onDelete: Restrict)
-  student           Student          @relation(fields: [student_id], references: [id], onDelete: Restrict)
-  school            School           @relation(fields: [school_id], references: [id], onDelete: Restrict)
+  student            Student          @relation(fields: [student_id], references: [id], onDelete: Restrict)
+  school             School           @relation(fields: [school_id], references: [id], onDelete: Restrict)
 
   @@index([school_id])
   @@index([student_id])
@@ -427,7 +435,7 @@ model Session {
   is_active  Boolean   @default(true)
   ip_address String?
   user_agent String?
-  location   String?   // NEW: Approximate location (e.g., "Kampala, Uganda")
+  location   String? // NEW: Approximate location (e.g., "Kampala, Uganda")
   created_at DateTime  @default(now())
   expires_at DateTime
   revoked_at DateTime?
@@ -438,31 +446,272 @@ model Session {
 }
 
 model Payment {
-  id             String               @id @default(uuid())
-  user_id        String
-  amount         Decimal              @db.Decimal(10, 2)
-  currency       String               @default("UGX")
-  status         String
-  payment_method String
-  reference      String               @unique
-  description    String?
-  created_at     DateTime             @default(now())
-  updated_at     DateTime             @updatedAt
-  completed_at   DateTime?
-  school_id      String?
-  transactions   PaymentTransaction[]
+  id                  String    @id @default(uuid())
+  /// Payer's user account, if any. Guardians paying at the bursar usually have none.
+  user_id             String?
+  amount              Decimal   @db.Decimal(14, 2)
+  currency            String    @default("UGX")
+  /// PENDING | COMPLETED | FAILED | REVERSED (see src/billing/billing.constants.ts)
+  status              String
+  /// CASH | BANK_DEPOSIT | MOBILE_MONEY | CHEQUE | OTHER
+  payment_method      String
+  reference           String    @unique
+  description         String?
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+  completed_at        DateTime?
+  school_id           String?
+  // Billing linkage
+  student_id          String?
+  invoice_id          String?
+  payer_name          String?
+  payer_phone         String?
+  receipt_number      String?
+  received_at         DateTime?
+  recorded_by_user_id String?
+  reversed_at         DateTime?
+  reversed_by_user_id String?
+  reversal_reason     String?
+  idempotency_key     String?
 
+  student      Student?             @relation(fields: [student_id], references: [id], onDelete: Restrict)
+  invoice      Invoice?             @relation(fields: [invoice_id], references: [id], onDelete: Restrict)
+  transactions PaymentTransaction[]
+
+  @@unique([school_id, receipt_number])
+  @@unique([school_id, idempotency_key])
   @@index([user_id])
   @@index([school_id])
   @@index([status])
   @@index([reference])
+  @@index([student_id])
+  @@index([invoice_id])
+  @@index([received_at])
+  @@schema("payment_mgt")
+}
+
+// ==========================================
+// BILLING MODELS
+// ==========================================
+
+enum FeeFrequency {
+  ONCE
+  PER_TERM
+  PER_YEAR
+
+  @@schema("payment_mgt")
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  CANCELLED
+
+  @@schema("payment_mgt")
+}
+
+enum InvoiceKind {
+  TERM
+  ADHOC
+
+  @@schema("payment_mgt")
+}
+
+enum FeeAssignmentStatus {
+  ACTIVE
+  REMOVED
+
+  @@schema("payment_mgt")
+}
+
+enum NumberSequenceKind {
+  INVOICE
+  RECEIPT
+
+  @@schema("payment_mgt")
+}
+
+model FeeCategory {
+  id          String   @id @default(uuid())
+  school_id   String
+  name        String
+  code        String
+  description String?
+  is_active   Boolean  @default(true)
+  sort_order  Int      @default(0)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  fee_structures FeeStructure[]
+  line_items     InvoiceLineItem[]
+
+  @@unique([school_id, code])
+  @@unique([school_id, name])
+  @@index([school_id])
+  @@schema("payment_mgt")
+}
+
+model FeeStructure {
+  id                      String       @id @default(uuid())
+  school_id               String
+  academic_year_id        String
+  term_template_item_id   String?
+  classroom_definition_id String?
+  fee_category_id         String
+  name                    String
+  amount                  Decimal      @db.Decimal(14, 2)
+  due_date                DateTime?
+  frequency               FeeFrequency @default(PER_TERM)
+  is_mandatory            Boolean      @default(true)
+  is_active               Boolean      @default(true)
+  metadata                Json?
+  created_by_user_id      String?
+  created_at              DateTime     @default(now())
+  updated_at              DateTime     @updatedAt
+
+  academic_year        AcademicYear           @relation(fields: [academic_year_id], references: [id], onDelete: Restrict)
+  term_template_item   TermTemplateItem?      @relation(fields: [term_template_item_id], references: [id], onDelete: Restrict)
+  classroom_definition ClassroomDefinition?   @relation(fields: [classroom_definition_id], references: [id], onDelete: Restrict)
+  fee_category         FeeCategory            @relation(fields: [fee_category_id], references: [id], onDelete: Restrict)
+  assignments          StudentFeeAssignment[]
+  line_items           InvoiceLineItem[]
+
+  @@index([school_id])
+  @@index([academic_year_id])
+  @@index([term_template_item_id])
+  @@index([classroom_definition_id])
+  @@index([fee_category_id])
+  @@schema("payment_mgt")
+}
+
+model StudentFeeAssignment {
+  id                 String              @id @default(uuid())
+  school_id          String
+  student_id         String
+  fee_structure_id   String
+  amount_override    Decimal?            @db.Decimal(14, 2)
+  waived_amount      Decimal             @default(0) @db.Decimal(14, 2)
+  waiver_reason      String?
+  waived_by_user_id  String?
+  status             FeeAssignmentStatus @default(ACTIVE)
+  created_by_user_id String?
+  created_at         DateTime            @default(now())
+  updated_at         DateTime            @updatedAt
+
+  student       Student      @relation(fields: [student_id], references: [id], onDelete: Restrict)
+  fee_structure FeeStructure @relation(fields: [fee_structure_id], references: [id], onDelete: Restrict)
+
+  @@unique([student_id, fee_structure_id])
+  @@index([school_id])
+  @@index([fee_structure_id])
+  @@schema("payment_mgt")
+}
+
+model Invoice {
+  id                    String        @id @default(uuid())
+  school_id             String
+  student_id            String
+  academic_year_id      String
+  term_template_item_id String?
+  kind                  InvoiceKind   @default(TERM)
+  /// Assigned on issue; null while DRAFT.
+  invoice_number        String?
+  currency              String        @default("UGX")
+  issue_date            DateTime?
+  due_date              DateTime
+  subtotal              Decimal       @default(0) @db.Decimal(14, 2)
+  waived_total          Decimal       @default(0) @db.Decimal(14, 2)
+  total_amount          Decimal       @default(0) @db.Decimal(14, 2)
+  /// Cached; recalculated in the same transaction as any payment change.
+  amount_paid           Decimal       @default(0) @db.Decimal(14, 2)
+  status                InvoiceStatus @default(DRAFT)
+  notes                 String?
+  generation_batch_id   String?
+  created_by_user_id    String?
+  issued_by_user_id     String?
+  cancelled_at          DateTime?
+  cancelled_by_user_id  String?
+  cancellation_reason   String?
+  created_at            DateTime      @default(now())
+  updated_at            DateTime      @updatedAt
+
+  student            Student                 @relation(fields: [student_id], references: [id], onDelete: Restrict)
+  academic_year      AcademicYear            @relation(fields: [academic_year_id], references: [id], onDelete: Restrict)
+  term_template_item TermTemplateItem?       @relation(fields: [term_template_item_id], references: [id], onDelete: Restrict)
+  generation_batch   InvoiceGenerationBatch? @relation(fields: [generation_batch_id], references: [id], onDelete: SetNull)
+  line_items         InvoiceLineItem[]
+  payments           Payment[]
+
+  // One TERM invoice per student per term is enforced by a partial unique index
+  // added by hand in the migration SQL (Prisma cannot express partial indexes).
+  @@unique([school_id, invoice_number])
+  @@index([school_id])
+  @@index([student_id])
+  @@index([academic_year_id, term_template_item_id])
+  @@index([status])
+  @@index([due_date])
+  @@index([generation_batch_id])
+  @@schema("payment_mgt")
+}
+
+model InvoiceLineItem {
+  id               String   @id @default(uuid())
+  invoice_id       String
+  fee_structure_id String?
+  fee_category_id  String
+  description      String
+  quantity         Int      @default(1)
+  unit_amount      Decimal  @db.Decimal(14, 2)
+  waived_amount    Decimal  @default(0) @db.Decimal(14, 2)
+  line_total       Decimal  @db.Decimal(14, 2)
+  sort_order       Int      @default(0)
+  created_at       DateTime @default(now())
+
+  invoice       Invoice       @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
+  fee_structure FeeStructure? @relation(fields: [fee_structure_id], references: [id], onDelete: Restrict)
+  fee_category  FeeCategory   @relation(fields: [fee_category_id], references: [id], onDelete: Restrict)
+
+  @@index([invoice_id])
+  @@index([fee_structure_id])
+  @@schema("payment_mgt")
+}
+
+model InvoiceGenerationBatch {
+  id                      String   @id @default(uuid())
+  school_id               String
+  academic_year_id        String
+  term_template_item_id   String?
+  classroom_definition_id String?
+  requested_by_user_id    String
+  created_count           Int      @default(0)
+  skipped_count           Int      @default(0)
+  skipped_details         Json?
+  status                  String   @default("COMPLETED")
+  created_at              DateTime @default(now())
+
+  invoices Invoice[]
+
+  @@index([school_id])
+  @@schema("payment_mgt")
+}
+
+model NumberSequence {
+  school_id  String
+  kind       NumberSequenceKind
+  year       Int
+  next_value Int                @default(1)
+  updated_at DateTime           @updatedAt
+
+  @@id([school_id, kind, year])
   @@schema("payment_mgt")
 }
 
 model PaymentTransaction {
   id         String   @id @default(uuid())
   payment_id String
-  amount     Decimal  @db.Decimal(10, 2)
+  amount     Decimal  @db.Decimal(14, 2)
   type       String
   status     String
   reference  String   @unique

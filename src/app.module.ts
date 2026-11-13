@@ -5,6 +5,7 @@ import { AdminModule } from './admin/admin.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { BillingModule } from './billing/billing.module';
 import { ClassroomsModule } from './classrooms/classrooms.module';
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
 import { DashboardModule } from './dashboard/dashboard.module';
@@ -31,6 +32,7 @@ import { UsersModule } from './users/users.module';
     EmailModule,
     GuardiansModule,
     DashboardModule,
+    BillingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

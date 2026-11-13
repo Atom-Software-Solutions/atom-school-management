@@ -345,15 +345,30 @@ export class StudentsService {
   }
 
   async listInvoices(studentId: string, adminUserId: string) {
-    await this.findOwned(studentId, adminUserId);
-    // TODO: Integrate with payment_mgt when schema supports student linkage
-    return [];
+    const student = await this.findOwned(studentId, adminUserId);
+    return this.prisma.invoice.findMany({
+      where: { school_id: student.school_id, student_id: studentId, status: { not: 'DRAFT' } },
+      orderBy: { issue_date: 'desc' },
+      select: {
+        id: true, invoice_number: true, status: true, issue_date: true, due_date: true,
+        total_amount: true, amount_paid: true, currency: true,
+        academic_year: { select: { name: true } },
+        term_template_item: { select: { name: true } },
+      },
+    });
   }
 
   async listPayments(studentId: string, adminUserId: string) {
-    await this.findOwned(studentId, adminUserId);
-    // TODO: Integrate with payment_mgt when schema supports student linkage
-    return [];
+    const student = await this.findOwned(studentId, adminUserId);
+    return this.prisma.payment.findMany({
+      where: { school_id: student.school_id, student_id: studentId },
+      orderBy: { received_at: 'desc' },
+      select: {
+        id: true, receipt_number: true, reference: true, amount: true, currency: true, status: true,
+        payment_method: true, received_at: true, reversed_at: true,
+        invoice: { select: { id: true, invoice_number: true } },
+      },
+    });
   }
 
   generateImportTemplate(): Buffer {
